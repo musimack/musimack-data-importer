@@ -1,0 +1,742 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 2116.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2072.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2254.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.064745
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 589.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 413.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1098.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.667233
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 38.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 13.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 228.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.842105
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 15.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 15.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 25.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.4
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.5
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "SMS",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Professional Botox, Fillers & Threads in Portland, OR | Aluma Aesthetic Medicine (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 754.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 535.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 2489.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 60.250479
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Dermal Fillers - Aluma Aesthetic Medicine | Portland, OR (/treatments/dermal-fillers-portland/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 140.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 106.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 413.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 60.564877
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Gallery\u00a0 - Aluma Aesthetic Medicine | Portland, OR (/gallery/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 113.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 90.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 306.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 61.794475
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Aluma Specials - Aluma Aesthetic Medicine | Portland, OR (/about/aluma-specials/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 111.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 102.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 350.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 21.653282
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Botox and Dysport - Aluma Aesthetic Medicine | Portland, OR (/treatments/dysport-and-botox-portland/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 102.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 65.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 247.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 126.584853
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Botox & Dysport - Aluma Aesthetic Medicine | Portland, OR (/treatments/dysport-and-botox-portland/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 91.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 63.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 273.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 58.059613
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Cheek Filler vs. Sculptra: Lift Now or Build Over Time? - Aluma Aesthetic Medicine | Portland, OR (/cheek-filler-vs-sculptra-lift-now-or-build-over-time/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 87.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 79.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 318.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 88.018098
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Injectable PRF - Aluma Aesthetic Medicine | Portland, OR (/treatments/injectable-prf/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 80.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 64.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 229.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 28.297446
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Instalift Threads\u00a0 - Aluma Aesthetic Medicine | Portland, OR (/treatments/silhouette-instalift-threads/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 79.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 73.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 257.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 27.529999
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "About Aluma - Aluma Aesthetic Medicine | Portland, OR (/about/about-aluma/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 78.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 65.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 223.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 155.036563
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 2595.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 2768.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.205564
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 56.173304
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 3608.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 12169.0
+    }
+  ],
+  "property_resource": "properties/341923472",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 2595 users, 2768 sessions, and 3608 views.",
+  "summary_counts": {
+    "dimension_row_count": 16,
+    "metric_count": 6,
+    "time_series_count": 30
+  },
+  "time_series": [
+    {
+      "date": "2026-04-01",
+      "event_count": 250.0,
+      "sessions": 49.0,
+      "users": 43.0,
+      "views": 84.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 147.0,
+      "sessions": 36.0,
+      "users": 34.0,
+      "views": 49.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 286.0,
+      "sessions": 59.0,
+      "users": 54.0,
+      "views": 93.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 134.0,
+      "sessions": 36.0,
+      "users": 34.0,
+      "views": 45.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 889.0,
+      "sessions": 219.0,
+      "users": 219.0,
+      "views": 234.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 216.0,
+      "sessions": 40.0,
+      "users": 36.0,
+      "views": 76.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 216.0,
+      "sessions": 53.0,
+      "users": 49.0,
+      "views": 69.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 266.0,
+      "sessions": 60.0,
+      "users": 59.0,
+      "views": 87.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 298.0,
+      "sessions": 62.0,
+      "users": 51.0,
+      "views": 101.0
+    },
+    {
+      "date": "2026-04-10",
+      "event_count": 255.0,
+      "sessions": 49.0,
+      "users": 43.0,
+      "views": 97.0
+    },
+    {
+      "date": "2026-04-11",
+      "event_count": 164.0,
+      "sessions": 37.0,
+      "users": 37.0,
+      "views": 59.0
+    },
+    {
+      "date": "2026-04-12",
+      "event_count": 192.0,
+      "sessions": 43.0,
+      "users": 41.0,
+      "views": 66.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 286.0,
+      "sessions": 60.0,
+      "users": 54.0,
+      "views": 91.0
+    },
+    {
+      "date": "2026-04-14",
+      "event_count": 287.0,
+      "sessions": 58.0,
+      "users": 45.0,
+      "views": 102.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 270.0,
+      "sessions": 57.0,
+      "users": 45.0,
+      "views": 87.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 273.0,
+      "sessions": 50.0,
+      "users": 43.0,
+      "views": 90.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 221.0,
+      "sessions": 43.0,
+      "users": 36.0,
+      "views": 76.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 69.0,
+      "sessions": 21.0,
+      "users": 15.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 117.0,
+      "sessions": 28.0,
+      "users": 23.0,
+      "views": 44.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 328.0,
+      "sessions": 60.0,
+      "users": 46.0,
+      "views": 119.0
+    },
+    {
+      "date": "2026-04-21",
+      "event_count": 592.0,
+      "sessions": 138.0,
+      "users": 132.0,
+      "views": 164.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 687.0,
+      "sessions": 157.0,
+      "users": 146.0,
+      "views": 195.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 1004.0,
+      "sessions": 244.0,
+      "users": 237.0,
+      "views": 261.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 1891.0,
+      "sessions": 462.0,
+      "users": 458.0,
+      "views": 484.0
+    },
+    {
+      "date": "2026-04-25",
+      "event_count": 1713.0,
+      "sessions": 423.0,
+      "users": 421.0,
+      "views": 432.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 148.0,
+      "sessions": 35.0,
+      "users": 34.0,
+      "views": 48.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 241.0,
+      "sessions": 60.0,
+      "users": 51.0,
+      "views": 76.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 162.0,
+      "sessions": 32.0,
+      "users": 29.0,
+      "views": 52.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 339.0,
+      "sessions": 54.0,
+      "users": 44.0,
+      "views": 122.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 228.0,
+      "sessions": 43.0,
+      "users": 36.0,
+      "views": 81.0
+    }
+  ],
+  "warnings": []
+}

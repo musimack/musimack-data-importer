@@ -1,0 +1,104 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-04-07",
+    "start": "2026-04-01"
+  },
+  "dimension_rows": [],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 469.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 492.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.22561
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 67.684097
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 650.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 2138.0
+    }
+  ],
+  "property_resource": "properties/341923472",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 469 users, 492 sessions, and 650 views.",
+  "summary_counts": {
+    "dimension_row_count": 0,
+    "metric_count": 6,
+    "time_series_count": 7
+  },
+  "time_series": [
+    {
+      "date": "2026-04-01",
+      "event_count": 250.0,
+      "sessions": 49.0,
+      "users": 43.0,
+      "views": 84.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 147.0,
+      "sessions": 36.0,
+      "users": 34.0,
+      "views": 49.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 286.0,
+      "sessions": 59.0,
+      "users": 54.0,
+      "views": 93.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 134.0,
+      "sessions": 36.0,
+      "users": 34.0,
+      "views": 45.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 889.0,
+      "sessions": 219.0,
+      "users": 219.0,
+      "views": 234.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 216.0,
+      "sessions": 40.0,
+      "users": 36.0,
+      "views": 76.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 216.0,
+      "sessions": 53.0,
+      "users": 49.0,
+      "views": 69.0
+    }
+  ],
+  "warnings": []
+}

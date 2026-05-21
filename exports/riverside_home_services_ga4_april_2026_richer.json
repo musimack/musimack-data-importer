@@ -1,0 +1,670 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 122.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 111.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 137.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.229508
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 36.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 22.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 64.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.583333
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 13.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 13.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 17.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.538462
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.666667
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "We Help You Shine Online With Web Design, SEO & Digital Advertising | Musimack Marketing | Tigard, OR (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 142.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 125.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 499.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 46.448347
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Contact Musimack Marketing | Tigard, OR (/contact/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 19.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 15.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 70.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 169.01253
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Musimack Marketing Has Expert Leadership To Meet Your Needs | Tigard, OR | Musimack Marketing (/about/our-leadership/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 12.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 11.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 34.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 152.553955
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "See Our Website & Our Graphic Design Portfolio | Musimack Marketing | Tigard, OR (/portfolio/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 9.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 7.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 29.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 151.0038
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "About Musimack Marketing | Tigard, OR (/about/our-company/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 6.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 6.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 18.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 14.701113
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Create A Brand That People Remember | Tigard, OR | Musimack Marketing (/marketing-creating/branding/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 15.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 3.450929
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Custom Website Design & Development | Musimack Marketing | Tigard, OR (/web-services/web-design-development/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 10.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 8.524963
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Expert Pinterest Ads Management - Target Your Unique Customers | Musimack Marketing (/digital-advertising/pinterest-ads/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 10.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 0.210561
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "(not set) (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 26.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 40.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 4.461941
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Connecting Potential Customers Via Digital Advertising | Tigard, OR | Musimack Marketing (/digital-advertising/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 10.455151
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 158.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 174.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.333333
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 76.666675
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 221.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 788.0
+    }
+  ],
+  "property_resource": "properties/310280796",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 158 users, 174 sessions, and 221 views.",
+  "summary_counts": {
+    "dimension_row_count": 14,
+    "metric_count": 6,
+    "time_series_count": 30
+  },
+  "time_series": [
+    {
+      "date": "2026-04-01",
+      "event_count": 32.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 18.0,
+      "sessions": 6.0,
+      "users": 5.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 12.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 11.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 28.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 70.0,
+      "sessions": 14.0,
+      "users": 12.0,
+      "views": 19.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 21.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 49.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 26.0,
+      "sessions": 7.0,
+      "users": 5.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-04-10",
+      "event_count": 31.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-11",
+      "event_count": 16.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-12",
+      "event_count": 4.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 19.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-14",
+      "event_count": 28.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 29.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 24.0,
+      "sessions": 6.0,
+      "users": 5.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 17.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 11.0,
+      "sessions": 4.0,
+      "users": 3.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 38.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-04-21",
+      "event_count": 16.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 52.0,
+      "sessions": 17.0,
+      "users": 15.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 25.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 33.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-25",
+      "event_count": 3.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 10.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 42.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 40.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 40.0,
+      "sessions": 10.0,
+      "users": 9.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 37.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 9.0
+    }
+  ],
+  "warnings": []
+}

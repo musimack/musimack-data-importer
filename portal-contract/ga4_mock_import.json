@@ -1,0 +1,171 @@
+{
+  "provider": "google_analytics",
+  "snapshot_type": "ga4_summary",
+  "visibility": "client",
+  "status": "published",
+  "period_start": "2026-04-01",
+  "period_end": "2026-04-30",
+  "summary": "Website traffic and engagement improved in this local mock GA4 import.",
+  "metrics": [
+    { "name": "users", "value": 1842, "unit": "count" },
+    { "name": "new_users", "value": 1110, "unit": "count" },
+    { "name": "sessions", "value": 2416, "unit": "count" },
+    { "name": "engaged_sessions", "value": 1519, "unit": "count" },
+    { "name": "engagement_rate", "value": 0.629, "unit": "ratio" },
+    { "name": "average_engagement_time_seconds", "value": 83, "unit": "seconds" },
+    { "name": "key_events", "value": 64, "unit": "count" },
+    { "name": "conversions", "value": 64, "unit": "count" },
+    { "name": "views", "value": 6128, "unit": "count" }
+  ],
+  "dimensions": {
+    "date_range": {
+      "period_label": "April 2026",
+      "start_date": "2026-04-01",
+      "end_date": "2026-04-30"
+    },
+    "comparison_date_range": {
+      "period_label": "March 2026",
+      "start_date": "2026-03-01",
+      "end_date": "2026-03-31"
+    },
+    "previous_metrics": [
+      { "name": "users", "value": 1700, "unit": "count" },
+      { "name": "new_users", "value": 1000, "unit": "count" },
+      { "name": "sessions", "value": 2200, "unit": "count" },
+      { "name": "engaged_sessions", "value": 1400, "unit": "count" },
+      { "name": "engagement_rate", "value": 0.6, "unit": "ratio" },
+      { "name": "average_engagement_time_seconds", "value": 70, "unit": "seconds" },
+      { "name": "key_events", "value": 0, "unit": "count" },
+      { "name": "conversions", "value": 0, "unit": "count" }
+    ],
+    "time_series": [
+      { "date": "2026-04-01", "users": 54, "sessions": 72, "new_users": 32, "key_events": 3 },
+      { "date": "2026-04-02", "users": 61, "sessions": 80, "new_users": 37, "key_events": 4 },
+      { "date": "2026-04-03", "users": 58, "sessions": 76, "new_users": 34, "key_events": 5 },
+      { "date": "2026-04-04", "users": 69, "sessions": 91, "new_users": 43, "key_events": 6 },
+      { "date": "2026-04-05", "users": 72, "sessions": 95, "new_users": 44, "key_events": 7 },
+      { "date": "2026-04-06", "users": 66, "sessions": 88, "new_users": 39, "key_events": 5 },
+      { "date": "2026-04-07", "users": 81, "sessions": 108, "new_users": 50, "key_events": 8 }
+    ],
+    "top_pages": [
+      { "page": "/", "title": "Home", "views": 1420, "users": 740, "engagement_rate": "66.1%" },
+      { "page": "/services", "title": "Services", "views": 980, "users": 511, "engagement_rate": "61.4%" },
+      { "page": "/contact", "title": "Contact", "views": 612, "users": 295, "engagement_rate": "70.2%" },
+      { "page": "/blog/sample-guide", "title": "Sample Guide", "views": 438, "users": 214, "engagement_rate": "58.0%" }
+    ],
+    "traffic_channels": [
+      { "channel": "Organic Search", "sessions": 1044, "users": 820, "conversions": 31 },
+      { "channel": "Direct", "sessions": 520, "users": 430, "conversions": 11 },
+      { "channel": "Referral", "sessions": 318, "users": 250, "conversions": 8 },
+      { "channel": "Paid Search", "sessions": 280, "users": 221, "conversions": 10 },
+      { "channel": "Organic Social", "sessions": 254, "users": 194, "conversions": 4 }
+    ],
+    "dimension_rows": [
+      {
+        "label": "Organic Search",
+        "metrics": [
+          { "name": "sessions", "value": 1044, "unit": "count" },
+          { "name": "users", "value": 820, "unit": "count" },
+          { "name": "key_events", "value": 31, "unit": "count" }
+        ]
+      },
+      {
+        "label": "Direct",
+        "metrics": [
+          { "name": "sessions", "value": 520, "unit": "count" },
+          { "name": "users", "value": 430, "unit": "count" },
+          { "name": "key_events", "value": 11, "unit": "count" }
+        ]
+      },
+      {
+        "label": "Referral",
+        "metrics": [
+          { "name": "sessions", "value": 318, "unit": "count" },
+          { "name": "users", "value": 250, "unit": "count" },
+          { "name": "key_events", "value": 8, "unit": "count" }
+        ]
+      },
+      {
+        "label": "Paid Search",
+        "metrics": [
+          { "name": "sessions", "value": 280, "unit": "count" },
+          { "name": "users", "value": 221, "unit": "count" },
+          { "name": "key_events", "value": 10, "unit": "count" }
+        ]
+      }
+    ],
+    "device_breakdown": [
+      { "device": "mobile", "sessions": 1328, "share": "55.0%" },
+      { "device": "desktop", "sessions": 917, "share": "38.0%" },
+      { "device": "tablet", "sessions": 171, "share": "7.0%" }
+    ]
+  },
+  "source_metadata": {
+    "fixture": true,
+    "source": "local_json_import",
+    "demo_label": "ga4_mock_json_import",
+    "live_sync": false,
+    "schema_version": "ga4_snapshot.v1",
+    "provider_key": "google_analytics",
+    "report_type": "channel_breakdown",
+    "property_resource": "properties/123456789",
+    "summary_counts": {
+      "metric_count": 9,
+      "dimension_row_count": 4
+    },
+    "warnings": []
+  },
+  "report_sections": [
+    {
+      "section_key": "ga4_json_website_performance_summary",
+      "title": "Website Performance Summary",
+      "summary": "A fake client-facing GA4 summary imported from JSON.",
+      "body": "This section validates the local JSON import path for future GA4 reporting snapshots.",
+      "chart_type": "metric_cards",
+      "sort_order": 210,
+      "visibility": "client",
+      "data_json": {
+        "metrics": {
+          "users": 1842,
+          "sessions": 2416,
+          "engaged_sessions": 1519,
+          "engagement_rate": "62.9%",
+          "conversions": 64,
+          "views": 6128
+        }
+      }
+    },
+    {
+      "section_key": "ga4_json_top_pages",
+      "title": "Top Pages",
+      "summary": "Fake page-level performance rows imported from JSON.",
+      "body": "The rows are generic and exist only for local report rendering QA.",
+      "chart_type": "table",
+      "sort_order": 220,
+      "visibility": "client",
+      "data_json": {
+        "rows": [
+          { "page": "/", "title": "Home", "views": 1420, "users": 740, "engagement_rate": "66.1%" },
+          { "page": "/services", "title": "Services", "views": 980, "users": 511, "engagement_rate": "61.4%" },
+          { "page": "/contact", "title": "Contact", "views": 612, "users": 295, "engagement_rate": "70.2%" }
+        ]
+      }
+    },
+    {
+      "section_key": "ga4_json_next_actions",
+      "title": "Recommended Next Actions",
+      "summary": "Fake recommendations from the GA4 mock import.",
+      "body": "These actions are local demo content and should not be treated as real analytics guidance.",
+      "chart_type": "checklist",
+      "sort_order": 230,
+      "visibility": "client",
+      "data_json": {
+        "items": [
+          "Confirm key event definitions before enabling a live GA4 sync.",
+          "Review high-engagement pages for conversion opportunities.",
+          "Prepare a client-facing summary rather than exposing raw analytics tables."
+        ]
+      }
+    }
+  ]
+}
