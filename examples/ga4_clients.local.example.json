@@ -1,26 +1,147 @@
 {
   "aluma": {
     "client_label": "Aluma Aesthetic Medicine",
+    "domain": "alumapdx.com",
     "portal_project_id": "4cb10985-5506-4789-8e68-de90a1025da7",
     "portal_report_id": "9fecb93f-b5a3-4998-94d7-c32bb57a2d94",
     "ga4_property_id": "341923472",
     "suggested_export_slug": "aluma",
-    "default_report_title": "Aluma April 2026 Website Performance Report",
-    "default_start_date": "2026-04-01",
-    "default_end_date": "2026-04-30",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
     "assigned_client_email": "aluma.client@musimack.local",
     "unrelated_client_email": "unrelated.client@musimack.local"
   },
-  "riverside": {
-    "client_label": "Riverside Home Services Demo",
+  "lucy_escobar": {
+    "client_label": "Lucy Escobar",
+    "domain": "lucyescobar.com",
+    "portal_project_id": "ee80f322-7281-4eca-9f7d-81d28237928e",
+    "ga4_property_id": "508902753",
+    "suggested_export_slug": "lucy_escobar",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "lucy.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "priority_tree_service": {
+    "client_label": "Priority Tree Service",
+    "domain": "prioritytreeservicellc.com",
+    "portal_project_id": "698b8742-e4cc-4537-bdb3-084e7c158500",
+    "ga4_property_id": "485105653",
+    "suggested_export_slug": "priority_tree_service",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "priority.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "pinnacle_contractors": {
+    "client_label": "Pinnacle Contractors",
+    "domain": "pinnaclecontractorsllc.com",
+    "portal_project_id": "00f6d0f9-8bbd-4173-ad00-51066843fbc5",
+    "ga4_property_id": "496038888",
+    "suggested_export_slug": "pinnacle_contractors",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "pinnacle.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "musimack_marketing": {
+    "client_label": "Musimack Marketing",
+    "domain": "musimackmarketing.com",
     "portal_project_id": "3db3c692-ec2c-4116-a941-62c15c9ea0ec",
     "portal_report_id": "6096b69d-cde9-4955-90da-fe757a93d686",
     "ga4_property_id": "310280796",
-    "suggested_export_slug": "riverside_home_services",
-    "default_report_title": "Riverside April 2026 Website Performance Report",
-    "default_start_date": "2026-04-01",
-    "default_end_date": "2026-04-30",
-    "assigned_client_email": "riverside.client@musimack.local",
+    "suggested_export_slug": "musimack_marketing",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "musimack.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "steadfast_decks": {
+    "client_label": "Steadfast Decks",
+    "domain": "steadfastdecks.com",
+    "portal_project_id": "f813ec54-84b0-44d5-8fa5-1a4968c7f7e7",
+    "ga4_property_id": "518729554",
+    "suggested_export_slug": "steadfast_decks",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "steadfast.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "portland_painting_lead_removal": {
+    "client_label": "Portland Painting & Lead Removal",
+    "domain": "portlandpaintingleadremoval.com",
+    "portal_project_id": "dbe6b88f-a83e-4344-9767-e2a1550ab8ef",
+    "ga4_property_id": "498216134",
+    "suggested_export_slug": "portland_painting_lead_removal",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "painting.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "universal_crystal_cleaning": {
+    "client_label": "Universal Crystal Cleaning",
+    "domain": "universalcrystalcleaning.com",
+    "portal_project_id": "3701de00-18c0-4903-ac70-1455a6dd5d37",
+    "ga4_property_id": "527514220",
+    "suggested_export_slug": "universal_crystal_cleaning",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "ucc.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "tualatin_chamber": {
+    "client_label": "Tualatin Chamber",
+    "domain": "",
+    "portal_project_id": "5aa56322-08b0-4f72-ac13-54ecfd9840e3",
+    "ga4_property_id": "352931605",
+    "suggested_export_slug": "tualatin_chamber",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "tualatin.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "west_coast_land_renewal": {
+    "client_label": "West Coast Land Renewal",
+    "domain": "",
+    "portal_project_id": "54bf7186-b9ae-49d8-9d25-c53aae6b61b2",
+    "ga4_property_id": "483842467",
+    "suggested_export_slug": "west_coast_land_renewal",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "wclr.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "inn_at_spanish_head": {
+    "client_label": "Inn At Spanish Head",
+    "domain": "spanishhead.com",
+    "portal_project_id": "cd39f3ec-58b7-4ecc-8691-8415e29e9545",
+    "ga4_property_id": "460499108",
+    "suggested_export_slug": "inn_at_spanish_head",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "spanishhead.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "the_word_salon": {
+    "client_label": "The Word Salon",
+    "domain": "thewordsalonsuites.com",
+    "portal_project_id": "5ee2fcb4-c54e-4c08-bef5-b7751c9040fd",
+    "ga4_property_id": "515763575",
+    "suggested_export_slug": "the_word_salon",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "wordsalon.client@musimack.local",
+    "unrelated_client_email": "unrelated.client@musimack.local"
+  },
+  "portland_tattoo_company": {
+    "client_label": "Portland Tattoo Company",
+    "domain": "portlandtattooco.com",
+    "portal_project_id": "f0f2461e-ae56-4f66-89bb-dc36561a4f91",
+    "ga4_property_id": "468421274",
+    "suggested_export_slug": "portland_tattoo_company",
+    "suggested_ytd_start_date": "2026-01-01",
+    "suggested_ytd_end_date": "2026-05-19",
+    "assigned_client_email": "portlandtattoo.client@musimack.local",
     "unrelated_client_email": "unrelated.client@musimack.local"
   }
 }

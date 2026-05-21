@@ -3,7 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.config import load_ga4_config
-from src.ga4_client import GA4_DATA_API_SCOPE, load_oauth_credentials
+import pytest
+
+from src.ga4_client import GA4_DATA_API_SCOPE, OAuthCredentialError, load_oauth_credentials
 
 
 class FakeCredentials:
@@ -116,3 +118,25 @@ def test_missing_token_file_launches_local_browser_flow(monkeypatch, tmp_path):
     assert FakeFlow.launched
     assert seen == {"path": "client.json", "scopes": [GA4_DATA_API_SCOPE]}
     assert token_file.exists()
+
+
+def test_invalid_token_cache_error_is_actionable(monkeypatch, tmp_path):
+    token_file = tmp_path / "token.json"
+    token_file.write_text("{}", encoding="utf-8")
+
+    def invalid_token(*_args, **_kwargs):
+        raise ValueError("missing client_secret and refresh_token")
+
+    monkeypatch.setattr(
+        "src.ga4_client.oauth_credentials.Credentials.from_authorized_user_file",
+        invalid_token,
+    )
+
+    with pytest.raises(OAuthCredentialError) as excinfo:
+        load_oauth_credentials("client.json", str(token_file))
+
+    message = str(excinfo.value)
+    assert "OAuth token cache is not usable" in message
+    assert "MUSIMACK_GA4_OAUTH_TOKEN_FILE" in message
+    assert "client_secret" not in message
+    assert "refresh_token" not in message

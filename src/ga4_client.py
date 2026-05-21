@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from google.auth.exceptions import GoogleAuthError, RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2 import credentials as oauth_credentials
 from google.oauth2 import service_account
@@ -16,6 +17,10 @@ GA4_RUN_REPORT_URL = "https://analyticsdata.googleapis.com/v1beta/{property_reso
 
 
 class Ga4ClientError(RuntimeError):
+    pass
+
+
+class OAuthCredentialError(Ga4ClientError):
     pass
 
 
@@ -84,23 +89,45 @@ def load_oauth_credentials(client_secrets_file: str, token_file: str):
     token_path = Path(token_file)
     credentials = None
     if token_path.exists():
-        credentials = oauth_credentials.Credentials.from_authorized_user_file(
-            str(token_path),
-            scopes=[GA4_DATA_API_SCOPE],
-        )
+        try:
+            credentials = oauth_credentials.Credentials.from_authorized_user_file(
+                str(token_path),
+                scopes=[GA4_DATA_API_SCOPE],
+            )
+        except (ValueError, OSError, GoogleAuthError) as exc:
+            raise OAuthCredentialError(
+                "OAuth token cache is not usable as authorized-user credentials; "
+                "refresh or recreate MUSIMACK_GA4_OAUTH_TOKEN_FILE with the bootstrap command"
+            ) from exc
     if credentials and credentials.valid:
         return credentials
     if credentials and credentials.expired and credentials.refresh_token:
-        credentials.refresh(Request())
-        save_oauth_credentials(token_path, credentials)
+        try:
+            credentials.refresh(Request())
+            save_oauth_credentials(token_path, credentials)
+        except (OSError, GoogleAuthError, RefreshError) as exc:
+            raise OAuthCredentialError(
+                "OAuth token refresh failed or token cache write was blocked; "
+                "run bootstrap from normal local PowerShell and confirm the token path is writable"
+            ) from exc
         return credentials
 
-    flow = InstalledAppFlow.from_client_secrets_file(
-        client_secrets_file,
-        scopes=[GA4_DATA_API_SCOPE],
-    )
-    credentials = flow.run_local_server(port=0)
-    save_oauth_credentials(token_path, credentials)
+    try:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            client_secrets_file,
+            scopes=[GA4_DATA_API_SCOPE],
+        )
+        credentials = flow.run_local_server(port=0)
+        save_oauth_credentials(token_path, credentials)
+    except FileNotFoundError as exc:
+        raise OAuthCredentialError(
+            "OAuth client secrets file was not found; check MUSIMACK_GA4_OAUTH_CLIENT_SECRETS"
+        ) from exc
+    except (OSError, ValueError, GoogleAuthError) as exc:
+        raise OAuthCredentialError(
+            "OAuth browser login or token cache write failed; run bootstrap from normal local PowerShell "
+            "and confirm the client secrets and token cache paths are readable/writable"
+        ) from exc
     return credentials
 
 

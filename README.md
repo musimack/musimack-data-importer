@@ -13,7 +13,7 @@ This project pulls Musimack-owned GA4 data, normalizes it, writes a sanitized `g
 - It does not create generated report sections.
 - It does not change client visibility.
 - It does not store raw GA4 provider responses, access tokens, refresh tokens, client secrets, service account keys, or Authorization headers in exports or Postgres.
-- It is not a web app, React UI, or final production OAuth/token-refresh system.
+- It is not a portal web app, React UI, scheduler, or final production OAuth/token-refresh system.
 
 ## Setup
 
@@ -43,6 +43,52 @@ https://www.googleapis.com/auth/analytics.readonly
 ```
 
 After that, the token file is reused. If the token is expired and refreshable, it is refreshed and saved. Do not commit OAuth client secrets or token files.
+
+## OAuth / Operator Readiness
+
+Before any real-client batch export, run the readiness diagnostic:
+
+```powershell
+python scripts/check_ga4_oauth_ready.py
+```
+
+The diagnostic prints only `PASS`, `WARN`, and `FAIL` lines. It confirms:
+
+- required environment variables are present without printing values,
+- `MUSIMACK_GA4_AUTH_METHOD` is `oauth`,
+- the OAuth client secrets path exists, is readable, and has the expected high-level desktop/web OAuth JSON shape,
+- the OAuth token cache parent directory exists and is writable,
+- an existing token file is readable and writable for refresh,
+- `MUSIMACK_PORTAL_DATABASE_URL` is present without printing it.
+
+Keep both OAuth files outside repos:
+
+```powershell
+$env:MUSIMACK_GA4_AUTH_METHOD="oauth"
+$env:MUSIMACK_GA4_OAUTH_CLIENT_SECRETS="C:\path\outside\repos\oauth-client-secrets.json"
+$env:MUSIMACK_GA4_OAUTH_TOKEN_FILE="C:\path\outside\repos\ga4-oauth-token.json"
+$env:MUSIMACK_PORTAL_DATABASE_URL="<local portal database url>"
+```
+
+If the token file is missing, bootstrap it without exporting reports:
+
+```powershell
+python scripts/bootstrap_ga4_oauth_token.py
+```
+
+The bootstrap command performs OAuth login/token creation or refresh only. It does not export GA4 reports, import snapshots, connect to the portal database, publish, link, or set active snapshots. It writes the token cache to `MUSIMACK_GA4_OAUTH_TOKEN_FILE` and never prints token contents.
+
+If browser login is required, run the bootstrap from normal local PowerShell. Avoid isolated Codex/app shells when they cannot open a browser, reach the local callback, or write to the configured token cache path.
+
+In this importer, `MUSIMACK_GA4_OAUTH_TOKEN_FILE` is a read/write authorized-user token cache. "Cache/token blocked" usually means one of these:
+
+- the token cache path points to a missing directory,
+- the current shell cannot read or write the token file,
+- the token file is not valid Google authorized-user credentials,
+- the token is expired but cannot be refreshed and rewritten,
+- browser auth cannot complete from the current shell.
+
+Do not run the 13-client YTD batch until `python scripts/check_ga4_oauth_ready.py` passes. If readiness passes but the first live export still fails, run only a single-client smoke export first, such as Aluma for `2026-05-01` through `2026-05-02`, then validate the sanitized JSON before continuing.
 
 ## Optional Service Account Fallback
 
@@ -127,6 +173,61 @@ python scripts/run_ga4_pipeline.py --start-date 2026-04-01 --end-date 2026-04-30
 
 Without `--write`, the combined command only exports JSON.
 
+## Local Importer Console
+
+The local browser console is a Streamlit MVP for operating the importer without hand-running every script.
+
+Install dependencies:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Set the operator environment variables before launching the console:
+
+```powershell
+$env:MUSIMACK_GA4_AUTH_METHOD="oauth"
+$env:MUSIMACK_GA4_OAUTH_CLIENT_SECRETS="C:\path\outside\repos\oauth-client-secrets.json"
+$env:MUSIMACK_GA4_OAUTH_TOKEN_FILE="C:\path\outside\repos\ga4-oauth-token.json"
+$env:MUSIMACK_PORTAL_DATABASE_URL="<local portal database url>"
+streamlit run app/importer_console.py
+```
+
+The console can:
+
+- load the real-client roster from `examples/ga4_clients.local.example.json`,
+- show safe client fields such as label, domain, GA4 property id, portal project id, report id, assigned email, export slug, and suggested YTD dates,
+- run OAuth/operator readiness checks with `PASS`, `WARN`, and `FAIL` messages,
+- choose one client and date range,
+- show the planned export filename,
+- run one selected-client export,
+- validate a sanitized `ga4_snapshot.v1` export,
+- import a validated export as an `internal`/`draft` portal snapshot,
+- run the read-only portal workflow helper,
+- show a safe run log and portal follow-up checklist.
+
+The console intentionally cannot:
+
+- run the 13-client batch automatically,
+- publish snapshots,
+- link snapshots to reports,
+- set active snapshots,
+- promote reports,
+- call portal admin mutation routes,
+- add scheduler/monthly automation,
+- move this importer into the portal repo,
+- display OAuth token contents, client secret JSON, raw provider responses, or raw provider payloads.
+
+If readiness reports missing environment variables, set them in the same PowerShell session before launching Streamlit. If readiness reports token/cache trouble, run:
+
+```powershell
+python scripts/bootstrap_ga4_oauth_token.py
+```
+
+Run bootstrap from normal local PowerShell when browser login is needed. Isolated shells can fail to open the browser callback or write the configured token cache, which is the common meaning of a cache/token blocked condition.
+
 ## Monthly Reporting Operator Flow
 
 Use this flow for each monthly local GA4 import:
@@ -157,6 +258,45 @@ Example:
 ```text
 exports/aluma_ga4_april_2026_richer.json
 ```
+
+## YTD Batch Prep
+
+For real-client-first YTD pulls, use a completed range rather than today's partial data. GA4 can continue processing data for 24 to 48 hours, so yesterday or two days ago is safer than today.
+
+For the next YTD batch milestone, use:
+
+```text
+2026-01-01 through 2026-05-19
+```
+
+Each client in `examples/ga4_clients.local.example.json` includes:
+
+- `client_label`
+- `domain`
+- `portal_project_id`
+- `portal_report_id` when already known
+- `ga4_property_id`
+- `suggested_export_slug`
+- `suggested_ytd_start_date`
+- `suggested_ytd_end_date`
+- local verification emails
+
+Suggested YTD export command shape:
+
+```powershell
+$env:MUSIMACK_GA4_PROPERTY_ID="<ga4_property_id>"
+python scripts/pull_ga4_traffic_overview.py --start-date 2026-01-01 --end-date 2026-05-19 --out exports/<suggested_export_slug>_ga4_ytd_2026-01-01_2026-05-19_richer.json
+python scripts/validate_ga4_snapshot.py --file exports/<suggested_export_slug>_ga4_ytd_2026-01-01_2026-05-19_richer.json
+```
+
+Suggested YTD import command shape:
+
+```powershell
+python scripts/import_ga4_snapshot.py --file exports/<suggested_export_slug>_ga4_ytd_2026-01-01_2026-05-19_richer.json --project-id <portal_project_id>
+python scripts/check_portal_ga4_workflow.py --project-id <portal_project_id> --assigned-email <assigned_client_email> --unrelated-email unrelated.client@musimack.local
+```
+
+The importer exports, validates, and imports `internal`/`draft` snapshots only. Portal follow-up is required for report linking, active snapshot selection, admin preview, explicit promotion, and access verification.
 
 ## Read-Only Portal Workflow Check
 
@@ -190,6 +330,8 @@ See `examples/ga4_clients.local.example.json` for a safe non-secret mapping form
 - default report title,
 - default date range,
 - assigned and unrelated local test users.
+
+Suggested verification emails for newer real-client rows are local test identities and may not exist in the portal until a later portal milestone creates them.
 
 Do not put OAuth secrets, tokens, password values, or credential JSON in client mapping files.
 
@@ -262,6 +404,84 @@ Importer-side richer Aluma GA4 snapshot import completed for `Aluma Aesthetic Me
 - Workflow helper live Google calls: none
 
 No raw GA4 API responses, OAuth client secrets, token file contents, refresh tokens, raw provider errors, secret values, or credential material were recorded in this note.
+
+## Milestone 132A YTD Batch Attempt
+
+Milestone 132A targets the real-client roster YTD range `2026-01-01` through `2026-05-19` and should export to:
+
+```text
+exports/ytd_2026/{slug}_ga4_ytd_2026_2026-01-01_to_2026-05-19.json
+```
+
+The planned batch includes all 13 real clients from `examples/ga4_clients.local.example.json`, including Aluma.
+
+Execution was safely blocked in the Codex shell because the required operator environment was not present:
+
+- `MUSIMACK_GA4_AUTH_METHOD`: missing
+- `MUSIMACK_GA4_OAUTH_CLIENT_SECRETS`: missing
+- `MUSIMACK_GA4_OAUTH_TOKEN_FILE`: missing
+- `MUSIMACK_PORTAL_DATABASE_URL`: missing
+
+No live GA4 export was attempted, no files were validated for this YTD batch, and no portal imports were run. The importer should only run this batch after those environment variables are set locally without printing their values.
+
+When the environment is ready, use the command pattern from the YTD Batch Prep section for each client:
+
+```powershell
+$env:MUSIMACK_GA4_PROPERTY_ID="<ga4_property_id>"
+python scripts/pull_ga4_traffic_overview.py --start-date 2026-01-01 --end-date 2026-05-19 --out exports/ytd_2026/<slug>_ga4_ytd_2026_2026-01-01_to_2026-05-19.json
+python scripts/validate_ga4_snapshot.py --file exports/ytd_2026/<slug>_ga4_ytd_2026_2026-01-01_to_2026-05-19.json
+python scripts/import_ga4_snapshot.py --file exports/ytd_2026/<slug>_ga4_ytd_2026_2026-01-01_to_2026-05-19.json --project-id <portal_project_id>
+python scripts/check_portal_ga4_workflow.py --project-id <portal_project_id>
+```
+
+Successful imports must remain `internal` / `draft`. The importer must not publish, link, set active snapshots, call portal admin mutation routes, or change client visibility.
+
+## Milestone 132A Retry YTD Import Note
+
+Milestone 132A Retry attempted the 13-client real portal roster YTD range `2026-01-01` through `2026-05-19`, including Aluma.
+
+Required operator environment variables were present and `MUSIMACK_GA4_AUTH_METHOD` matched the expected OAuth lane:
+
+- `MUSIMACK_GA4_AUTH_METHOD`: present
+- `MUSIMACK_GA4_OAUTH_CLIENT_SECRETS`: present
+- `MUSIMACK_GA4_OAUTH_TOKEN_FILE`: present
+- `MUSIMACK_PORTAL_DATABASE_URL`: present
+
+Live export was safely blocked before GA4 data was pulled because the configured OAuth token cache was not accepted as authorized-user credentials. No raw provider payloads, OAuth file contents, token contents, client secret JSON, or secret values were printed or recorded.
+
+Clients attempted:
+
+- Aluma Aesthetic Medicine
+- Lucy Escobar
+- Priority Tree Service
+- Pinnacle Contractors
+- Musimack Marketing
+- Steadfast Decks
+- Portland Painting & Lead Removal
+- Universal Crystal Cleaning
+- Tualatin Chamber
+- West Coast Land Renewal
+- Inn At Spanish Head
+- The Word Salon
+- Portland Tattoo Company
+
+Retry result:
+
+- Clients attempted: 13
+- Clients succeeded: 0
+- Clients failed/skipped: 13
+- Export files validated: 0
+- Snapshots imported: 0
+- Snapshot IDs: none
+- Sync run IDs: none
+- Sanitized counts: unavailable because no `ga4_snapshot.v1` YTD export was created
+- Workflow helper runs: none, because there were no successful imports
+
+Portal follow-up required before another retry:
+
+- Refresh or recreate the local OAuth authorized-user token cache outside the repo.
+- Re-run the same YTD export/import batch after OAuth credentials are usable.
+- Keep imports `internal` / `draft`; do not publish, link, set active, or call portal admin mutation routes from the importer.
 
 ## Tests
 
