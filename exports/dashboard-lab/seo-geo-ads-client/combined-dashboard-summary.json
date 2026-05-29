@@ -1,0 +1,66 @@
+{
+  "above_fold_module_order": [
+    "executive_summary",
+    "website_performance",
+    "paid_search"
+  ],
+  "active_services": [
+    "SEO/GEO",
+    "GA4 reporting",
+    "GSC reporting",
+    "Google Ads Search",
+    "Local SEO / Maps"
+  ],
+  "below_fold_module_order": [
+    "search_console",
+    "local_map_rankings",
+    "tasks",
+    "insights"
+  ],
+  "client_name": "Willamette Growth Demo",
+  "current_tasks": [
+    {
+      "service": "SEO/GEO",
+      "status": "planned",
+      "title": "Compare paid search terms against rising GSC queries"
+    },
+    {
+      "service": "Local SEO / Maps",
+      "status": "in_progress",
+      "title": "Refresh local landing page proof blocks"
+    }
+  ],
+  "domain": "willamettegrowth.example",
+  "fixture_profile": "seo-geo-ads-client",
+  "latest_report_date": "2026-04-30",
+  "local_only": true,
+  "mock_data": true,
+  "modules_enabled": [
+    "executive_summary",
+    "website_performance",
+    "search_console",
+    "paid_search",
+    "local_map_rankings",
+    "tasks",
+    "insights"
+  ],
+  "primary_market": "Portland Metro",
+  "primary_service_priority": "blended search growth",
+  "provider_summaries": {
+    "ga4": "ga4-summary.json",
+    "google_ads_search": "google-ads-search-summary.json",
+    "gsc": "gsc-summary.json",
+    "local_falcon": "local-falcon-summary.json"
+  },
+  "recent_insights": [
+    "Paid search fills gaps where organic ranking is still maturing.",
+    "Local visibility improvements are opening opportunities for lower paid dependence."
+  ],
+  "schema_version": "dashboard_lab_combined_summary.v1",
+  "source_mode": "synthetic_mock",
+  "top_strategy_focus": [
+    "Balance paid and organic coverage on high-intent service searches.",
+    "Improve local map visibility in priority service areas.",
+    "Use GSC query movement to guide paid search expansion."
+  ]
+}

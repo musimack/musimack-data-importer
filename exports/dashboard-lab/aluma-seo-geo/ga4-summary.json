@@ -1,8 +1,8 @@
 {
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "aluma-seo-geo",
   "insights": [
-    "Organic Search generated the largest session volume and the strongest assisted service-request activity.",
-    "High-intent landing pages are carrying most website engagement."
+    "Organic traffic is concentrated around treatment and service education pages.",
+    "Botox, dermal filler, and lip filler pages are the strongest organic engagement surfaces."
   ],
   "local_only": true,
   "mock_data": true,
@@ -14,13 +14,13 @@
   "schema_version": "dashboard_lab_provider_summary.v1",
   "source_mode": "synthetic_mock",
   "summary_metrics": {
-    "average_session_duration_seconds": 138,
-    "conversions": 312,
-    "engagement_rate": 0.684,
-    "event_count": 74520,
-    "sessions": 11385,
-    "users": 8420,
-    "views": 28640
+    "average_session_duration_seconds": 152,
+    "conversions": 186,
+    "engagement_rate": 0.712,
+    "event_count": 51240,
+    "sessions": 7940,
+    "users": 6120,
+    "views": 22680
   },
   "time_series": [
     {
@@ -236,76 +236,69 @@
   ],
   "top_pages": [
     {
-      "conversions": 62,
-      "path": "/",
-      "title": "Home",
-      "users": 2840,
-      "views": 6920
+      "conversions": 44,
+      "path": "/botox-portland",
+      "title": "Botox Portland",
+      "users": 1680,
+      "views": 3920
     },
     {
-      "conversions": 74,
-      "path": "/services/hvac-repair",
-      "title": "HVAC Repair",
-      "users": 1610,
-      "views": 4310
+      "conversions": 28,
+      "path": "/dysport-portland",
+      "title": "Dysport Portland",
+      "users": 1015,
+      "views": 2410
     },
     {
-      "conversions": 68,
-      "path": "/services/plumbing",
-      "title": "Plumbing Services",
-      "users": 1475,
-      "views": 3860
+      "conversions": 39,
+      "path": "/dermal-fillers",
+      "title": "Dermal Fillers",
+      "users": 1490,
+      "views": 3580
     },
     {
-      "conversions": 31,
-      "path": "/service-area/portland",
-      "title": "Portland Service Area",
-      "users": 980,
-      "views": 2510
+      "conversions": 17,
+      "path": "/sculptra",
+      "title": "Sculptra",
+      "users": 740,
+      "views": 1725
     },
     {
-      "conversions": 77,
-      "path": "/contact",
-      "title": "Request Service",
-      "users": 1160,
-      "views": 2280
+      "conversions": 24,
+      "path": "/lip-filler",
+      "title": "Lip Filler",
+      "users": 930,
+      "views": 2140
     }
   ],
   "traffic_channels": [
     {
       "channel": "Organic Search",
-      "conversions": 142,
-      "sessions": 4210,
-      "users": 3290,
-      "views": 11320
-    },
-    {
-      "channel": "Paid Search",
-      "conversions": 96,
-      "sessions": 2985,
-      "users": 2310,
-      "views": 7610
+      "conversions": 118,
+      "sessions": 3720,
+      "users": 2890,
+      "views": 10640
     },
     {
       "channel": "Direct",
-      "conversions": 28,
-      "sessions": 1640,
-      "users": 1304,
-      "views": 3840
+      "conversions": 31,
+      "sessions": 1260,
+      "users": 1010,
+      "views": 3140
     },
     {
       "channel": "Referral",
-      "conversions": 22,
-      "sessions": 1015,
-      "users": 870,
-      "views": 2510
+      "conversions": 13,
+      "sessions": 540,
+      "users": 465,
+      "views": 1410
     },
     {
       "channel": "Organic Social",
-      "conversions": 14,
-      "sessions": 760,
-      "users": 646,
-      "views": 1785
+      "conversions": 8,
+      "sessions": 420,
+      "users": 350,
+      "views": 980
     }
   ],
   "warnings": []

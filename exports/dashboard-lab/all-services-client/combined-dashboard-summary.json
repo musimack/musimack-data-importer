@@ -45,6 +45,7 @@
     }
   ],
   "domain": "riversidehomeservices.example",
+  "fixture_profile": "all-services-client",
   "latest_report_date": "2026-04-30",
   "local_only": true,
   "mock_data": true,

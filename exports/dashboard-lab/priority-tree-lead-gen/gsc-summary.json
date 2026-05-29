@@ -1,30 +1,24 @@
 {
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "priority-tree-lead-gen",
   "insights": [
-    "High-intent service terms improved into stronger average positions.",
-    "Service pages have large impression volume and should be tested for stronger calls to action."
+    "Emergency and removal terms are strongest for lead generation.",
+    "Pruning visibility is improving and can support seasonal demand."
   ],
   "local_only": true,
   "mock_data": true,
   "provider": "gsc",
   "query_movement": [
     {
-      "change": -1.9,
-      "current_position": 4.8,
-      "previous_position": 6.7,
-      "query": "hvac repair portland"
+      "change": -1.7,
+      "current_position": 5.7,
+      "previous_position": 7.4,
+      "query": "emergency tree service"
     },
     {
-      "change": -2.5,
-      "current_position": 8.9,
-      "previous_position": 11.4,
-      "query": "water heater replacement"
-    },
-    {
-      "change": 0.9,
-      "current_position": 10.1,
-      "previous_position": 9.2,
-      "query": "drain cleaning portland"
+      "change": -1.7,
+      "current_position": 7.2,
+      "previous_position": 8.9,
+      "query": "tree pruning near me"
     }
   ],
   "reporting_period": {
@@ -34,10 +28,10 @@
   "schema_version": "dashboard_lab_provider_summary.v1",
   "source_mode": "synthetic_mock",
   "summary_metrics": {
-    "average_position": 9.8,
-    "clicks": 4980,
-    "ctr": 0.0335,
-    "impressions": 148500
+    "average_position": 8.9,
+    "clicks": 5240,
+    "ctr": 0.0393,
+    "impressions": 133200
   },
   "time_series": [
     {
@@ -193,48 +187,42 @@
   ],
   "top_pages": [
     {
-      "clicks": 1120,
-      "ctr": 0.0418,
-      "impressions": 26800,
-      "path": "/services/hvac-repair"
+      "clicks": 1160,
+      "ctr": 0.0532,
+      "impressions": 21800,
+      "path": "/tree-removal"
     },
     {
-      "clicks": 980,
-      "ctr": 0.0326,
-      "impressions": 30100,
-      "path": "/services/plumbing"
+      "clicks": 840,
+      "ctr": 0.0512,
+      "impressions": 16400,
+      "path": "/emergency-tree-service"
     },
     {
-      "clicks": 625,
-      "ctr": 0.034,
-      "impressions": 18400,
-      "path": "/service-area/portland"
+      "clicks": 530,
+      "ctr": 0.0445,
+      "impressions": 11900,
+      "path": "/tree-pruning"
     }
   ],
   "top_queries": [
     {
+      "clicks": 710,
+      "impressions": 12800,
+      "position": 4.9,
+      "query": "tree removal portland"
+    },
+    {
       "clicks": 620,
-      "impressions": 11800,
-      "position": 4.8,
-      "query": "hvac repair portland"
+      "impressions": 10400,
+      "position": 5.7,
+      "query": "emergency tree service"
     },
     {
-      "clicks": 545,
-      "impressions": 13640,
-      "position": 6.1,
-      "query": "emergency plumber near me"
-    },
-    {
-      "clicks": 488,
-      "impressions": 9200,
-      "position": 5.3,
-      "query": "furnace repair portland"
-    },
-    {
-      "clicks": 315,
-      "impressions": 8700,
-      "position": 8.9,
-      "query": "water heater replacement"
+      "clicks": 388,
+      "impressions": 8200,
+      "position": 7.2,
+      "query": "tree pruning near me"
     }
   ],
   "warnings": []

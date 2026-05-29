@@ -1,29 +1,22 @@
 {
   "active_services": [
     "SEO/GEO",
-    "Google Ads Search",
-    "Google Ads LSA",
-    "Local SEO / Maps",
-    "Call Tracking",
-    "Website Maintenance",
-    "Hosting"
+    "GA4 reporting",
+    "GSC reporting",
+    "content performance"
   ],
-  "client_key": "all_services_client",
-  "client_name": "Riverside Home Services Demo",
-  "domain": "riversidehomeservices.example",
+  "client_key": "aluma_seo_geo",
+  "client_name": "Aluma Aesthetic Medicine",
+  "domain": "alumapdx.example",
   "enabled_providers": [
     "ga4",
-    "gsc",
-    "google_ads_search",
-    "google_ads_lsa",
-    "local_falcon",
-    "callrail"
+    "gsc"
   ],
   "fixture_notes": [
     "Synthetic local fixture for dashboard prototyping.",
     "No live provider connections, credentials, or portal database writes."
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "aluma-seo-geo",
   "local_only": true,
   "mock_data": true,
   "primary_market": "Portland Metro",

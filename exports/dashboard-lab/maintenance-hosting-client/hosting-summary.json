@@ -1,0 +1,37 @@
+{
+  "fixture_profile": "maintenance-hosting-client",
+  "health_checks": [
+    {
+      "name": "Daily backups",
+      "status": "healthy"
+    },
+    {
+      "name": "SSL certificate",
+      "status": "healthy"
+    },
+    {
+      "name": "Core web vitals watch",
+      "status": "monitoring"
+    }
+  ],
+  "insights": [
+    "Hosting is stable with successful daily backups.",
+    "No incidents were recorded in the synthetic reporting period."
+  ],
+  "local_only": true,
+  "mock_data": true,
+  "provider": "hosting",
+  "reporting_period": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "average_response_time_ms": 184,
+    "backups_completed": 30,
+    "incidents": 0,
+    "uptime_percent": 99.98
+  },
+  "warnings": []
+}

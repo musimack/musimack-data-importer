@@ -1,32 +1,23 @@
 {
   "active_services": [
-    "SEO/GEO",
-    "Google Ads Search",
-    "Google Ads LSA",
-    "Local SEO / Maps",
-    "Call Tracking",
     "Website Maintenance",
     "Hosting"
   ],
-  "client_key": "all_services_client",
-  "client_name": "Riverside Home Services Demo",
-  "domain": "riversidehomeservices.example",
+  "client_key": "maintenance_hosting_client",
+  "client_name": "Evergreen Care Plan Demo",
+  "domain": "evergreencareplan.example",
   "enabled_providers": [
-    "ga4",
-    "gsc",
-    "google_ads_search",
-    "google_ads_lsa",
-    "local_falcon",
-    "callrail"
+    "website_maintenance",
+    "hosting"
   ],
   "fixture_notes": [
     "Synthetic local fixture for dashboard prototyping.",
     "No live provider connections, credentials, or portal database writes."
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "maintenance-hosting-client",
   "local_only": true,
   "mock_data": true,
-  "primary_market": "Portland Metro",
+  "primary_market": "Local/Internal",
   "reporting_period": {
     "end": "2026-04-30",
     "start": "2026-04-01"

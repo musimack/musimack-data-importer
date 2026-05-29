@@ -1,20 +1,40 @@
 # Dashboard Lab Fixture Builder
 
-This repo can now generate a local-only synthetic all-services fixture folder for `musimack-dashboard-lab`.
+This repo can generate local-only synthetic fixture folders for `musimack-dashboard-lab`.
 
 The fixture data is mock data for dashboard prototyping. It does not connect to live providers, does not add OAuth, does not use credentials, does not write tokens, does not run schedulers, does not touch staging or production, and does not mutate the Musimack Client Portal database.
 
-Generate the default fixture folder:
+## Commands
+
+Generate the default all-services fixture:
 
 ```powershell
 python scripts/build_dashboard_lab_fixture.py
 ```
 
-Default output:
+Generate a specific profile:
 
-```text
-exports/dashboard-lab/all-services-client/
+```powershell
+python scripts/build_dashboard_lab_fixture.py --profile aluma-seo-geo
 ```
+
+Generate every profile:
+
+```powershell
+python scripts/build_dashboard_lab_fixture.py --all
+```
+
+Validate an existing profile folder:
+
+```powershell
+python scripts/build_dashboard_lab_fixture.py --validate-only --out exports/dashboard-lab/aluma-seo-geo
+```
+
+## Available Profiles
+
+### all-services-client
+
+Synthetic all-services profile for `Riverside Home Services Demo`.
 
 Generated files:
 
@@ -27,10 +47,70 @@ Generated files:
 - `callrail-summary.json`
 - `combined-dashboard-summary.json`
 
-Validate an existing fixture folder:
+### aluma-seo-geo
 
-```powershell
-python scripts/build_dashboard_lab_fixture.py --validate-only --out exports/dashboard-lab/all-services-client
-```
+Synthetic organic SEO/GEO profile for `Aluma Aesthetic Medicine`.
 
-The validator checks that expected files exist, JSON parses, required top-level fields exist, secret-like keys are absent, CallRail output does not include recording/transcript fields, CallRail output does not include real-looking phone numbers, and the combined summary references all provider summary files.
+Aluma is not modeled as an Ads Search or LSA client. This profile intentionally has no Ads, LSA, CallRail, or paid ads modules.
+
+Generated files:
+
+- `client-profile.json`
+- `ga4-summary.json`
+- `gsc-summary.json`
+- `combined-dashboard-summary.json`
+
+### priority-tree-lead-gen
+
+Synthetic tree-service lead generation profile. This can be used later for dashboard testing around Ads, Local Falcon, and CallRail patterns without using real account data.
+
+Generated files:
+
+- `client-profile.json`
+- `ga4-summary.json`
+- `gsc-summary.json`
+- `google-ads-search-summary.json`
+- `local-falcon-summary.json`
+- `callrail-summary.json`
+- `combined-dashboard-summary.json`
+
+### ads-client
+
+Synthetic paid-search-focused profile with GA4 conversion tracking context.
+
+Generated files:
+
+- `client-profile.json`
+- `ga4-summary.json`
+- `google-ads-search-summary.json`
+- `combined-dashboard-summary.json`
+
+### seo-geo-ads-client
+
+Synthetic blended SEO/GEO plus Ads profile with local map visibility.
+
+Generated files:
+
+- `client-profile.json`
+- `ga4-summary.json`
+- `gsc-summary.json`
+- `google-ads-search-summary.json`
+- `local-falcon-summary.json`
+- `combined-dashboard-summary.json`
+
+### maintenance-hosting-client
+
+Synthetic care-plan profile for a client with website maintenance and hosting but little or no marketing reporting.
+
+Generated files:
+
+- `client-profile.json`
+- `website-maintenance-summary.json`
+- `hosting-summary.json`
+- `combined-dashboard-summary.json`
+
+## Validation
+
+The validator is profile-aware. It checks that expected files exist for the selected profile, JSON parses successfully, required top-level fields exist, secret-like keys are absent, and `combined-dashboard-summary.json` references only provider summary files that are enabled and generated for that profile.
+
+When a CallRail file exists, validation also rejects recording/transcript fields and real-looking phone numbers.

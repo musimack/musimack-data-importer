@@ -1,0 +1,67 @@
+{
+  "above_fold_module_order": [
+    "executive_summary",
+    "website_performance",
+    "search_console"
+  ],
+  "active_services": [
+    "SEO/GEO",
+    "GA4 reporting",
+    "GSC reporting",
+    "content performance"
+  ],
+  "below_fold_module_order": [
+    "content_performance",
+    "tasks",
+    "insights"
+  ],
+  "client_name": "Aluma Aesthetic Medicine",
+  "current_tasks": [
+    {
+      "service": "SEO/GEO",
+      "status": "in_progress",
+      "title": "Refresh Botox and Dysport page comparison copy"
+    },
+    {
+      "service": "content performance",
+      "status": "planned",
+      "title": "Add internal links from filler education content to treatment pages"
+    },
+    {
+      "service": "GSC reporting",
+      "status": "planned",
+      "title": "Review GSC query movement for Sculptra and Kybella topics"
+    }
+  ],
+  "domain": "alumapdx.example",
+  "fixture_profile": "aluma-seo-geo",
+  "latest_report_date": "2026-04-30",
+  "local_only": true,
+  "mock_data": true,
+  "modules_enabled": [
+    "executive_summary",
+    "website_performance",
+    "search_console",
+    "content_performance",
+    "tasks",
+    "insights"
+  ],
+  "primary_market": "Portland Metro",
+  "primary_service_priority": "SEO/GEO",
+  "provider_summaries": {
+    "ga4": "ga4-summary.json",
+    "gsc": "gsc-summary.json"
+  },
+  "recent_insights": [
+    "Treatment pages are the primary organic performance surface.",
+    "Search demand is strongest around Botox, lip filler, cheek filler, and dermal fillers.",
+    "No Ads Search, LSA, or CallRail modules are enabled for this fixture."
+  ],
+  "schema_version": "dashboard_lab_combined_summary.v1",
+  "source_mode": "synthetic_mock",
+  "top_strategy_focus": [
+    "Improve organic visibility for treatment and service pages.",
+    "Track search demand across Botox, Dysport, fillers, and aesthetic medicine topics.",
+    "Use content performance to prioritize page refreshes and internal linking."
+  ]
+}

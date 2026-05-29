@@ -1,6 +1,7 @@
 {
+  "fixture_profile": "all-services-client",
   "insights": [
-    "Booked lead rate is strongest for HVAC repair.",
+    "Booked lead rate is strongest for urgent service categories.",
     "Dispute review should focus on out-of-area and wrong-service leads."
   ],
   "lead_categories": [
@@ -21,12 +22,6 @@
       "category": "Water Heater",
       "cost_per_lead": 58.9,
       "leads": 21
-    },
-    {
-      "booked_leads": 7,
-      "category": "Other Home Services",
-      "cost_per_lead": 66.8,
-      "leads": 15
     }
   ],
   "local_only": true,

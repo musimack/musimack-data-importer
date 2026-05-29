@@ -1,19 +1,19 @@
 {
   "ad_groups": [
     {
-      "campaign": "Search | HVAC Emergency",
+      "campaign": "Search | Emergency Tree Service",
       "conversions": 66,
       "name": "High Intent Core",
       "spend": 3910.8
     },
     {
-      "campaign": "Search | Plumbing Core",
+      "campaign": "Search | Tree Removal",
       "conversions": 28,
       "name": "Near Me Searches",
       "spend": 2075.4
     },
     {
-      "campaign": "Search | Brand",
+      "campaign": "Search | Tree Pruning",
       "conversions": 31,
       "name": "Service Variants",
       "spend": 1885.3
@@ -21,31 +21,25 @@
   ],
   "campaigns": [
     {
-      "clicks": 1290,
-      "conversions": 104,
-      "name": "Search | HVAC Emergency",
-      "spend": 6820.4
+      "clicks": 1080,
+      "conversions": 92,
+      "name": "Search | Emergency Tree Service",
+      "spend": 6420.3
     },
     {
-      "clicks": 1185,
-      "conversions": 88,
-      "name": "Search | Plumbing Core",
-      "spend": 5940.2
+      "clicks": 960,
+      "conversions": 74,
+      "name": "Search | Tree Removal",
+      "spend": 5280.8
     },
     {
-      "clicks": 715,
-      "conversions": 54,
-      "name": "Search | Water Heater",
-      "spend": 3160.9
-    },
-    {
-      "clicks": 420,
-      "conversions": 28,
-      "name": "Search | Brand",
-      "spend": 910.25
+      "clicks": 540,
+      "conversions": 36,
+      "name": "Search | Tree Pruning",
+      "spend": 2760.1
     }
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "priority-tree-lead-gen",
   "insights": [
     "High-intent search campaigns are the strongest paid conversion driver.",
     "Safe keyword previews are synthetic and contain no account exports."
@@ -59,24 +53,19 @@
   },
   "safe_keyword_preview": [
     {
-      "clicks": 245,
-      "conversions": 28,
-      "term": "emergency hvac repair"
+      "clicks": 210,
+      "conversions": 26,
+      "term": "emergency tree service"
     },
     {
-      "clicks": 218,
+      "clicks": 198,
       "conversions": 22,
-      "term": "plumber near me"
+      "term": "tree removal near me"
     },
     {
-      "clicks": 176,
-      "conversions": 17,
-      "term": "furnace repair portland"
-    },
-    {
-      "clicks": 149,
-      "conversions": 13,
-      "term": "water heater install"
+      "clicks": 132,
+      "conversions": 11,
+      "term": "tree pruning service"
     }
   ],
   "schema_version": "dashboard_lab_provider_summary.v1",

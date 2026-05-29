@@ -1,0 +1,76 @@
+{
+  "above_fold_module_order": [
+    "executive_summary",
+    "paid_search",
+    "call_tracking",
+    "local_map_rankings"
+  ],
+  "active_services": [
+    "SEO/GEO",
+    "GA4 reporting",
+    "GSC reporting",
+    "Google Ads Search",
+    "Local SEO / Maps",
+    "Call Tracking"
+  ],
+  "below_fold_module_order": [
+    "website_performance",
+    "search_console",
+    "tasks",
+    "insights"
+  ],
+  "client_name": "Priority Tree Service Demo",
+  "current_tasks": [
+    {
+      "service": "Google Ads Search",
+      "status": "planned",
+      "title": "Split emergency tree service ad group by urgent intent"
+    },
+    {
+      "service": "SEO/GEO",
+      "status": "in_progress",
+      "title": "Add pruning and tree removal proof sections to landing pages"
+    },
+    {
+      "service": "Call Tracking",
+      "status": "planned",
+      "title": "Review missed-call patterns during storm-related demand spikes"
+    }
+  ],
+  "domain": "prioritytreeservice.example",
+  "fixture_profile": "priority-tree-lead-gen",
+  "latest_report_date": "2026-04-30",
+  "local_only": true,
+  "mock_data": true,
+  "modules_enabled": [
+    "executive_summary",
+    "website_performance",
+    "search_console",
+    "paid_search",
+    "local_map_rankings",
+    "call_tracking",
+    "tasks",
+    "insights"
+  ],
+  "primary_market": "Portland Metro",
+  "primary_service_priority": "lead generation",
+  "provider_summaries": {
+    "callrail": "callrail-summary.json",
+    "ga4": "ga4-summary.json",
+    "google_ads_search": "google-ads-search-summary.json",
+    "gsc": "gsc-summary.json",
+    "local_falcon": "local-falcon-summary.json"
+  },
+  "recent_insights": [
+    "Emergency tree service demand produces high-value but volatile call volume.",
+    "Local ranking strength is best near the core Portland service area.",
+    "Paid and organic channels both support tree removal lead flow."
+  ],
+  "schema_version": "dashboard_lab_combined_summary.v1",
+  "source_mode": "synthetic_mock",
+  "top_strategy_focus": [
+    "Increase qualified tree removal and pruning leads.",
+    "Improve local visibility for emergency tree service searches.",
+    "Use call quality signals to tune paid search and landing pages."
+  ]
+}

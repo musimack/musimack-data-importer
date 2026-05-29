@@ -1,0 +1,40 @@
+{
+  "fixture_profile": "maintenance-hosting-client",
+  "insights": [
+    "Maintenance work is current and no marketing reporting modules are enabled.",
+    "Care-plan visibility can focus on tasks, updates, and operational status."
+  ],
+  "local_only": true,
+  "mock_data": true,
+  "provider": "website_maintenance",
+  "recent_activity": [
+    {
+      "date": "2026-04-05",
+      "status": "completed",
+      "type": "CMS update"
+    },
+    {
+      "date": "2026-04-12",
+      "status": "completed",
+      "type": "Plugin update batch"
+    },
+    {
+      "date": "2026-04-22",
+      "status": "completed",
+      "type": "Accessibility copy cleanup"
+    }
+  ],
+  "reporting_period": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "content_edits_completed": 7,
+    "open_maintenance_tasks": 3,
+    "security_checks_passed": 12,
+    "updates_completed": 18
+  },
+  "warnings": []
+}

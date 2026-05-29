@@ -1,32 +1,24 @@
 {
   "active_services": [
-    "SEO/GEO",
     "Google Ads Search",
-    "Google Ads LSA",
-    "Local SEO / Maps",
-    "Call Tracking",
-    "Website Maintenance",
-    "Hosting"
+    "GA4 reporting",
+    "conversion tracking summary"
   ],
-  "client_key": "all_services_client",
-  "client_name": "Riverside Home Services Demo",
-  "domain": "riversidehomeservices.example",
+  "client_key": "ads_client",
+  "client_name": "Cascade Paid Search Demo",
+  "domain": "cascadepaidsearch.example",
   "enabled_providers": [
     "ga4",
-    "gsc",
-    "google_ads_search",
-    "google_ads_lsa",
-    "local_falcon",
-    "callrail"
+    "google_ads_search"
   ],
   "fixture_notes": [
     "Synthetic local fixture for dashboard prototyping.",
     "No live provider connections, credentials, or portal database writes."
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "ads-client",
   "local_only": true,
   "mock_data": true,
-  "primary_market": "Portland Metro",
+  "primary_market": "Pacific Northwest",
   "reporting_period": {
     "end": "2026-04-30",
     "start": "2026-04-01"

@@ -1,5 +1,5 @@
 {
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "priority-tree-lead-gen",
   "insights": [
     "Organic Search generated the largest session volume and the strongest assisted service-request activity.",
     "High-intent landing pages are carrying most website engagement."
@@ -236,39 +236,39 @@
   ],
   "top_pages": [
     {
-      "conversions": 62,
-      "path": "/",
-      "title": "Home",
-      "users": 2840,
-      "views": 6920
+      "conversions": 86,
+      "path": "/tree-removal",
+      "title": "Tree Removal",
+      "users": 1740,
+      "views": 4680
     },
     {
-      "conversions": 74,
-      "path": "/services/hvac-repair",
-      "title": "HVAC Repair",
-      "users": 1610,
-      "views": 4310
+      "conversions": 72,
+      "path": "/emergency-tree-service",
+      "title": "Emergency Tree Service",
+      "users": 1380,
+      "views": 3210
     },
     {
-      "conversions": 68,
-      "path": "/services/plumbing",
-      "title": "Plumbing Services",
-      "users": 1475,
-      "views": 3860
+      "conversions": 41,
+      "path": "/tree-pruning",
+      "title": "Tree Pruning",
+      "users": 1150,
+      "views": 2860
     },
     {
-      "conversions": 31,
+      "conversions": 33,
       "path": "/service-area/portland",
-      "title": "Portland Service Area",
-      "users": 980,
-      "views": 2510
+      "title": "Portland Tree Service",
+      "users": 940,
+      "views": 2420
     },
     {
-      "conversions": 77,
+      "conversions": 64,
       "path": "/contact",
-      "title": "Request Service",
-      "users": 1160,
-      "views": 2280
+      "title": "Request Estimate",
+      "users": 1050,
+      "views": 2180
     }
   ],
   "traffic_channels": [

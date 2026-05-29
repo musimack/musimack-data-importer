@@ -45,7 +45,7 @@
       "spend": 910.25
     }
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "ads-client",
   "insights": [
     "High-intent search campaigns are the strongest paid conversion driver.",
     "Safe keyword previews are synthetic and contain no account exports."

@@ -1,0 +1,56 @@
+{
+  "above_fold_module_order": [
+    "executive_summary",
+    "maintenance",
+    "hosting"
+  ],
+  "active_services": [
+    "Website Maintenance",
+    "Hosting"
+  ],
+  "below_fold_module_order": [
+    "tasks",
+    "insights"
+  ],
+  "client_name": "Evergreen Care Plan Demo",
+  "current_tasks": [
+    {
+      "service": "Website Maintenance",
+      "status": "planned",
+      "title": "Apply monthly plugin and CMS updates"
+    },
+    {
+      "service": "Hosting",
+      "status": "in_progress",
+      "title": "Review backup restore-point status"
+    }
+  ],
+  "domain": "evergreencareplan.example",
+  "fixture_profile": "maintenance-hosting-client",
+  "latest_report_date": "2026-04-30",
+  "local_only": true,
+  "mock_data": true,
+  "modules_enabled": [
+    "executive_summary",
+    "maintenance",
+    "hosting",
+    "tasks",
+    "insights"
+  ],
+  "primary_market": "Local/Internal",
+  "primary_service_priority": "website operations",
+  "provider_summaries": {
+    "hosting": "hosting-summary.json",
+    "website_maintenance": "website-maintenance-summary.json"
+  },
+  "recent_insights": [
+    "No paid, organic, call tracking, or local rank modules are enabled for this fixture.",
+    "Operational health modules can stand alone for maintenance-only clients."
+  ],
+  "schema_version": "dashboard_lab_combined_summary.v1",
+  "source_mode": "synthetic_mock",
+  "top_strategy_focus": [
+    "Keep website maintenance, uptime, and hosting health visible without marketing modules.",
+    "Track care-plan tasks, updates, backups, and performance checks."
+  ]
+}

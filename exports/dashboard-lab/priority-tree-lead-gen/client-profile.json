@@ -1,21 +1,19 @@
 {
   "active_services": [
     "SEO/GEO",
+    "GA4 reporting",
+    "GSC reporting",
     "Google Ads Search",
-    "Google Ads LSA",
     "Local SEO / Maps",
-    "Call Tracking",
-    "Website Maintenance",
-    "Hosting"
+    "Call Tracking"
   ],
-  "client_key": "all_services_client",
-  "client_name": "Riverside Home Services Demo",
-  "domain": "riversidehomeservices.example",
+  "client_key": "priority_tree_lead_gen",
+  "client_name": "Priority Tree Service Demo",
+  "domain": "prioritytreeservice.example",
   "enabled_providers": [
     "ga4",
     "gsc",
     "google_ads_search",
-    "google_ads_lsa",
     "local_falcon",
     "callrail"
   ],
@@ -23,7 +21,7 @@
     "Synthetic local fixture for dashboard prototyping.",
     "No live provider connections, credentials, or portal database writes."
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "priority-tree-lead-gen",
   "local_only": true,
   "mock_data": true,
   "primary_market": "Portland Metro",

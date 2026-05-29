@@ -1,11 +1,11 @@
 {
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "priority-tree-lead-gen",
   "grid_metadata": {
     "grid_size": "7x7",
     "keywords_tracked": [
-      "hvac repair",
-      "plumber",
-      "water heater repair"
+      "tree removal",
+      "emergency tree service",
+      "tree pruning"
     ],
     "radius_miles": 8
   },
@@ -16,23 +16,23 @@
   "keyword_location_scans": [
     {
       "average_rank": 4.6,
-      "keyword": "hvac repair",
+      "keyword": "tree removal",
       "visibility_score": 78
     },
     {
       "average_rank": 6.1,
-      "keyword": "plumber",
+      "keyword": "emergency tree service",
       "visibility_score": 69
     },
     {
       "average_rank": 6.5,
-      "keyword": "water heater repair",
+      "keyword": "tree pruning",
       "visibility_score": 66
     }
   ],
   "local_only": true,
   "location_metadata": {
-    "business_name": "Riverside Home Services Demo",
+    "business_name": "Priority Tree Service Demo",
     "center_point_label": "Portland, OR",
     "primary_market": "Portland Metro"
   },

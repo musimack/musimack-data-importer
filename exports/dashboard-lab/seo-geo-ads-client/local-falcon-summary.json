@@ -1,5 +1,5 @@
 {
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "seo-geo-ads-client",
   "grid_metadata": {
     "grid_size": "7x7",
     "keywords_tracked": [
@@ -32,7 +32,7 @@
   ],
   "local_only": true,
   "location_metadata": {
-    "business_name": "Riverside Home Services Demo",
+    "business_name": "Willamette Growth Demo",
     "center_point_label": "Portland, OR",
     "primary_market": "Portland Metro"
   },

@@ -1,29 +1,25 @@
 {
   "active_services": [
     "SEO/GEO",
+    "GA4 reporting",
+    "GSC reporting",
     "Google Ads Search",
-    "Google Ads LSA",
-    "Local SEO / Maps",
-    "Call Tracking",
-    "Website Maintenance",
-    "Hosting"
+    "Local SEO / Maps"
   ],
-  "client_key": "all_services_client",
-  "client_name": "Riverside Home Services Demo",
-  "domain": "riversidehomeservices.example",
+  "client_key": "seo_geo_ads_client",
+  "client_name": "Willamette Growth Demo",
+  "domain": "willamettegrowth.example",
   "enabled_providers": [
     "ga4",
     "gsc",
     "google_ads_search",
-    "google_ads_lsa",
-    "local_falcon",
-    "callrail"
+    "local_falcon"
   ],
   "fixture_notes": [
     "Synthetic local fixture for dashboard prototyping.",
     "No live provider connections, credentials, or portal database writes."
   ],
-  "fixture_profile": "all-services-client",
+  "fixture_profile": "seo-geo-ads-client",
   "local_only": true,
   "mock_data": true,
   "primary_market": "Portland Metro",

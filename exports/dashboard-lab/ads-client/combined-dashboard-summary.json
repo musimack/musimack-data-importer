@@ -1,0 +1,58 @@
+{
+  "above_fold_module_order": [
+    "executive_summary",
+    "paid_search",
+    "website_performance"
+  ],
+  "active_services": [
+    "Google Ads Search",
+    "GA4 reporting",
+    "conversion tracking summary"
+  ],
+  "below_fold_module_order": [
+    "tasks",
+    "insights"
+  ],
+  "client_name": "Cascade Paid Search Demo",
+  "current_tasks": [
+    {
+      "service": "Google Ads Search",
+      "status": "in_progress",
+      "title": "Pause low-intent broad match terms"
+    },
+    {
+      "service": "GA4 reporting",
+      "status": "planned",
+      "title": "Review conversion tracking event consistency"
+    }
+  ],
+  "domain": "cascadepaidsearch.example",
+  "fixture_profile": "ads-client",
+  "latest_report_date": "2026-04-30",
+  "local_only": true,
+  "mock_data": true,
+  "modules_enabled": [
+    "executive_summary",
+    "website_performance",
+    "paid_search",
+    "tasks",
+    "insights"
+  ],
+  "primary_market": "Pacific Northwest",
+  "primary_service_priority": "paid search efficiency",
+  "provider_summaries": {
+    "ga4": "ga4-summary.json",
+    "google_ads_search": "google-ads-search-summary.json"
+  },
+  "recent_insights": [
+    "Non-brand search drives most spend and most conversion variance.",
+    "Landing page engagement is a good early warning signal for paid efficiency."
+  ],
+  "schema_version": "dashboard_lab_combined_summary.v1",
+  "source_mode": "synthetic_mock",
+  "top_strategy_focus": [
+    "Improve conversion rate from paid landing pages.",
+    "Reduce cost per conversion in non-brand search campaigns.",
+    "Use GA4 conversion tracking to validate paid search quality."
+  ]
+}
