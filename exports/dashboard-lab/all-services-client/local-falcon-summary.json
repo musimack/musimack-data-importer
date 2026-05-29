@@ -1,0 +1,95 @@
+{
+  "grid_metadata": {
+    "grid_size": "7x7",
+    "keywords_tracked": [
+      "hvac repair",
+      "plumber",
+      "water heater repair"
+    ],
+    "radius_miles": 8
+  },
+  "insights": [
+    "Map visibility improved for HVAC and plumbing keywords month over month.",
+    "Outer west-side ranking gaps should guide location page and review-generation priorities."
+  ],
+  "keyword_location_scans": [
+    {
+      "average_rank": 4.6,
+      "keyword": "hvac repair",
+      "visibility_score": 78
+    },
+    {
+      "average_rank": 6.1,
+      "keyword": "plumber",
+      "visibility_score": 69
+    },
+    {
+      "average_rank": 6.5,
+      "keyword": "water heater repair",
+      "visibility_score": 66
+    }
+  ],
+  "local_only": true,
+  "location_metadata": {
+    "business_name": "Riverside Home Services Demo",
+    "center_point_label": "Portland, OR",
+    "primary_market": "Portland Metro"
+  },
+  "mock_data": true,
+  "provider": "local_falcon",
+  "scan_date": "2026-04-28",
+  "scan_history": [
+    {
+      "average_rank": 7.8,
+      "scan_date": "2026-02-28",
+      "visibility_score": 62
+    },
+    {
+      "average_rank": 6.4,
+      "scan_date": "2026-03-28",
+      "visibility_score": 68
+    },
+    {
+      "average_rank": 5.7,
+      "scan_date": "2026-04-28",
+      "visibility_score": 71
+    }
+  ],
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "average_rank": 5.7,
+    "top_10_grid_share": 0.86,
+    "top_3_grid_share": 0.38,
+    "visibility_score": 71
+  },
+  "top_ranking_areas": [
+    {
+      "area": "North Portland",
+      "average_rank": 2.4
+    },
+    {
+      "area": "Pearl District",
+      "average_rank": 3.1
+    },
+    {
+      "area": "Sellwood",
+      "average_rank": 3.6
+    }
+  ],
+  "warnings": [],
+  "weak_ranking_areas": [
+    {
+      "area": "Beaverton",
+      "average_rank": 11.2
+    },
+    {
+      "area": "Gresham",
+      "average_rank": 10.7
+    },
+    {
+      "area": "Lake Oswego",
+      "average_rank": 9.8
+    }
+  ]
+}

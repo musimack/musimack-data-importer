@@ -8,7 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.oauth_readiness import build_oauth_readiness_report, report_has_failures
+from src.console_ops import build_console_readiness_report
+from src.local_config import load_local_operator_config
+from src.oauth_readiness import report_has_failures
 
 
 def main() -> int:
@@ -17,8 +19,11 @@ def main() -> int:
     )
     parser.parse_args()
 
-    checks = build_oauth_readiness_report()
+    local_config_status = load_local_operator_config()
+    checks = build_console_readiness_report()
     print("GA4 OAuth/operator readiness check")
+    for line in local_config_status.safe_summary_lines():
+        print(line)
     for check in checks:
         print(check.line())
     if report_has_failures(checks):

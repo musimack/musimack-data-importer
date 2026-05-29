@@ -1,0 +1,1541 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-05-19",
+    "start": "2026-01-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 867.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 818.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1091.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.241061
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 615.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 422.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1206.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.630894
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 66.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 65.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 68.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.378788
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 50.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 30.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 151.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.6
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Paid Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 35.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 34.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 67.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.657143
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Cross-network",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.25
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Pinnacle Contractors | General Contractor | Portland, OR (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1283.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 994.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 4236.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 81.897307
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Structural Repairs | Pinnacle Contractors | Portland, OR (/contractor-services/structural-repairs/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 205.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 156.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 715.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 47.262641
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "About Us | Andrew Eshleman, General Contractor | Pinnacle Contractors | Portland, OR (/about/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 172.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 132.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 475.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 80.485057
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Contact Us | Pinnacle Contractors | Portland, OR (/contact/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 144.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 118.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 339.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 124.531359
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Blog | Pinnacle Contractors | Portland, OR (/blogs/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 90.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 32.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 208.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 171.965498
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Home Remodeling | Kitchen & Bath Remodels | Pinnacle Contractors | Portland, OR (/contractor-services/home-remodeling/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 74.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 57.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 172.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 48.881404
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Case Studies - Pinnacle Contractors | Portland, OR (/case-studies/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 71.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 60.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 187.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 61.119356
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Decks, Patio Covers, Sheds & Pergolas - Pinnacle Contractors | Portland, OR (/contractor-services/patio-covers-sheds-and-pergolas/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 54.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 37.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 114.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 133.855481
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Custom Carpentry | Pinnacle Contractors | Portland, OR (/contractor-services/custom-carpentry/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 49.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 42.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 140.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 50.531825
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Thank You - Pinnacle Contractors | Portland, OR (/thank-you/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 34.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 32.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 73.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 125.718859
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 1461.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 1644.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.410584
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 118.27036
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 2590.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 7770.0
+    }
+  ],
+  "property_resource": "properties/496038888",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 1461 users, 1644 sessions, and 2590 views.",
+  "summary_counts": {
+    "dimension_row_count": 17,
+    "metric_count": 6,
+    "time_series_count": 139
+  },
+  "time_series": [
+    {
+      "date": "2026-01-01",
+      "event_count": 52.0,
+      "sessions": 15.0,
+      "users": 13.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-01-02",
+      "event_count": 94.0,
+      "sessions": 15.0,
+      "users": 15.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-01-03",
+      "event_count": 28.0,
+      "sessions": 8.0,
+      "users": 6.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-01-04",
+      "event_count": 48.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-01-05",
+      "event_count": 68.0,
+      "sessions": 16.0,
+      "users": 16.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-01-06",
+      "event_count": 84.0,
+      "sessions": 23.0,
+      "users": 21.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-01-07",
+      "event_count": 62.0,
+      "sessions": 13.0,
+      "users": 10.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-01-08",
+      "event_count": 69.0,
+      "sessions": 15.0,
+      "users": 15.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-01-09",
+      "event_count": 63.0,
+      "sessions": 14.0,
+      "users": 14.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-01-10",
+      "event_count": 67.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-01-11",
+      "event_count": 155.0,
+      "sessions": 39.0,
+      "users": 38.0,
+      "views": 42.0
+    },
+    {
+      "date": "2026-01-12",
+      "event_count": 66.0,
+      "sessions": 15.0,
+      "users": 14.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-01-13",
+      "event_count": 79.0,
+      "sessions": 19.0,
+      "users": 15.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-01-14",
+      "event_count": 34.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-01-15",
+      "event_count": 76.0,
+      "sessions": 19.0,
+      "users": 16.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-01-16",
+      "event_count": 46.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-01-17",
+      "event_count": 21.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-01-18",
+      "event_count": 57.0,
+      "sessions": 11.0,
+      "users": 11.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-01-19",
+      "event_count": 81.0,
+      "sessions": 17.0,
+      "users": 12.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-01-20",
+      "event_count": 40.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-01-21",
+      "event_count": 173.0,
+      "sessions": 14.0,
+      "users": 12.0,
+      "views": 72.0
+    },
+    {
+      "date": "2026-01-22",
+      "event_count": 127.0,
+      "sessions": 16.0,
+      "users": 15.0,
+      "views": 46.0
+    },
+    {
+      "date": "2026-01-23",
+      "event_count": 78.0,
+      "sessions": 15.0,
+      "users": 12.0,
+      "views": 27.0
+    },
+    {
+      "date": "2026-01-24",
+      "event_count": 24.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-01-25",
+      "event_count": 8.0,
+      "sessions": 3.0,
+      "users": 1.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-01-26",
+      "event_count": 109.0,
+      "sessions": 28.0,
+      "users": 19.0,
+      "views": 36.0
+    },
+    {
+      "date": "2026-01-27",
+      "event_count": 106.0,
+      "sessions": 24.0,
+      "users": 22.0,
+      "views": 35.0
+    },
+    {
+      "date": "2026-01-28",
+      "event_count": 56.0,
+      "sessions": 12.0,
+      "users": 11.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-01-29",
+      "event_count": 91.0,
+      "sessions": 24.0,
+      "users": 22.0,
+      "views": 29.0
+    },
+    {
+      "date": "2026-01-30",
+      "event_count": 48.0,
+      "sessions": 12.0,
+      "users": 11.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-01-31",
+      "event_count": 9.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-02-01",
+      "event_count": 33.0,
+      "sessions": 4.0,
+      "users": 3.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-02-02",
+      "event_count": 51.0,
+      "sessions": 12.0,
+      "users": 11.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-02-03",
+      "event_count": 25.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-02-04",
+      "event_count": 91.0,
+      "sessions": 22.0,
+      "users": 21.0,
+      "views": 27.0
+    },
+    {
+      "date": "2026-02-05",
+      "event_count": 50.0,
+      "sessions": 12.0,
+      "users": 11.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-02-06",
+      "event_count": 48.0,
+      "sessions": 7.0,
+      "users": 5.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-02-07",
+      "event_count": 49.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-08",
+      "event_count": 15.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-02-09",
+      "event_count": 38.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-02-10",
+      "event_count": 55.0,
+      "sessions": 14.0,
+      "users": 13.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-11",
+      "event_count": 69.0,
+      "sessions": 13.0,
+      "users": 12.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-02-12",
+      "event_count": 80.0,
+      "sessions": 20.0,
+      "users": 16.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-02-13",
+      "event_count": 10.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-02-14",
+      "event_count": 34.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-02-15",
+      "event_count": 27.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-02-16",
+      "event_count": 73.0,
+      "sessions": 14.0,
+      "users": 14.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-02-17",
+      "event_count": 50.0,
+      "sessions": 13.0,
+      "users": 11.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-02-18",
+      "event_count": 31.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-02-19",
+      "event_count": 58.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-20",
+      "event_count": 25.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-02-21",
+      "event_count": 22.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-02-22",
+      "event_count": 44.0,
+      "sessions": 14.0,
+      "users": 14.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-02-23",
+      "event_count": 68.0,
+      "sessions": 15.0,
+      "users": 12.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-02-24",
+      "event_count": 47.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-02-25",
+      "event_count": 47.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-02-26",
+      "event_count": 126.0,
+      "sessions": 22.0,
+      "users": 22.0,
+      "views": 44.0
+    },
+    {
+      "date": "2026-02-27",
+      "event_count": 82.0,
+      "sessions": 25.0,
+      "users": 24.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-02-28",
+      "event_count": 16.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-01",
+      "event_count": 66.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-03-02",
+      "event_count": 118.0,
+      "sessions": 20.0,
+      "users": 19.0,
+      "views": 51.0
+    },
+    {
+      "date": "2026-03-03",
+      "event_count": 25.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-03-04",
+      "event_count": 42.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-03-05",
+      "event_count": 95.0,
+      "sessions": 16.0,
+      "users": 16.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-03-06",
+      "event_count": 64.0,
+      "sessions": 11.0,
+      "users": 11.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-03-07",
+      "event_count": 29.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-03-08",
+      "event_count": 9.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-03-09",
+      "event_count": 74.0,
+      "sessions": 20.0,
+      "users": 19.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-03-10",
+      "event_count": 82.0,
+      "sessions": 17.0,
+      "users": 16.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-03-11",
+      "event_count": 32.0,
+      "sessions": 8.0,
+      "users": 5.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-03-12",
+      "event_count": 39.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-03-13",
+      "event_count": 33.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-03-14",
+      "event_count": 22.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-03-15",
+      "event_count": 52.0,
+      "sessions": 11.0,
+      "users": 8.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-03-16",
+      "event_count": 68.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-03-17",
+      "event_count": 118.0,
+      "sessions": 25.0,
+      "users": 18.0,
+      "views": 41.0
+    },
+    {
+      "date": "2026-03-18",
+      "event_count": 187.0,
+      "sessions": 25.0,
+      "users": 22.0,
+      "views": 70.0
+    },
+    {
+      "date": "2026-03-19",
+      "event_count": 143.0,
+      "sessions": 29.0,
+      "users": 23.0,
+      "views": 52.0
+    },
+    {
+      "date": "2026-03-20",
+      "event_count": 35.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-03-21",
+      "event_count": 30.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-03-22",
+      "event_count": 21.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-03-23",
+      "event_count": 53.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-03-24",
+      "event_count": 116.0,
+      "sessions": 18.0,
+      "users": 14.0,
+      "views": 42.0
+    },
+    {
+      "date": "2026-03-25",
+      "event_count": 84.0,
+      "sessions": 10.0,
+      "users": 6.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-03-26",
+      "event_count": 117.0,
+      "sessions": 18.0,
+      "users": 13.0,
+      "views": 41.0
+    },
+    {
+      "date": "2026-03-27",
+      "event_count": 69.0,
+      "sessions": 16.0,
+      "users": 13.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-03-28",
+      "event_count": 16.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-29",
+      "event_count": 29.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-03-30",
+      "event_count": 37.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-03-31",
+      "event_count": 30.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-01",
+      "event_count": 53.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 38.0,
+      "sessions": 10.0,
+      "users": 10.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 51.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 13.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 38.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 31.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 43.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 42.0,
+      "sessions": 11.0,
+      "users": 11.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 41.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-04-10",
+      "event_count": 20.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-04-11",
+      "event_count": 75.0,
+      "sessions": 18.0,
+      "users": 18.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-04-12",
+      "event_count": 22.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 41.0,
+      "sessions": 9.0,
+      "users": 7.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-04-14",
+      "event_count": 88.0,
+      "sessions": 12.0,
+      "users": 7.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 25.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 31.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 37.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 14.0,
+      "sessions": 5.0,
+      "users": 3.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 19.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 56.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 19.0
+    },
+    {
+      "date": "2026-04-21",
+      "event_count": 38.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 47.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 25.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 43.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-04-25",
+      "event_count": 18.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 21.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 26.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 135.0,
+      "sessions": 20.0,
+      "users": 16.0,
+      "views": 48.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 73.0,
+      "sessions": 10.0,
+      "users": 7.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 142.0,
+      "sessions": 18.0,
+      "users": 15.0,
+      "views": 53.0
+    },
+    {
+      "date": "2026-05-01",
+      "event_count": 19.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-05-02",
+      "event_count": 23.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-05-03",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-05-04",
+      "event_count": 27.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-05-05",
+      "event_count": 109.0,
+      "sessions": 18.0,
+      "users": 16.0,
+      "views": 37.0
+    },
+    {
+      "date": "2026-05-06",
+      "event_count": 56.0,
+      "sessions": 11.0,
+      "users": 11.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-05-07",
+      "event_count": 42.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-05-08",
+      "event_count": 69.0,
+      "sessions": 16.0,
+      "users": 14.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-05-09",
+      "event_count": 53.0,
+      "sessions": 12.0,
+      "users": 11.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-05-10",
+      "event_count": 60.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-05-11",
+      "event_count": 82.0,
+      "sessions": 19.0,
+      "users": 17.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-05-12",
+      "event_count": 68.0,
+      "sessions": 19.0,
+      "users": 17.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-05-13",
+      "event_count": 87.0,
+      "sessions": 25.0,
+      "users": 25.0,
+      "views": 27.0
+    },
+    {
+      "date": "2026-05-14",
+      "event_count": 83.0,
+      "sessions": 21.0,
+      "users": 13.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-05-15",
+      "event_count": 41.0,
+      "sessions": 12.0,
+      "users": 8.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-05-16",
+      "event_count": 44.0,
+      "sessions": 14.0,
+      "users": 9.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-05-17",
+      "event_count": 42.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-05-18",
+      "event_count": 46.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-05-19",
+      "event_count": 49.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 17.0
+    }
+  ],
+  "warnings": []
+}

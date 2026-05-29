@@ -185,15 +185,28 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Set the operator environment variables before launching the console:
+Create local operator config once:
 
 ```powershell
-$env:MUSIMACK_GA4_AUTH_METHOD="oauth"
-$env:MUSIMACK_GA4_OAUTH_CLIENT_SECRETS="C:\path\outside\repos\oauth-client-secrets.json"
-$env:MUSIMACK_GA4_OAUTH_TOKEN_FILE="C:\path\outside\repos\ga4-oauth-token.json"
-$env:MUSIMACK_PORTAL_DATABASE_URL="<local portal database url>"
-streamlit run app/importer_console.py
+Copy-Item .env.local.example .env.local
+notepad .env.local
 ```
+
+Fill `.env.local` with local operator values. The file is ignored by Git. It may point to OAuth client JSON and token JSON files, but those files should also live outside this repo and their contents should never be pasted into `.env.local`.
+
+Config precedence is:
+
+1. OS environment variables already set in the shell,
+2. `.env.local`,
+3. `.env.example` as documentation only.
+
+Launch the console:
+
+```powershell
+python -m streamlit run app/importer_console.py
+```
+
+The console loads `.env.local` on startup without overriding OS environment variables. It displays whether `.env.local` was found and parsed, but never displays config values.
 
 The console can:
 
@@ -220,13 +233,51 @@ The console intentionally cannot:
 - move this importer into the portal repo,
 - display OAuth token contents, client secret JSON, raw provider responses, or raw provider payloads.
 
-If readiness reports missing environment variables, set them in the same PowerShell session before launching Streamlit. If readiness reports token/cache trouble, run:
+If readiness reports missing environment variables, create or update `.env.local`, then restart Streamlit. If readiness reports token/cache trouble, run:
 
 ```powershell
 python scripts/bootstrap_ga4_oauth_token.py
 ```
 
 Run bootstrap from normal local PowerShell when browser login is needed. Isolated shells can fail to open the browser callback or write the configured token cache, which is the common meaning of a cache/token blocked condition.
+
+### Aluma Smoke Test Through The Console
+
+Use this before any 13-client YTD batch. The goal is to prove the console can see the local operator environment, complete OAuth readiness, export one tiny GA4 range, and validate the sanitized output.
+
+1. Launch the console:
+
+```powershell
+python -m streamlit run app/importer_console.py
+```
+
+2. Confirm the Environment Readiness panel has no `FAIL` lines.
+
+3. Select `Aluma Aesthetic Medicine`.
+
+4. Set the date range:
+
+```text
+2026-05-01 through 2026-05-02
+```
+
+5. Confirm the output file is:
+
+```text
+exports/smoke/aluma_ga4_smoke_2026-05-01_to_2026-05-02.json
+```
+
+6. Click `Run Export`, then `Validate Export`.
+
+Smoke validation success looks like:
+
+- schema/version is `ga4_snapshot.v1`,
+- provider/provider key is `ga4` / `google_analytics`,
+- date range is `2026-05-01` through `2026-05-02`,
+- metrics, daily trend points, traffic channel rows, and top page rows are summarized,
+- secret-like fields are not detected.
+
+Do not import the smoke snapshot unless there is a specific reason. If token/cache/browser OAuth is blocked, stop before export, run `python scripts/check_ga4_oauth_ready.py`, then run `python scripts/bootstrap_ga4_oauth_token.py` from normal local PowerShell if the token cache needs creation or refresh.
 
 ## Monthly Reporting Operator Flow
 
@@ -241,11 +292,16 @@ Use this flow for each monthly local GA4 import:
 7. Run `scripts/check_portal_ga4_workflow.py`.
 8. Switch to the portal/admin workflow.
 9. Explicitly link the new snapshot to the intended report or use the portal set-active route for an existing link.
-10. Admin-preview the Website Performance Summary.
-11. Explicitly promote/publish only after review.
-12. Verify assigned-client access and unrelated-client denial through the portal.
+10. Confirm older linked snapshots are historical/inactive, not deleted.
+11. Admin-preview the Website Performance Summary.
+12. Explicitly promote/publish only after review.
+13. Verify assigned-client access and unrelated-client denial through the portal.
 
 Keep the transport and display lanes separate: this importer pulls/sanitizes GA4 data, while the portal owns report linking, active snapshot selection, promotion, and all visibility rules.
+
+Monthly replacement is not automatic. A new import should appear in the portal as a new `internal` / `draft` `ga4_snapshot.v1` row with its own date range. It should not replace the previous active report source until an admin explicitly links it, sets it active, previews it, and promotes the selected report/snapshot pair in the portal. Older linked snapshots should remain inactive/historical for auditability and future comparison planning.
+
+The Streamlit console follow-up checklist mirrors that handoff: validate first, import internal/draft, run the read-only workflow helper, then finish link/set-active/promote/access QA inside the portal. The console must not call portal admin mutation routes, set active snapshots, publish reports, or make imported snapshots client-visible.
 
 Suggested filename pattern:
 
@@ -482,6 +538,160 @@ Portal follow-up required before another retry:
 - Refresh or recreate the local OAuth authorized-user token cache outside the repo.
 - Re-run the same YTD export/import batch after OAuth credentials are usable.
 - Keep imports `internal` / `draft`; do not publish, link, set active, or call portal admin mutation routes from the importer.
+
+## Milestone 132A-3 YTD Import Note
+
+Milestone 132A-3 ran the real 13-client YTD export/validation batch for `2026-01-01` through `2026-05-19` after OAuth readiness and the Aluma smoke export were proven.
+
+Readiness result:
+
+- `.env.local` loaded local operator settings without printing values.
+- OAuth auth method was `oauth`.
+- OAuth client secrets file existed and was readable; contents were not printed.
+- OAuth token cache existed, was readable, and was writable; contents were not printed.
+- Portal database URL setting was present; value was not printed.
+- Exports directory was writable.
+
+CLI/operator consistency fix:
+
+- `src.config` now loads `.env.local` before GA4 and portal database config reads.
+- Direct export/import/workflow helper scripts no longer require manually setting PowerShell `$env:` variables when `.env.local` is populated.
+- OS environment variables still take precedence over `.env.local`.
+
+YTD export and validation results:
+
+| Client | Export | Validation | Metrics | Trend points | Channel rows | Top page rows | Warnings |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Aluma Aesthetic Medicine | succeeded | passed | 6 | 139 | 6 | 10 | 0 |
+| Lucy Escobar | succeeded | passed | 6 | 136 | 7 | 10 | 0 |
+| Priority Tree Service | succeeded | passed | 6 | 138 | 7 | 10 | 0 |
+| Pinnacle Contractors | succeeded | passed | 6 | 139 | 7 | 10 | 0 |
+| Musimack Marketing | succeeded | passed | 6 | 138 | 5 | 10 | 0 |
+| Steadfast Decks | succeeded | passed | 6 | 111 | 7 | 10 | 0 |
+| Portland Painting & Lead Removal | succeeded | passed | 6 | 29 | 5 | 10 | 0 |
+| Universal Crystal Cleaning | succeeded | passed | 6 | 47 | 6 | 10 | 0 |
+| Tualatin Chamber | succeeded | passed | 6 | 139 | 5 | 10 | 0 |
+| West Coast Land Renewal | succeeded | passed | 6 | 131 | 7 | 10 | 0 |
+| Inn At Spanish Head | succeeded | passed | 6 | 139 | 7 | 10 | 0 |
+| The Word Salon | succeeded | passed | 6 | 138 | 5 | 10 | 0 |
+| Portland Tattoo Company | succeeded | passed | 6 | 130 | 9 | 10 | 0 |
+
+Each validated export reported `ga4_snapshot.v1`, `ga4/google_analytics`, the expected YTD date range, and no secret-like fields.
+
+Import result:
+
+- Import attempts: 13
+- Imports succeeded: 0
+- Imports failed: 13
+- Failure category: portal database connection/write unavailable from the importer process (`OperationalError`)
+- Snapshot IDs: none
+- Sync run IDs: none
+- Workflow helper runs: none, because no imports succeeded
+
+Portal follow-up required:
+
+- Restore local portal database connectivity for `MUSIMACK_PORTAL_DATABASE_URL`.
+- Re-run imports for the already validated YTD export files.
+- Keep all imports `internal` / `draft`.
+- Do not publish, link, set active, promote, or call portal admin mutation routes from this importer.
+
+No raw GA4 provider responses, OAuth client secrets, token contents, credential JSON, raw database URL, raw provider errors, or secret values were recorded in this note.
+
+## Milestone 132A-4 Portal DB Import Attempt
+
+Milestone 132A-4 did not rerun live GA4 exports. It reused the existing YTD files in `exports/ytd_2026/` for `2026-01-01` through `2026-05-19`.
+
+Database readiness diagnosis:
+
+- `.env.local` loaded local operator settings without printing values.
+- `MUSIMACK_PORTAL_DATABASE_URL` was present; value was not printed.
+- Read-only database connection check failed safely.
+- Failure category: authentication failed.
+- No import was attempted after the DB readiness failure.
+
+Offline export revalidation:
+
+- YTD files found: 13
+- YTD files validated: 13
+- YTD files skipped: 0
+- Each file validated as `ga4_snapshot.v1` with provider/provider key `ga4/google_analytics`, date range `2026-01-01` through `2026-05-19`, and no secret-like fields detected.
+
+Import result:
+
+- Import attempts: 0
+- Imports succeeded: 0
+- Imports failed: 0
+- Snapshot IDs: none
+- Sync run IDs: none
+- Workflow helper runs: none
+
+Local operator follow-up:
+
+- Verify the local portal database service is running.
+- Verify the database host and port are reachable.
+- Verify the database name, user, and password in `.env.local`.
+- Verify the configured user can authenticate to the local portal database.
+- After DB readiness passes, rerun only the import/workflow-helper phase against the already validated YTD files.
+
+The importer must still keep imported snapshots `internal` / `draft` and must not publish, link, set active, promote, or call portal admin mutation routes.
+
+No raw DB URL, credentials, OAuth token contents, OAuth client secret JSON, raw GA4 provider payloads, or raw provider responses were recorded in this note.
+
+## Milestone 132A-5 Remaining YTD Imports
+
+Milestone 132A-5 imported the remaining validated YTD exports after portal database readiness was restored. No live GA4 exports were rerun.
+
+Readiness:
+
+- OAuth/operator readiness passed.
+- Portal database readiness passed.
+- Existing YTD exports found: 13
+- Existing YTD exports validated: 13
+- Existing YTD exports skipped: 0
+
+Aluma was not imported again because it had already been manually imported:
+
+- Snapshot id: `a7232b75-90d5-4556-8945-8953dfcfc3ba`
+- Sync run id: `66bec54c-2844-44cc-b11b-0a1bd09286d2`
+- Initial state: `internal` / `draft`
+
+Remaining import results:
+
+| Client | Snapshot id | Sync run id | Counts |
+| --- | --- | --- | --- |
+| Lucy Escobar | `37274047-9e77-4eb6-a1bd-68c549d14b72` | `a79c6a19-ca3d-4285-9324-56fb9f232339` | 6 metrics, 136 trend, 7 channel, 10 pages |
+| Priority Tree Service | `a171e494-8404-4316-b0d5-69ed838e251a` | `02bf510e-0dee-49b2-a33e-8e3212877e6c` | 6 metrics, 138 trend, 7 channel, 10 pages |
+| Pinnacle Contractors | `91975661-b6f4-409d-bcee-3c5e55034d2b` | `fde46705-795f-4f3e-9457-df3c2c29bdca` | 6 metrics, 139 trend, 7 channel, 10 pages |
+| Musimack Marketing | `7e31c9ed-baa9-43c1-802d-06c0cde665fc` | `3cf261fe-bc63-40a7-9b9e-bb9bfa61decc` | 6 metrics, 138 trend, 5 channel, 10 pages |
+| Steadfast Decks | `dbc2f6fa-d2be-4eb7-a396-15e450e93433` | `6d274c50-5f92-418b-a7ae-54ec7a9a9167` | 6 metrics, 111 trend, 7 channel, 10 pages |
+| Portland Painting & Lead Removal | `4499664b-e409-43c0-95b8-7fdbc14fb863` | `14301049-4d72-4b75-ab35-68bbc8439a41` | 6 metrics, 29 trend, 5 channel, 10 pages |
+| Universal Crystal Cleaning | `77f24474-ff1c-4904-8294-f09c176e0073` | `8ccd04f6-debe-48d0-81f3-713b566f7d58` | 6 metrics, 47 trend, 6 channel, 10 pages |
+| Tualatin Chamber | `c4d6031c-6a83-42f9-91b0-bc47b2d3dfc4` | `5778f548-8548-43db-9179-f1452e2afaee` | 6 metrics, 139 trend, 5 channel, 10 pages |
+| West Coast Land Renewal | `74570452-1f35-4102-8509-ce15dcea19c7` | `88a4fafc-6d90-4e03-9b95-65cef95143eb` | 6 metrics, 131 trend, 7 channel, 10 pages |
+| Inn At Spanish Head | `cc2138f8-6776-4e3d-9e14-2763e5a71f7f` | `e778ad71-8019-45a2-9536-bb3f508bc542` | 6 metrics, 139 trend, 7 channel, 10 pages |
+| The Word Salon | `c9147e09-d5ad-4071-af1c-b069b89a9285` | `50619479-4c2f-472c-bc98-770b04da5ec3` | 6 metrics, 138 trend, 5 channel, 10 pages |
+| Portland Tattoo Company | `6f8a1105-0472-4cca-b741-6ec102289134` | `334933cb-b3a5-43df-bef1-329b04f9db05` | 6 metrics, 130 trend, 9 channel, 10 pages |
+
+All 12 imports reported initial `internal` / `draft` state. Together with Aluma, the YTD imported snapshot count is 13.
+
+Workflow helper summary:
+
+- Aluma: project ok, GA4 mapping ok, snapshots ok, reports ok, links ok, active snapshot remains the existing published active snapshot, assigned/unrelated users ok.
+- Musimack Marketing: project ok, GA4 mapping ok, snapshots ok, reports ok, links ok, active snapshot remains existing published active snapshot, assigned/unrelated users ok.
+- Remaining 11 clients: project ok, GA4 mapping ok, one internal/draft GA4 summary snapshot each; reports, report links, active snapshot links, and assigned-client local users still need portal follow-up.
+- Workflow helper writes: none.
+- Workflow helper live Google calls: none.
+
+Portal follow-up required:
+
+- Create or configure reports for clients that do not yet have published reports.
+- Link reviewed YTD snapshots to the intended reports.
+- Set active snapshots in the portal.
+- Preview Website Performance Summary as admin/internal user.
+- Promote/publish only after review.
+- Verify assigned-client access and unrelated-client denial.
+
+No raw DB URL, credentials, OAuth token contents, OAuth client secret JSON, raw GA4 provider payloads, or raw provider responses were recorded in this note.
 
 ## Tests
 

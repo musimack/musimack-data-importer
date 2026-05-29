@@ -1,0 +1,1345 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-05-19",
+    "start": "2026-01-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 611.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 441.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1911.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.469722
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 224.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 123.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 432.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.638393
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Paid Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 143.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 135.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 245.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.524476
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 34.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 200.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.794118
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 19.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 16.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 20.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.368421
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 6.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.2
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Cross-network",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 7.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Steadfast Fencing, Decking & Construction | Beaverton, OR (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 769.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 410.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 2314.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 140.868833
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Steadfast Fencing and Decking - Steadfast Fencing & Decking (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 198.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 151.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 771.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 57.230277
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Steadfast, Fencing, Decking & Construction - Steadfast Fencing, Decking & Construction (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 198.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 500.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 757.15103
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Landing Page: Decks - Steadfast Fencing, Decking & Construction | Beaverton, OR (/lp-deck/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 156.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 114.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 511.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 71.179155
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Gallery - Steadfast Fencing, Decking & Construction | Beaverton, OR (/gallery/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 155.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 47.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 410.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 304.539797
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Footer - Steadfast Fencing, Decking & Construction (/index.php/template/footer/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 153.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 320.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 898.083551
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Fences - Steadfast Fencing, Decking & Construction | Beaverton, OR (/services/fences/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 131.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 61.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 296.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 117.347189
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Contact - Steadfast Fencing, Decking & Construction | Beaverton, OR (/contact/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 112.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 80.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 311.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 132.253917
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Decks & Railings - Steadfast Fencing, Decking & Construction | Beaverton, OR (/services/decks-railings/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 111.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 68.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 262.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 120.536409
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Header - Steadfast Fencing, Decking & Construction (/index.php/template/test-header/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 68.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 152.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 376.364359
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 847.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 1040.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.522115
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 256.943085
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 2821.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 7748.0
+    }
+  ],
+  "property_resource": "properties/518729554",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 847 users, 1040 sessions, and 2821 views.",
+  "summary_counts": {
+    "dimension_row_count": 17,
+    "metric_count": 6,
+    "time_series_count": 111
+  },
+  "time_series": [
+    {
+      "date": "2026-01-06",
+      "event_count": 9.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-01-28",
+      "event_count": 22.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-01-29",
+      "event_count": 44.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-01-30",
+      "event_count": 52.0,
+      "sessions": 11.0,
+      "users": 11.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-02-01",
+      "event_count": 10.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-02-02",
+      "event_count": 78.0,
+      "sessions": 18.0,
+      "users": 18.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-02-03",
+      "event_count": 16.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-02-04",
+      "event_count": 53.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-02-05",
+      "event_count": 23.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-02-06",
+      "event_count": 33.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-02-07",
+      "event_count": 63.0,
+      "sessions": 15.0,
+      "users": 15.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-02-08",
+      "event_count": 25.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-02-09",
+      "event_count": 68.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-10",
+      "event_count": 64.0,
+      "sessions": 13.0,
+      "users": 12.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-11",
+      "event_count": 263.0,
+      "sessions": 16.0,
+      "users": 15.0,
+      "views": 102.0
+    },
+    {
+      "date": "2026-02-12",
+      "event_count": 398.0,
+      "sessions": 13.0,
+      "users": 11.0,
+      "views": 186.0
+    },
+    {
+      "date": "2026-02-13",
+      "event_count": 143.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 47.0
+    },
+    {
+      "date": "2026-02-14",
+      "event_count": 4.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-02-16",
+      "event_count": 52.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-02-17",
+      "event_count": 191.0,
+      "sessions": 14.0,
+      "users": 8.0,
+      "views": 76.0
+    },
+    {
+      "date": "2026-02-18",
+      "event_count": 543.0,
+      "sessions": 25.0,
+      "users": 17.0,
+      "views": 214.0
+    },
+    {
+      "date": "2026-02-19",
+      "event_count": 552.0,
+      "sessions": 15.0,
+      "users": 12.0,
+      "views": 220.0
+    },
+    {
+      "date": "2026-02-20",
+      "event_count": 453.0,
+      "sessions": 24.0,
+      "users": 12.0,
+      "views": 177.0
+    },
+    {
+      "date": "2026-02-21",
+      "event_count": 79.0,
+      "sessions": 14.0,
+      "users": 10.0,
+      "views": 30.0
+    },
+    {
+      "date": "2026-02-22",
+      "event_count": 46.0,
+      "sessions": 8.0,
+      "users": 6.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-02-23",
+      "event_count": 191.0,
+      "sessions": 17.0,
+      "users": 10.0,
+      "views": 76.0
+    },
+    {
+      "date": "2026-02-24",
+      "event_count": 181.0,
+      "sessions": 18.0,
+      "users": 10.0,
+      "views": 72.0
+    },
+    {
+      "date": "2026-02-25",
+      "event_count": 32.0,
+      "sessions": 5.0,
+      "users": 2.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-02-26",
+      "event_count": 23.0,
+      "sessions": 5.0,
+      "users": 3.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-02-27",
+      "event_count": 21.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-02-28",
+      "event_count": 17.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-03-01",
+      "event_count": 18.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-03-02",
+      "event_count": 31.0,
+      "sessions": 8.0,
+      "users": 5.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-03-03",
+      "event_count": 39.0,
+      "sessions": 9.0,
+      "users": 7.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-03-04",
+      "event_count": 34.0,
+      "sessions": 8.0,
+      "users": 6.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-03-05",
+      "event_count": 100.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 33.0
+    },
+    {
+      "date": "2026-03-06",
+      "event_count": 42.0,
+      "sessions": 8.0,
+      "users": 5.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-03-07",
+      "event_count": 26.0,
+      "sessions": 7.0,
+      "users": 5.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-03-08",
+      "event_count": 7.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-03-09",
+      "event_count": 33.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-03-10",
+      "event_count": 14.0,
+      "sessions": 6.0,
+      "users": 2.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-03-11",
+      "event_count": 35.0,
+      "sessions": 8.0,
+      "users": 8.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-03-12",
+      "event_count": 86.0,
+      "sessions": 13.0,
+      "users": 9.0,
+      "views": 30.0
+    },
+    {
+      "date": "2026-03-13",
+      "event_count": 24.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-03-14",
+      "event_count": 13.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-03-15",
+      "event_count": 41.0,
+      "sessions": 8.0,
+      "users": 6.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-03-16",
+      "event_count": 15.0,
+      "sessions": 4.0,
+      "users": 3.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-17",
+      "event_count": 48.0,
+      "sessions": 14.0,
+      "users": 14.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-03-18",
+      "event_count": 16.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-19",
+      "event_count": 12.0,
+      "sessions": 4.0,
+      "users": 3.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-03-20",
+      "event_count": 18.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-21",
+      "event_count": 18.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-03-22",
+      "event_count": 63.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-03-23",
+      "event_count": 39.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-03-24",
+      "event_count": 17.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-25",
+      "event_count": 291.0,
+      "sessions": 13.0,
+      "users": 7.0,
+      "views": 134.0
+    },
+    {
+      "date": "2026-03-26",
+      "event_count": 49.0,
+      "sessions": 9.0,
+      "users": 7.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-03-27",
+      "event_count": 45.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-03-28",
+      "event_count": 22.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-03-29",
+      "event_count": 12.0,
+      "sessions": 4.0,
+      "users": 3.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-03-30",
+      "event_count": 64.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-03-31",
+      "event_count": 95.0,
+      "sessions": 17.0,
+      "users": 14.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-04-01",
+      "event_count": 40.0,
+      "sessions": 6.0,
+      "users": 5.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 76.0,
+      "sessions": 12.0,
+      "users": 8.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 49.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 11.0,
+      "sessions": 5.0,
+      "users": 1.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 14.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 43.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 29.0,
+      "sessions": 6.0,
+      "users": 5.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 45.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 64.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-04-10",
+      "event_count": 45.0,
+      "sessions": 10.0,
+      "users": 7.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-04-11",
+      "event_count": 25.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-12",
+      "event_count": 72.0,
+      "sessions": 10.0,
+      "users": 9.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 25.0,
+      "sessions": 5.0,
+      "users": 3.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-14",
+      "event_count": 36.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 32.0,
+      "sessions": 8.0,
+      "users": 4.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 99.0,
+      "sessions": 16.0,
+      "users": 15.0,
+      "views": 38.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 60.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 45.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 60.0,
+      "sessions": 12.0,
+      "users": 12.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 141.0,
+      "sessions": 20.0,
+      "users": 20.0,
+      "views": 50.0
+    },
+    {
+      "date": "2026-04-21",
+      "event_count": 55.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 19.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 69.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 38.0,
+      "sessions": 7.0,
+      "users": 7.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 56.0,
+      "sessions": 15.0,
+      "users": 12.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-04-25",
+      "event_count": 96.0,
+      "sessions": 13.0,
+      "users": 12.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 90.0,
+      "sessions": 16.0,
+      "users": 15.0,
+      "views": 29.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 61.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 19.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 115.0,
+      "sessions": 16.0,
+      "users": 16.0,
+      "views": 44.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 145.0,
+      "sessions": 23.0,
+      "users": 19.0,
+      "views": 51.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 36.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-05-01",
+      "event_count": 47.0,
+      "sessions": 11.0,
+      "users": 8.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-05-02",
+      "event_count": 39.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-05-03",
+      "event_count": 62.0,
+      "sessions": 14.0,
+      "users": 12.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-05-04",
+      "event_count": 56.0,
+      "sessions": 13.0,
+      "users": 10.0,
+      "views": 19.0
+    },
+    {
+      "date": "2026-05-05",
+      "event_count": 45.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-05-06",
+      "event_count": 42.0,
+      "sessions": 10.0,
+      "users": 7.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-05-07",
+      "event_count": 60.0,
+      "sessions": 10.0,
+      "users": 9.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-05-08",
+      "event_count": 87.0,
+      "sessions": 14.0,
+      "users": 12.0,
+      "views": 32.0
+    },
+    {
+      "date": "2026-05-09",
+      "event_count": 30.0,
+      "sessions": 9.0,
+      "users": 6.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-05-10",
+      "event_count": 21.0,
+      "sessions": 7.0,
+      "users": 4.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-05-11",
+      "event_count": 25.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-05-12",
+      "event_count": 71.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-05-13",
+      "event_count": 66.0,
+      "sessions": 13.0,
+      "users": 10.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-05-14",
+      "event_count": 39.0,
+      "sessions": 8.0,
+      "users": 6.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-05-15",
+      "event_count": 21.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-05-16",
+      "event_count": 25.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-05-17",
+      "event_count": 45.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-05-18",
+      "event_count": 17.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-05-19",
+      "event_count": 62.0,
+      "sessions": 13.0,
+      "users": 11.0,
+      "views": 23.0
+    }
+  ],
+  "warnings": []
+}

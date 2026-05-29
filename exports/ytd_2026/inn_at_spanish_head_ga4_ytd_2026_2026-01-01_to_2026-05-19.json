@@ -1,0 +1,1541 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-05-19",
+    "start": "2026-01-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 52298.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 27399.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 100207.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.674557
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 34182.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 23770.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 51225.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.421274
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Paid Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 6882.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4760.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 15337.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.705318
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 4020.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2224.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 5854.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.638806
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1413.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1201.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2409.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.766454
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1266.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1070.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1584.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.255924
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Cross-network",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 105.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 97.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 321.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.780952
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 54857.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 33259.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 172533.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 106.123451
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Fathoms Restaurant & Bar | The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/fathoms-dining/fathoms-penthouse-restaurant-bar/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 35803.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 18921.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 121870.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 201.075207
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Live Webcam & Tide Predictions | The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/resort/live-webcam/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 25745.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 6565.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 68775.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 116.879244
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Rooms & Suites | The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/accommodations/rooms-suites/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 18028.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 10610.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 46530.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 198.74977
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Landing Page - The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/landing-page/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 6673.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4564.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 24152.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 130.889334
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Packages | The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/accommodations/packages/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 5041.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3514.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 13075.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 120.032092
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Resort Amenities | The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/resort/amenities/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 4157.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3108.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 10682.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 97.231678
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Special Offers - The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/accommodations/special-offers/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3450.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2501.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 9853.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 56.247386
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Contact Us | The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/contact/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3374.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1948.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 7738.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 131.525452
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Page not found - The Inn at Spanish Head Resort Hotel | Lincoln City, OR (/fathoms.htm)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2436.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1861.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 7834.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 48.536868
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 74202.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 98879.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.597619
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 197.421296
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 176937.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 532507.0
+    }
+  ],
+  "property_resource": "properties/460499108",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 74202 users, 98879 sessions, and 176937 views.",
+  "summary_counts": {
+    "dimension_row_count": 17,
+    "metric_count": 6,
+    "time_series_count": 139
+  },
+  "time_series": [
+    {
+      "date": "2026-01-01",
+      "event_count": 4282.0,
+      "sessions": 808.0,
+      "users": 567.0,
+      "views": 1459.0
+    },
+    {
+      "date": "2026-01-02",
+      "event_count": 4247.0,
+      "sessions": 837.0,
+      "users": 586.0,
+      "views": 1443.0
+    },
+    {
+      "date": "2026-01-03",
+      "event_count": 4956.0,
+      "sessions": 907.0,
+      "users": 642.0,
+      "views": 1709.0
+    },
+    {
+      "date": "2026-01-04",
+      "event_count": 5024.0,
+      "sessions": 709.0,
+      "users": 525.0,
+      "views": 1761.0
+    },
+    {
+      "date": "2026-01-05",
+      "event_count": 4018.0,
+      "sessions": 569.0,
+      "users": 401.0,
+      "views": 1401.0
+    },
+    {
+      "date": "2026-01-06",
+      "event_count": 3450.0,
+      "sessions": 576.0,
+      "users": 419.0,
+      "views": 1170.0
+    },
+    {
+      "date": "2026-01-07",
+      "event_count": 3164.0,
+      "sessions": 571.0,
+      "users": 408.0,
+      "views": 1073.0
+    },
+    {
+      "date": "2026-01-08",
+      "event_count": 3431.0,
+      "sessions": 635.0,
+      "users": 464.0,
+      "views": 1168.0
+    },
+    {
+      "date": "2026-01-09",
+      "event_count": 3664.0,
+      "sessions": 639.0,
+      "users": 476.0,
+      "views": 1234.0
+    },
+    {
+      "date": "2026-01-10",
+      "event_count": 3895.0,
+      "sessions": 737.0,
+      "users": 533.0,
+      "views": 1304.0
+    },
+    {
+      "date": "2026-01-11",
+      "event_count": 3868.0,
+      "sessions": 701.0,
+      "users": 494.0,
+      "views": 1310.0
+    },
+    {
+      "date": "2026-01-12",
+      "event_count": 3611.0,
+      "sessions": 636.0,
+      "users": 460.0,
+      "views": 1207.0
+    },
+    {
+      "date": "2026-01-13",
+      "event_count": 3785.0,
+      "sessions": 653.0,
+      "users": 462.0,
+      "views": 1258.0
+    },
+    {
+      "date": "2026-01-14",
+      "event_count": 3702.0,
+      "sessions": 660.0,
+      "users": 465.0,
+      "views": 1247.0
+    },
+    {
+      "date": "2026-01-15",
+      "event_count": 3885.0,
+      "sessions": 695.0,
+      "users": 504.0,
+      "views": 1336.0
+    },
+    {
+      "date": "2026-01-16",
+      "event_count": 4816.0,
+      "sessions": 811.0,
+      "users": 583.0,
+      "views": 1669.0
+    },
+    {
+      "date": "2026-01-17",
+      "event_count": 4413.0,
+      "sessions": 867.0,
+      "users": 627.0,
+      "views": 1522.0
+    },
+    {
+      "date": "2026-01-18",
+      "event_count": 4380.0,
+      "sessions": 829.0,
+      "users": 596.0,
+      "views": 1485.0
+    },
+    {
+      "date": "2026-01-19",
+      "event_count": 4278.0,
+      "sessions": 738.0,
+      "users": 513.0,
+      "views": 1454.0
+    },
+    {
+      "date": "2026-01-20",
+      "event_count": 3465.0,
+      "sessions": 630.0,
+      "users": 462.0,
+      "views": 1186.0
+    },
+    {
+      "date": "2026-01-21",
+      "event_count": 3452.0,
+      "sessions": 556.0,
+      "users": 407.0,
+      "views": 1193.0
+    },
+    {
+      "date": "2026-01-22",
+      "event_count": 3539.0,
+      "sessions": 581.0,
+      "users": 433.0,
+      "views": 1210.0
+    },
+    {
+      "date": "2026-01-23",
+      "event_count": 7916.0,
+      "sessions": 1459.0,
+      "users": 1199.0,
+      "views": 2600.0
+    },
+    {
+      "date": "2026-01-24",
+      "event_count": 4959.0,
+      "sessions": 920.0,
+      "users": 683.0,
+      "views": 1667.0
+    },
+    {
+      "date": "2026-01-25",
+      "event_count": 4013.0,
+      "sessions": 734.0,
+      "users": 510.0,
+      "views": 1387.0
+    },
+    {
+      "date": "2026-01-26",
+      "event_count": 3706.0,
+      "sessions": 641.0,
+      "users": 454.0,
+      "views": 1262.0
+    },
+    {
+      "date": "2026-01-27",
+      "event_count": 3033.0,
+      "sessions": 539.0,
+      "users": 385.0,
+      "views": 1031.0
+    },
+    {
+      "date": "2026-01-28",
+      "event_count": 3278.0,
+      "sessions": 542.0,
+      "users": 403.0,
+      "views": 1123.0
+    },
+    {
+      "date": "2026-01-29",
+      "event_count": 3225.0,
+      "sessions": 544.0,
+      "users": 376.0,
+      "views": 1088.0
+    },
+    {
+      "date": "2026-01-30",
+      "event_count": 2840.0,
+      "sessions": 526.0,
+      "users": 366.0,
+      "views": 950.0
+    },
+    {
+      "date": "2026-01-31",
+      "event_count": 3582.0,
+      "sessions": 673.0,
+      "users": 466.0,
+      "views": 1221.0
+    },
+    {
+      "date": "2026-02-01",
+      "event_count": 3342.0,
+      "sessions": 633.0,
+      "users": 444.0,
+      "views": 1167.0
+    },
+    {
+      "date": "2026-02-02",
+      "event_count": 3799.0,
+      "sessions": 629.0,
+      "users": 451.0,
+      "views": 1294.0
+    },
+    {
+      "date": "2026-02-03",
+      "event_count": 3273.0,
+      "sessions": 596.0,
+      "users": 427.0,
+      "views": 1106.0
+    },
+    {
+      "date": "2026-02-04",
+      "event_count": 3635.0,
+      "sessions": 654.0,
+      "users": 469.0,
+      "views": 1198.0
+    },
+    {
+      "date": "2026-02-05",
+      "event_count": 3249.0,
+      "sessions": 597.0,
+      "users": 427.0,
+      "views": 1097.0
+    },
+    {
+      "date": "2026-02-06",
+      "event_count": 2760.0,
+      "sessions": 536.0,
+      "users": 378.0,
+      "views": 930.0
+    },
+    {
+      "date": "2026-02-07",
+      "event_count": 3656.0,
+      "sessions": 655.0,
+      "users": 487.0,
+      "views": 1218.0
+    },
+    {
+      "date": "2026-02-08",
+      "event_count": 2479.0,
+      "sessions": 482.0,
+      "users": 348.0,
+      "views": 844.0
+    },
+    {
+      "date": "2026-02-09",
+      "event_count": 3662.0,
+      "sessions": 618.0,
+      "users": 455.0,
+      "views": 1223.0
+    },
+    {
+      "date": "2026-02-10",
+      "event_count": 3970.0,
+      "sessions": 655.0,
+      "users": 463.0,
+      "views": 1321.0
+    },
+    {
+      "date": "2026-02-11",
+      "event_count": 4140.0,
+      "sessions": 630.0,
+      "users": 458.0,
+      "views": 1478.0
+    },
+    {
+      "date": "2026-02-12",
+      "event_count": 4168.0,
+      "sessions": 690.0,
+      "users": 507.0,
+      "views": 1417.0
+    },
+    {
+      "date": "2026-02-13",
+      "event_count": 4172.0,
+      "sessions": 756.0,
+      "users": 560.0,
+      "views": 1374.0
+    },
+    {
+      "date": "2026-02-14",
+      "event_count": 4789.0,
+      "sessions": 895.0,
+      "users": 670.0,
+      "views": 1558.0
+    },
+    {
+      "date": "2026-02-15",
+      "event_count": 4411.0,
+      "sessions": 754.0,
+      "users": 532.0,
+      "views": 1515.0
+    },
+    {
+      "date": "2026-02-16",
+      "event_count": 3589.0,
+      "sessions": 654.0,
+      "users": 445.0,
+      "views": 1229.0
+    },
+    {
+      "date": "2026-02-17",
+      "event_count": 3439.0,
+      "sessions": 592.0,
+      "users": 438.0,
+      "views": 1139.0
+    },
+    {
+      "date": "2026-02-18",
+      "event_count": 3161.0,
+      "sessions": 612.0,
+      "users": 472.0,
+      "views": 1019.0
+    },
+    {
+      "date": "2026-02-19",
+      "event_count": 3599.0,
+      "sessions": 654.0,
+      "users": 456.0,
+      "views": 1216.0
+    },
+    {
+      "date": "2026-02-20",
+      "event_count": 3680.0,
+      "sessions": 643.0,
+      "users": 443.0,
+      "views": 1238.0
+    },
+    {
+      "date": "2026-02-21",
+      "event_count": 3844.0,
+      "sessions": 675.0,
+      "users": 485.0,
+      "views": 1305.0
+    },
+    {
+      "date": "2026-02-22",
+      "event_count": 3423.0,
+      "sessions": 620.0,
+      "users": 451.0,
+      "views": 1154.0
+    },
+    {
+      "date": "2026-02-23",
+      "event_count": 3249.0,
+      "sessions": 575.0,
+      "users": 405.0,
+      "views": 1054.0
+    },
+    {
+      "date": "2026-02-24",
+      "event_count": 3357.0,
+      "sessions": 532.0,
+      "users": 387.0,
+      "views": 1116.0
+    },
+    {
+      "date": "2026-02-25",
+      "event_count": 3441.0,
+      "sessions": 593.0,
+      "users": 427.0,
+      "views": 1170.0
+    },
+    {
+      "date": "2026-02-26",
+      "event_count": 3697.0,
+      "sessions": 648.0,
+      "users": 458.0,
+      "views": 1258.0
+    },
+    {
+      "date": "2026-02-27",
+      "event_count": 4048.0,
+      "sessions": 749.0,
+      "users": 520.0,
+      "views": 1353.0
+    },
+    {
+      "date": "2026-02-28",
+      "event_count": 4119.0,
+      "sessions": 749.0,
+      "users": 547.0,
+      "views": 1361.0
+    },
+    {
+      "date": "2026-03-01",
+      "event_count": 3982.0,
+      "sessions": 689.0,
+      "users": 490.0,
+      "views": 1345.0
+    },
+    {
+      "date": "2026-03-02",
+      "event_count": 3506.0,
+      "sessions": 538.0,
+      "users": 388.0,
+      "views": 1222.0
+    },
+    {
+      "date": "2026-03-03",
+      "event_count": 5844.0,
+      "sessions": 821.0,
+      "users": 634.0,
+      "views": 2068.0
+    },
+    {
+      "date": "2026-03-04",
+      "event_count": 4364.0,
+      "sessions": 716.0,
+      "users": 541.0,
+      "views": 1462.0
+    },
+    {
+      "date": "2026-03-05",
+      "event_count": 3688.0,
+      "sessions": 637.0,
+      "users": 476.0,
+      "views": 1236.0
+    },
+    {
+      "date": "2026-03-06",
+      "event_count": 3645.0,
+      "sessions": 652.0,
+      "users": 461.0,
+      "views": 1228.0
+    },
+    {
+      "date": "2026-03-07",
+      "event_count": 3767.0,
+      "sessions": 683.0,
+      "users": 499.0,
+      "views": 1244.0
+    },
+    {
+      "date": "2026-03-08",
+      "event_count": 3761.0,
+      "sessions": 640.0,
+      "users": 457.0,
+      "views": 1254.0
+    },
+    {
+      "date": "2026-03-09",
+      "event_count": 3291.0,
+      "sessions": 550.0,
+      "users": 405.0,
+      "views": 1087.0
+    },
+    {
+      "date": "2026-03-10",
+      "event_count": 3246.0,
+      "sessions": 555.0,
+      "users": 413.0,
+      "views": 1087.0
+    },
+    {
+      "date": "2026-03-11",
+      "event_count": 3445.0,
+      "sessions": 564.0,
+      "users": 395.0,
+      "views": 1158.0
+    },
+    {
+      "date": "2026-03-12",
+      "event_count": 3271.0,
+      "sessions": 617.0,
+      "users": 452.0,
+      "views": 1071.0
+    },
+    {
+      "date": "2026-03-13",
+      "event_count": 3338.0,
+      "sessions": 562.0,
+      "users": 432.0,
+      "views": 1109.0
+    },
+    {
+      "date": "2026-03-14",
+      "event_count": 3601.0,
+      "sessions": 677.0,
+      "users": 481.0,
+      "views": 1212.0
+    },
+    {
+      "date": "2026-03-15",
+      "event_count": 3745.0,
+      "sessions": 650.0,
+      "users": 473.0,
+      "views": 1258.0
+    },
+    {
+      "date": "2026-03-16",
+      "event_count": 3423.0,
+      "sessions": 577.0,
+      "users": 425.0,
+      "views": 1144.0
+    },
+    {
+      "date": "2026-03-17",
+      "event_count": 3387.0,
+      "sessions": 592.0,
+      "users": 426.0,
+      "views": 1112.0
+    },
+    {
+      "date": "2026-03-18",
+      "event_count": 3530.0,
+      "sessions": 641.0,
+      "users": 439.0,
+      "views": 1177.0
+    },
+    {
+      "date": "2026-03-19",
+      "event_count": 3500.0,
+      "sessions": 587.0,
+      "users": 419.0,
+      "views": 1229.0
+    },
+    {
+      "date": "2026-03-20",
+      "event_count": 4177.0,
+      "sessions": 712.0,
+      "users": 521.0,
+      "views": 1409.0
+    },
+    {
+      "date": "2026-03-21",
+      "event_count": 4772.0,
+      "sessions": 877.0,
+      "users": 611.0,
+      "views": 1617.0
+    },
+    {
+      "date": "2026-03-22",
+      "event_count": 4546.0,
+      "sessions": 841.0,
+      "users": 590.0,
+      "views": 1567.0
+    },
+    {
+      "date": "2026-03-23",
+      "event_count": 4314.0,
+      "sessions": 803.0,
+      "users": 590.0,
+      "views": 1429.0
+    },
+    {
+      "date": "2026-03-24",
+      "event_count": 3942.0,
+      "sessions": 751.0,
+      "users": 542.0,
+      "views": 1279.0
+    },
+    {
+      "date": "2026-03-25",
+      "event_count": 4260.0,
+      "sessions": 785.0,
+      "users": 579.0,
+      "views": 1354.0
+    },
+    {
+      "date": "2026-03-26",
+      "event_count": 3858.0,
+      "sessions": 746.0,
+      "users": 548.0,
+      "views": 1222.0
+    },
+    {
+      "date": "2026-03-27",
+      "event_count": 3756.0,
+      "sessions": 774.0,
+      "users": 587.0,
+      "views": 1213.0
+    },
+    {
+      "date": "2026-03-28",
+      "event_count": 3405.0,
+      "sessions": 676.0,
+      "users": 538.0,
+      "views": 1114.0
+    },
+    {
+      "date": "2026-03-29",
+      "event_count": 3185.0,
+      "sessions": 579.0,
+      "users": 426.0,
+      "views": 1031.0
+    },
+    {
+      "date": "2026-03-30",
+      "event_count": 3412.0,
+      "sessions": 606.0,
+      "users": 461.0,
+      "views": 1116.0
+    },
+    {
+      "date": "2026-03-31",
+      "event_count": 2955.0,
+      "sessions": 566.0,
+      "users": 419.0,
+      "views": 946.0
+    },
+    {
+      "date": "2026-04-01",
+      "event_count": 2813.0,
+      "sessions": 534.0,
+      "users": 399.0,
+      "views": 878.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 3374.0,
+      "sessions": 598.0,
+      "users": 425.0,
+      "views": 1138.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 3315.0,
+      "sessions": 606.0,
+      "users": 457.0,
+      "views": 1077.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 3022.0,
+      "sessions": 609.0,
+      "users": 463.0,
+      "views": 989.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 3054.0,
+      "sessions": 610.0,
+      "users": 456.0,
+      "views": 996.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 3216.0,
+      "sessions": 614.0,
+      "users": 452.0,
+      "views": 1019.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 3370.0,
+      "sessions": 619.0,
+      "users": 464.0,
+      "views": 1100.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 3088.0,
+      "sessions": 616.0,
+      "users": 462.0,
+      "views": 984.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 3354.0,
+      "sessions": 610.0,
+      "users": 483.0,
+      "views": 1067.0
+    },
+    {
+      "date": "2026-04-10",
+      "event_count": 3089.0,
+      "sessions": 617.0,
+      "users": 460.0,
+      "views": 1007.0
+    },
+    {
+      "date": "2026-04-11",
+      "event_count": 3590.0,
+      "sessions": 713.0,
+      "users": 537.0,
+      "views": 1198.0
+    },
+    {
+      "date": "2026-04-12",
+      "event_count": 3505.0,
+      "sessions": 672.0,
+      "users": 495.0,
+      "views": 1142.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 3395.0,
+      "sessions": 652.0,
+      "users": 507.0,
+      "views": 1089.0
+    },
+    {
+      "date": "2026-04-14",
+      "event_count": 3438.0,
+      "sessions": 682.0,
+      "users": 556.0,
+      "views": 1087.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 3502.0,
+      "sessions": 657.0,
+      "users": 534.0,
+      "views": 1144.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 3952.0,
+      "sessions": 741.0,
+      "users": 593.0,
+      "views": 1275.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 3550.0,
+      "sessions": 743.0,
+      "users": 556.0,
+      "views": 1171.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 3894.0,
+      "sessions": 793.0,
+      "users": 627.0,
+      "views": 1271.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 3584.0,
+      "sessions": 727.0,
+      "users": 580.0,
+      "views": 1186.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 3534.0,
+      "sessions": 720.0,
+      "users": 569.0,
+      "views": 1157.0
+    },
+    {
+      "date": "2026-04-21",
+      "event_count": 3766.0,
+      "sessions": 749.0,
+      "users": 583.0,
+      "views": 1203.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 4156.0,
+      "sessions": 799.0,
+      "users": 627.0,
+      "views": 1322.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 3951.0,
+      "sessions": 768.0,
+      "users": 600.0,
+      "views": 1275.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 3683.0,
+      "sessions": 777.0,
+      "users": 607.0,
+      "views": 1206.0
+    },
+    {
+      "date": "2026-04-25",
+      "event_count": 4275.0,
+      "sessions": 869.0,
+      "users": 694.0,
+      "views": 1419.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 4190.0,
+      "sessions": 849.0,
+      "users": 657.0,
+      "views": 1393.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 4035.0,
+      "sessions": 777.0,
+      "users": 597.0,
+      "views": 1310.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 4214.0,
+      "sessions": 806.0,
+      "users": 610.0,
+      "views": 1369.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 3745.0,
+      "sessions": 713.0,
+      "users": 560.0,
+      "views": 1213.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 3861.0,
+      "sessions": 764.0,
+      "users": 608.0,
+      "views": 1248.0
+    },
+    {
+      "date": "2026-05-01",
+      "event_count": 4228.0,
+      "sessions": 799.0,
+      "users": 592.0,
+      "views": 1384.0
+    },
+    {
+      "date": "2026-05-02",
+      "event_count": 4541.0,
+      "sessions": 986.0,
+      "users": 809.0,
+      "views": 1488.0
+    },
+    {
+      "date": "2026-05-03",
+      "event_count": 4395.0,
+      "sessions": 935.0,
+      "users": 755.0,
+      "views": 1448.0
+    },
+    {
+      "date": "2026-05-04",
+      "event_count": 4195.0,
+      "sessions": 887.0,
+      "users": 707.0,
+      "views": 1356.0
+    },
+    {
+      "date": "2026-05-05",
+      "event_count": 4158.0,
+      "sessions": 865.0,
+      "users": 707.0,
+      "views": 1340.0
+    },
+    {
+      "date": "2026-05-06",
+      "event_count": 3842.0,
+      "sessions": 841.0,
+      "users": 680.0,
+      "views": 1258.0
+    },
+    {
+      "date": "2026-05-07",
+      "event_count": 4176.0,
+      "sessions": 881.0,
+      "users": 699.0,
+      "views": 1342.0
+    },
+    {
+      "date": "2026-05-08",
+      "event_count": 3678.0,
+      "sessions": 818.0,
+      "users": 676.0,
+      "views": 1186.0
+    },
+    {
+      "date": "2026-05-09",
+      "event_count": 4217.0,
+      "sessions": 918.0,
+      "users": 751.0,
+      "views": 1359.0
+    },
+    {
+      "date": "2026-05-10",
+      "event_count": 4040.0,
+      "sessions": 859.0,
+      "users": 707.0,
+      "views": 1327.0
+    },
+    {
+      "date": "2026-05-11",
+      "event_count": 4187.0,
+      "sessions": 857.0,
+      "users": 704.0,
+      "views": 1372.0
+    },
+    {
+      "date": "2026-05-12",
+      "event_count": 4521.0,
+      "sessions": 887.0,
+      "users": 724.0,
+      "views": 1481.0
+    },
+    {
+      "date": "2026-05-13",
+      "event_count": 3973.0,
+      "sessions": 837.0,
+      "users": 662.0,
+      "views": 1253.0
+    },
+    {
+      "date": "2026-05-14",
+      "event_count": 4005.0,
+      "sessions": 853.0,
+      "users": 701.0,
+      "views": 1299.0
+    },
+    {
+      "date": "2026-05-15",
+      "event_count": 4298.0,
+      "sessions": 876.0,
+      "users": 719.0,
+      "views": 1387.0
+    },
+    {
+      "date": "2026-05-16",
+      "event_count": 4522.0,
+      "sessions": 905.0,
+      "users": 734.0,
+      "views": 1470.0
+    },
+    {
+      "date": "2026-05-17",
+      "event_count": 4613.0,
+      "sessions": 943.0,
+      "users": 769.0,
+      "views": 1485.0
+    },
+    {
+      "date": "2026-05-18",
+      "event_count": 4133.0,
+      "sessions": 888.0,
+      "users": 731.0,
+      "views": 1303.0
+    },
+    {
+      "date": "2026-05-19",
+      "event_count": 6326.0,
+      "sessions": 1377.0,
+      "users": 1160.0,
+      "views": 1986.0
+    }
+  ],
+  "warnings": []
+}

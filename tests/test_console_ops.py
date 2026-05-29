@@ -59,6 +59,23 @@ def test_output_path_uses_ytd_filename_pattern():
     assert str(path) == "exports\\ytd_2026\\aluma_ga4_ytd_2026_2026-01-01_to_2026-05-19.json"
 
 
+def test_output_path_uses_smoke_filename_for_aluma_smoke_range():
+    client = ConsoleClient(
+        key="aluma",
+        client_label="Aluma Aesthetic Medicine",
+        domain="alumapdx.com",
+        portal_project_id="project-id",
+        ga4_property_id="341923472",
+        suggested_export_slug="aluma",
+        suggested_ytd_start_date="2026-01-01",
+        suggested_ytd_end_date="2026-05-19",
+    )
+
+    path = output_path_for(client, date(2026, 5, 1), date(2026, 5, 2))
+
+    assert str(path) == "exports\\smoke\\aluma_ga4_smoke_2026-05-01_to_2026-05-02.json"
+
+
 def test_redaction_helper_masks_secret_like_output():
     text = (
         "Authorization: Bearer abc123\n"

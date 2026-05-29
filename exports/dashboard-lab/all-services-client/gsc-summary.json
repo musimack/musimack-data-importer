@@ -1,0 +1,240 @@
+{
+  "insights": [
+    "High-intent HVAC terms improved into the top five average positions.",
+    "Plumbing pages have large impression volume and should be tested for stronger calls to action."
+  ],
+  "local_only": true,
+  "mock_data": true,
+  "provider": "gsc",
+  "query_movement": [
+    {
+      "change": -1.9,
+      "current_position": 4.8,
+      "previous_position": 6.7,
+      "query": "hvac repair portland"
+    },
+    {
+      "change": -2.5,
+      "current_position": 8.9,
+      "previous_position": 11.4,
+      "query": "water heater replacement"
+    },
+    {
+      "change": 0.9,
+      "current_position": 10.1,
+      "previous_position": 9.2,
+      "query": "drain cleaning portland"
+    }
+  ],
+  "reporting_period": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "average_position": 9.8,
+    "clicks": 4980,
+    "ctr": 0.0335,
+    "impressions": 148500
+  },
+  "time_series": [
+    {
+      "clicks": 118,
+      "date": "2026-04-01",
+      "impressions": 3710
+    },
+    {
+      "clicks": 152,
+      "date": "2026-04-02",
+      "impressions": 4536
+    },
+    {
+      "clicks": 132,
+      "date": "2026-04-03",
+      "impressions": 4064
+    },
+    {
+      "clicks": 166,
+      "date": "2026-04-04",
+      "impressions": 4890
+    },
+    {
+      "clicks": 147,
+      "date": "2026-04-05",
+      "impressions": 4418
+    },
+    {
+      "clicks": 128,
+      "date": "2026-04-06",
+      "impressions": 3946
+    },
+    {
+      "clicks": 161,
+      "date": "2026-04-07",
+      "impressions": 4772
+    },
+    {
+      "clicks": 142,
+      "date": "2026-04-08",
+      "impressions": 4300
+    },
+    {
+      "clicks": 123,
+      "date": "2026-04-09",
+      "impressions": 3828
+    },
+    {
+      "clicks": 156,
+      "date": "2026-04-10",
+      "impressions": 4654
+    },
+    {
+      "clicks": 137,
+      "date": "2026-04-11",
+      "impressions": 4182
+    },
+    {
+      "clicks": 118,
+      "date": "2026-04-12",
+      "impressions": 3710
+    },
+    {
+      "clicks": 152,
+      "date": "2026-04-13",
+      "impressions": 4536
+    },
+    {
+      "clicks": 132,
+      "date": "2026-04-14",
+      "impressions": 4064
+    },
+    {
+      "clicks": 166,
+      "date": "2026-04-15",
+      "impressions": 4890
+    },
+    {
+      "clicks": 147,
+      "date": "2026-04-16",
+      "impressions": 4418
+    },
+    {
+      "clicks": 128,
+      "date": "2026-04-17",
+      "impressions": 3946
+    },
+    {
+      "clicks": 161,
+      "date": "2026-04-18",
+      "impressions": 4772
+    },
+    {
+      "clicks": 142,
+      "date": "2026-04-19",
+      "impressions": 4300
+    },
+    {
+      "clicks": 123,
+      "date": "2026-04-20",
+      "impressions": 3828
+    },
+    {
+      "clicks": 156,
+      "date": "2026-04-21",
+      "impressions": 4654
+    },
+    {
+      "clicks": 137,
+      "date": "2026-04-22",
+      "impressions": 4182
+    },
+    {
+      "clicks": 118,
+      "date": "2026-04-23",
+      "impressions": 3710
+    },
+    {
+      "clicks": 152,
+      "date": "2026-04-24",
+      "impressions": 4536
+    },
+    {
+      "clicks": 132,
+      "date": "2026-04-25",
+      "impressions": 4064
+    },
+    {
+      "clicks": 166,
+      "date": "2026-04-26",
+      "impressions": 4890
+    },
+    {
+      "clicks": 147,
+      "date": "2026-04-27",
+      "impressions": 4418
+    },
+    {
+      "clicks": 128,
+      "date": "2026-04-28",
+      "impressions": 3946
+    },
+    {
+      "clicks": 161,
+      "date": "2026-04-29",
+      "impressions": 4772
+    },
+    {
+      "clicks": 142,
+      "date": "2026-04-30",
+      "impressions": 4300
+    }
+  ],
+  "top_pages": [
+    {
+      "clicks": 1120,
+      "ctr": 0.0418,
+      "impressions": 26800,
+      "path": "/services/hvac-repair"
+    },
+    {
+      "clicks": 980,
+      "ctr": 0.0326,
+      "impressions": 30100,
+      "path": "/services/plumbing"
+    },
+    {
+      "clicks": 625,
+      "ctr": 0.034,
+      "impressions": 18400,
+      "path": "/service-area/portland"
+    }
+  ],
+  "top_queries": [
+    {
+      "clicks": 620,
+      "impressions": 11800,
+      "position": 4.8,
+      "query": "hvac repair portland"
+    },
+    {
+      "clicks": 545,
+      "impressions": 13640,
+      "position": 6.1,
+      "query": "emergency plumber near me"
+    },
+    {
+      "clicks": 488,
+      "impressions": 9200,
+      "position": 5.3,
+      "query": "furnace repair portland"
+    },
+    {
+      "clicks": 315,
+      "impressions": 8700,
+      "position": 8.9,
+      "query": "water heater replacement"
+    }
+  ],
+  "warnings": []
+}

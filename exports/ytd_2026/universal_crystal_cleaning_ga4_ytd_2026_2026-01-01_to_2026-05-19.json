@@ -1,0 +1,861 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-05-19",
+    "start": "2026-01-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 97.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 64.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 374.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.42268
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 72.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 593.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.861111
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 29.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 13.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 46.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.517241
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Paid Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Universal Crystal Cleaning (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 236.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 654.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 464.278751
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Universal Crystal Cleaning - Pink Unicorn (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 118.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 57.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 370.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 189.305236
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Header - Pink Unicorn (/index.php/template/header/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 53.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 114.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 949.926625
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Janitorial - Universal Crystal Cleaning (/commercial-cleaning/janitorial/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 38.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 96.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 154.274114
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Carpet Cleaning - Universal Crystal Cleaning (/universal-crystal-cleaning/services/carpet-cleaning/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 31.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 75.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 516.516681
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Day Porter - Universal Crystal Cleaning (/universal-crystal-cleaning/services/commercial-cleaning/day-porter/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 31.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 82.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 158.961183
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Carpet Cleaning - Universal Crystal Cleaning (/carpet-cleaning/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 28.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 72.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 245.829941
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Post Construction clean up - Universal Crystal Cleaning (/universal-crystal-cleaning/services/commercial-cleaning/post-construction-clean-up/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 27.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 70.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 70.736223
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Janitorial - Universal Crystal Cleaning (/universal-crystal-cleaning/services/commercial-cleaning/janitorial/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 26.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 61.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 425.83158
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Pressure Washing - Universal Crystal Cleaning (/universal-crystal-cleaning/services/pressure-washing/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 23.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 60.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 315.830733
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 122.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 203.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.586207
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 564.298855
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 1016.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 2771.0
+    }
+  ],
+  "property_resource": "properties/527514220",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 122 users, 203 sessions, and 1016 views.",
+  "summary_counts": {
+    "dimension_row_count": 16,
+    "metric_count": 6,
+    "time_series_count": 47
+  },
+  "time_series": [
+    {
+      "date": "2026-03-12",
+      "event_count": 13.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-20",
+      "event_count": 274.0,
+      "sessions": 5.0,
+      "users": 5.0,
+      "views": 112.0
+    },
+    {
+      "date": "2026-03-21",
+      "event_count": 17.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 5.0
+    },
+    {
+      "date": "2026-03-22",
+      "event_count": 4.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-03-23",
+      "event_count": 20.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-03-24",
+      "event_count": 35.0,
+      "sessions": 8.0,
+      "users": 4.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-03-25",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-03-26",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-03-27",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-03-28",
+      "event_count": 9.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-03-29",
+      "event_count": 15.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-03-30",
+      "event_count": 3.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-03-31",
+      "event_count": 12.0,
+      "sessions": 2.0,
+      "users": 1.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-01",
+      "event_count": 15.0,
+      "sessions": 5.0,
+      "users": 3.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 2.0,
+      "sessions": 1.0,
+      "users": 0.0,
+      "views": 0.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 3.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 3.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 13.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 90.0,
+      "sessions": 9.0,
+      "users": 5.0,
+      "views": 31.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 4.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 45.0,
+      "sessions": 8.0,
+      "users": 5.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 111.0,
+      "sessions": 8.0,
+      "users": 5.0,
+      "views": 45.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 2.0,
+      "sessions": 1.0,
+      "users": 0.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 22.0,
+      "sessions": 5.0,
+      "users": 4.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 3.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 13.0,
+      "sessions": 4.0,
+      "users": 4.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 12.0,
+      "sessions": 2.0,
+      "users": 2.0,
+      "views": 4.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 3.0,
+      "sessions": 1.0,
+      "users": 1.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 8.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 72.0,
+      "sessions": 8.0,
+      "users": 3.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 291.0,
+      "sessions": 8.0,
+      "users": 4.0,
+      "views": 98.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 26.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-05-01",
+      "event_count": 6.0,
+      "sessions": 2.0,
+      "users": 1.0,
+      "views": 2.0
+    },
+    {
+      "date": "2026-05-04",
+      "event_count": 77.0,
+      "sessions": 5.0,
+      "users": 2.0,
+      "views": 29.0
+    },
+    {
+      "date": "2026-05-05",
+      "event_count": 57.0,
+      "sessions": 3.0,
+      "users": 2.0,
+      "views": 23.0
+    },
+    {
+      "date": "2026-05-06",
+      "event_count": 29.0,
+      "sessions": 3.0,
+      "users": 1.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-05-07",
+      "event_count": 117.0,
+      "sessions": 13.0,
+      "users": 4.0,
+      "views": 42.0
+    },
+    {
+      "date": "2026-05-08",
+      "event_count": 270.0,
+      "sessions": 11.0,
+      "users": 5.0,
+      "views": 101.0
+    },
+    {
+      "date": "2026-05-11",
+      "event_count": 189.0,
+      "sessions": 7.0,
+      "users": 4.0,
+      "views": 69.0
+    },
+    {
+      "date": "2026-05-12",
+      "event_count": 78.0,
+      "sessions": 9.0,
+      "users": 4.0,
+      "views": 27.0
+    },
+    {
+      "date": "2026-05-13",
+      "event_count": 32.0,
+      "sessions": 5.0,
+      "users": 2.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-05-14",
+      "event_count": 104.0,
+      "sessions": 5.0,
+      "users": 1.0,
+      "views": 39.0
+    },
+    {
+      "date": "2026-05-15",
+      "event_count": 468.0,
+      "sessions": 11.0,
+      "users": 6.0,
+      "views": 180.0
+    },
+    {
+      "date": "2026-05-16",
+      "event_count": 2.0,
+      "sessions": 1.0,
+      "users": 0.0,
+      "views": 1.0
+    },
+    {
+      "date": "2026-05-18",
+      "event_count": 77.0,
+      "sessions": 6.0,
+      "users": 3.0,
+      "views": 32.0
+    },
+    {
+      "date": "2026-05-19",
+      "event_count": 101.0,
+      "sessions": 8.0,
+      "users": 4.0,
+      "views": 37.0
+    }
+  ],
+  "warnings": []
+}

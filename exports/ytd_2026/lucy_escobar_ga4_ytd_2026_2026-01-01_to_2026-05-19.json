@@ -1,0 +1,1520 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-05-19",
+    "start": "2026-01-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 2324.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2146.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 2920.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.145009
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 382.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 210.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 701.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.557592
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Social",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 179.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 177.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 181.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.592179
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 54.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 30.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 236.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.5
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 21.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.071429
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Email",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Video",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Lucy Escobar - Lucy Escobar (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 1500.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1130.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 4938.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 66.644933
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "About - Lucy Escobar (/about/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 98.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 88.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 295.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 113.249841
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Early Childhood Education Business Management - Lucy Escobar (/early-learning-consulting/early-childhood-education-business-management/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 89.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 63.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 216.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 77.480906
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "contact - Lucy Escobar (/contact/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 87.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 81.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 212.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 55.735614
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Lucy Escobar - Espa\u00f1ol - Lucy Escobar (/es/lucy-escobar-espanol/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 80.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 52.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 258.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 102.980394
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Strategic Planning Lab - Lucy Escobar (/strategic-planning/strategic-planning-lab/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 72.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 40.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 171.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 196.153046
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Tools and Frameworks - Lucy Escobar (/business-development/tools-and-frameworks/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 72.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 64.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 194.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 17.934505
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Emotional Intelligence Coaching and 360 Assessments - Lucy Escobar (/leadership-development/emotional-intelligence-coaching-360-assessments/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 70.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 58.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 205.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 77.535737
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Strategic Business Consulting - Lucy Escobar (/business-development/strategic-business-consulting/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 67.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 59.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 174.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 53.557274
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "DISC Assessments & Strategic Coaching - Lucy Escobar (/disc-assessments-strategic-coaching/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 66.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 29.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 187.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 257.653408
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 2664.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 2950.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.232881
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 73.325108
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 4063.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 12348.0
+    }
+  ],
+  "property_resource": "properties/508902753",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 2664 users, 2950 sessions, and 4063 views.",
+  "summary_counts": {
+    "dimension_row_count": 17,
+    "metric_count": 6,
+    "time_series_count": 136
+  },
+  "time_series": [
+    {
+      "date": "2026-01-04",
+      "event_count": 9.0,
+      "sessions": 3.0,
+      "users": 3.0,
+      "views": 3.0
+    },
+    {
+      "date": "2026-01-05",
+      "event_count": 305.0,
+      "sessions": 97.0,
+      "users": 97.0,
+      "views": 97.0
+    },
+    {
+      "date": "2026-01-06",
+      "event_count": 162.0,
+      "sessions": 50.0,
+      "users": 50.0,
+      "views": 53.0
+    },
+    {
+      "date": "2026-01-07",
+      "event_count": 140.0,
+      "sessions": 31.0,
+      "users": 29.0,
+      "views": 42.0
+    },
+    {
+      "date": "2026-01-08",
+      "event_count": 107.0,
+      "sessions": 25.0,
+      "users": 25.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-01-09",
+      "event_count": 87.0,
+      "sessions": 25.0,
+      "users": 23.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-01-10",
+      "event_count": 49.0,
+      "sessions": 15.0,
+      "users": 15.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-01-11",
+      "event_count": 63.0,
+      "sessions": 17.0,
+      "users": 16.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-01-12",
+      "event_count": 119.0,
+      "sessions": 32.0,
+      "users": 32.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-01-13",
+      "event_count": 142.0,
+      "sessions": 37.0,
+      "users": 37.0,
+      "views": 37.0
+    },
+    {
+      "date": "2026-01-14",
+      "event_count": 138.0,
+      "sessions": 26.0,
+      "users": 23.0,
+      "views": 42.0
+    },
+    {
+      "date": "2026-01-15",
+      "event_count": 39.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-01-16",
+      "event_count": 73.0,
+      "sessions": 25.0,
+      "users": 22.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-01-17",
+      "event_count": 217.0,
+      "sessions": 72.0,
+      "users": 71.0,
+      "views": 72.0
+    },
+    {
+      "date": "2026-01-18",
+      "event_count": 260.0,
+      "sessions": 85.0,
+      "users": 85.0,
+      "views": 86.0
+    },
+    {
+      "date": "2026-01-19",
+      "event_count": 150.0,
+      "sessions": 45.0,
+      "users": 42.0,
+      "views": 47.0
+    },
+    {
+      "date": "2026-01-20",
+      "event_count": 62.0,
+      "sessions": 19.0,
+      "users": 18.0,
+      "views": 19.0
+    },
+    {
+      "date": "2026-01-21",
+      "event_count": 91.0,
+      "sessions": 25.0,
+      "users": 25.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-01-22",
+      "event_count": 87.0,
+      "sessions": 28.0,
+      "users": 25.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-01-23",
+      "event_count": 88.0,
+      "sessions": 26.0,
+      "users": 24.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-01-24",
+      "event_count": 47.0,
+      "sessions": 13.0,
+      "users": 12.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-01-25",
+      "event_count": 109.0,
+      "sessions": 31.0,
+      "users": 30.0,
+      "views": 35.0
+    },
+    {
+      "date": "2026-01-26",
+      "event_count": 70.0,
+      "sessions": 21.0,
+      "users": 20.0,
+      "views": 22.0
+    },
+    {
+      "date": "2026-01-27",
+      "event_count": 74.0,
+      "sessions": 24.0,
+      "users": 24.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-01-28",
+      "event_count": 150.0,
+      "sessions": 29.0,
+      "users": 27.0,
+      "views": 49.0
+    },
+    {
+      "date": "2026-01-29",
+      "event_count": 125.0,
+      "sessions": 38.0,
+      "users": 37.0,
+      "views": 41.0
+    },
+    {
+      "date": "2026-01-30",
+      "event_count": 105.0,
+      "sessions": 30.0,
+      "users": 30.0,
+      "views": 32.0
+    },
+    {
+      "date": "2026-01-31",
+      "event_count": 135.0,
+      "sessions": 28.0,
+      "users": 27.0,
+      "views": 46.0
+    },
+    {
+      "date": "2026-02-01",
+      "event_count": 32.0,
+      "sessions": 10.0,
+      "users": 10.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-02-02",
+      "event_count": 95.0,
+      "sessions": 25.0,
+      "users": 24.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-02-03",
+      "event_count": 63.0,
+      "sessions": 18.0,
+      "users": 18.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-02-04",
+      "event_count": 98.0,
+      "sessions": 21.0,
+      "users": 21.0,
+      "views": 33.0
+    },
+    {
+      "date": "2026-02-05",
+      "event_count": 81.0,
+      "sessions": 20.0,
+      "users": 19.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-02-06",
+      "event_count": 55.0,
+      "sessions": 15.0,
+      "users": 14.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-07",
+      "event_count": 70.0,
+      "sessions": 14.0,
+      "users": 13.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-02-08",
+      "event_count": 60.0,
+      "sessions": 13.0,
+      "users": 11.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-02-09",
+      "event_count": 79.0,
+      "sessions": 14.0,
+      "users": 14.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-02-10",
+      "event_count": 101.0,
+      "sessions": 21.0,
+      "users": 21.0,
+      "views": 37.0
+    },
+    {
+      "date": "2026-02-11",
+      "event_count": 163.0,
+      "sessions": 42.0,
+      "users": 38.0,
+      "views": 45.0
+    },
+    {
+      "date": "2026-02-12",
+      "event_count": 73.0,
+      "sessions": 14.0,
+      "users": 13.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-02-13",
+      "event_count": 159.0,
+      "sessions": 21.0,
+      "users": 19.0,
+      "views": 55.0
+    },
+    {
+      "date": "2026-02-14",
+      "event_count": 50.0,
+      "sessions": 15.0,
+      "users": 13.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-02-15",
+      "event_count": 34.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 10.0
+    },
+    {
+      "date": "2026-02-16",
+      "event_count": 105.0,
+      "sessions": 30.0,
+      "users": 26.0,
+      "views": 32.0
+    },
+    {
+      "date": "2026-02-17",
+      "event_count": 85.0,
+      "sessions": 20.0,
+      "users": 19.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-02-18",
+      "event_count": 33.0,
+      "sessions": 11.0,
+      "users": 10.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-02-19",
+      "event_count": 113.0,
+      "sessions": 34.0,
+      "users": 27.0,
+      "views": 35.0
+    },
+    {
+      "date": "2026-02-20",
+      "event_count": 61.0,
+      "sessions": 18.0,
+      "users": 18.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-02-21",
+      "event_count": 40.0,
+      "sessions": 13.0,
+      "users": 13.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-02-22",
+      "event_count": 121.0,
+      "sessions": 33.0,
+      "users": 33.0,
+      "views": 36.0
+    },
+    {
+      "date": "2026-02-23",
+      "event_count": 80.0,
+      "sessions": 23.0,
+      "users": 20.0,
+      "views": 27.0
+    },
+    {
+      "date": "2026-02-24",
+      "event_count": 47.0,
+      "sessions": 15.0,
+      "users": 15.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-02-25",
+      "event_count": 128.0,
+      "sessions": 28.0,
+      "users": 27.0,
+      "views": 42.0
+    },
+    {
+      "date": "2026-02-26",
+      "event_count": 130.0,
+      "sessions": 24.0,
+      "users": 21.0,
+      "views": 41.0
+    },
+    {
+      "date": "2026-02-27",
+      "event_count": 65.0,
+      "sessions": 18.0,
+      "users": 17.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-02-28",
+      "event_count": 115.0,
+      "sessions": 22.0,
+      "users": 22.0,
+      "views": 38.0
+    },
+    {
+      "date": "2026-03-01",
+      "event_count": 95.0,
+      "sessions": 18.0,
+      "users": 17.0,
+      "views": 33.0
+    },
+    {
+      "date": "2026-03-02",
+      "event_count": 43.0,
+      "sessions": 11.0,
+      "users": 12.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-03-03",
+      "event_count": 57.0,
+      "sessions": 16.0,
+      "users": 12.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-03-04",
+      "event_count": 50.0,
+      "sessions": 15.0,
+      "users": 14.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-03-05",
+      "event_count": 108.0,
+      "sessions": 29.0,
+      "users": 24.0,
+      "views": 35.0
+    },
+    {
+      "date": "2026-03-06",
+      "event_count": 47.0,
+      "sessions": 12.0,
+      "users": 11.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-03-07",
+      "event_count": 61.0,
+      "sessions": 18.0,
+      "users": 18.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-03-08",
+      "event_count": 46.0,
+      "sessions": 12.0,
+      "users": 12.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-03-09",
+      "event_count": 142.0,
+      "sessions": 36.0,
+      "users": 33.0,
+      "views": 38.0
+    },
+    {
+      "date": "2026-03-10",
+      "event_count": 159.0,
+      "sessions": 21.0,
+      "users": 20.0,
+      "views": 60.0
+    },
+    {
+      "date": "2026-03-11",
+      "event_count": 285.0,
+      "sessions": 45.0,
+      "users": 29.0,
+      "views": 100.0
+    },
+    {
+      "date": "2026-03-12",
+      "event_count": 187.0,
+      "sessions": 33.0,
+      "users": 21.0,
+      "views": 68.0
+    },
+    {
+      "date": "2026-03-13",
+      "event_count": 117.0,
+      "sessions": 28.0,
+      "users": 22.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-03-14",
+      "event_count": 45.0,
+      "sessions": 14.0,
+      "users": 13.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-03-15",
+      "event_count": 89.0,
+      "sessions": 27.0,
+      "users": 23.0,
+      "views": 30.0
+    },
+    {
+      "date": "2026-03-16",
+      "event_count": 99.0,
+      "sessions": 30.0,
+      "users": 22.0,
+      "views": 30.0
+    },
+    {
+      "date": "2026-03-17",
+      "event_count": 145.0,
+      "sessions": 29.0,
+      "users": 25.0,
+      "views": 44.0
+    },
+    {
+      "date": "2026-03-18",
+      "event_count": 118.0,
+      "sessions": 30.0,
+      "users": 28.0,
+      "views": 38.0
+    },
+    {
+      "date": "2026-03-19",
+      "event_count": 115.0,
+      "sessions": 27.0,
+      "users": 26.0,
+      "views": 36.0
+    },
+    {
+      "date": "2026-03-20",
+      "event_count": 43.0,
+      "sessions": 11.0,
+      "users": 9.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-03-21",
+      "event_count": 35.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-03-22",
+      "event_count": 79.0,
+      "sessions": 13.0,
+      "users": 12.0,
+      "views": 32.0
+    },
+    {
+      "date": "2026-03-23",
+      "event_count": 40.0,
+      "sessions": 13.0,
+      "users": 12.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-03-24",
+      "event_count": 49.0,
+      "sessions": 15.0,
+      "users": 12.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-03-25",
+      "event_count": 96.0,
+      "sessions": 18.0,
+      "users": 15.0,
+      "views": 31.0
+    },
+    {
+      "date": "2026-03-26",
+      "event_count": 55.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-03-27",
+      "event_count": 27.0,
+      "sessions": 9.0,
+      "users": 7.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-03-28",
+      "event_count": 63.0,
+      "sessions": 17.0,
+      "users": 16.0,
+      "views": 20.0
+    },
+    {
+      "date": "2026-03-29",
+      "event_count": 21.0,
+      "sessions": 7.0,
+      "users": 6.0,
+      "views": 7.0
+    },
+    {
+      "date": "2026-03-30",
+      "event_count": 106.0,
+      "sessions": 31.0,
+      "users": 22.0,
+      "views": 33.0
+    },
+    {
+      "date": "2026-03-31",
+      "event_count": 53.0,
+      "sessions": 13.0,
+      "users": 11.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-04-01",
+      "event_count": 35.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 11.0
+    },
+    {
+      "date": "2026-04-02",
+      "event_count": 32.0,
+      "sessions": 10.0,
+      "users": 9.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-03",
+      "event_count": 49.0,
+      "sessions": 14.0,
+      "users": 12.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-04-04",
+      "event_count": 41.0,
+      "sessions": 12.0,
+      "users": 10.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-04-05",
+      "event_count": 84.0,
+      "sessions": 14.0,
+      "users": 9.0,
+      "views": 31.0
+    },
+    {
+      "date": "2026-04-06",
+      "event_count": 127.0,
+      "sessions": 22.0,
+      "users": 14.0,
+      "views": 45.0
+    },
+    {
+      "date": "2026-04-07",
+      "event_count": 78.0,
+      "sessions": 24.0,
+      "users": 20.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-04-08",
+      "event_count": 64.0,
+      "sessions": 16.0,
+      "users": 14.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-04-09",
+      "event_count": 108.0,
+      "sessions": 26.0,
+      "users": 24.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-04-10",
+      "event_count": 104.0,
+      "sessions": 21.0,
+      "users": 20.0,
+      "views": 33.0
+    },
+    {
+      "date": "2026-04-11",
+      "event_count": 44.0,
+      "sessions": 15.0,
+      "users": 11.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-04-12",
+      "event_count": 44.0,
+      "sessions": 12.0,
+      "users": 12.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-04-13",
+      "event_count": 357.0,
+      "sessions": 26.0,
+      "users": 23.0,
+      "views": 135.0
+    },
+    {
+      "date": "2026-04-14",
+      "event_count": 24.0,
+      "sessions": 6.0,
+      "users": 5.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-15",
+      "event_count": 88.0,
+      "sessions": 18.0,
+      "users": 12.0,
+      "views": 29.0
+    },
+    {
+      "date": "2026-04-16",
+      "event_count": 31.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 9.0
+    },
+    {
+      "date": "2026-04-17",
+      "event_count": 83.0,
+      "sessions": 22.0,
+      "users": 21.0,
+      "views": 25.0
+    },
+    {
+      "date": "2026-04-18",
+      "event_count": 42.0,
+      "sessions": 12.0,
+      "users": 12.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-04-19",
+      "event_count": 34.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 12.0
+    },
+    {
+      "date": "2026-04-20",
+      "event_count": 130.0,
+      "sessions": 20.0,
+      "users": 17.0,
+      "views": 46.0
+    },
+    {
+      "date": "2026-04-21",
+      "event_count": 84.0,
+      "sessions": 15.0,
+      "users": 14.0,
+      "views": 32.0
+    },
+    {
+      "date": "2026-04-22",
+      "event_count": 77.0,
+      "sessions": 16.0,
+      "users": 14.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-04-23",
+      "event_count": 43.0,
+      "sessions": 10.0,
+      "users": 8.0,
+      "views": 15.0
+    },
+    {
+      "date": "2026-04-24",
+      "event_count": 192.0,
+      "sessions": 24.0,
+      "users": 19.0,
+      "views": 81.0
+    },
+    {
+      "date": "2026-04-25",
+      "event_count": 23.0,
+      "sessions": 8.0,
+      "users": 7.0,
+      "views": 8.0
+    },
+    {
+      "date": "2026-04-26",
+      "event_count": 80.0,
+      "sessions": 18.0,
+      "users": 18.0,
+      "views": 26.0
+    },
+    {
+      "date": "2026-04-27",
+      "event_count": 64.0,
+      "sessions": 18.0,
+      "users": 17.0,
+      "views": 21.0
+    },
+    {
+      "date": "2026-04-28",
+      "event_count": 102.0,
+      "sessions": 23.0,
+      "users": 17.0,
+      "views": 37.0
+    },
+    {
+      "date": "2026-04-29",
+      "event_count": 57.0,
+      "sessions": 15.0,
+      "users": 9.0,
+      "views": 18.0
+    },
+    {
+      "date": "2026-04-30",
+      "event_count": 55.0,
+      "sessions": 18.0,
+      "users": 16.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-05-01",
+      "event_count": 78.0,
+      "sessions": 20.0,
+      "users": 15.0,
+      "views": 24.0
+    },
+    {
+      "date": "2026-05-02",
+      "event_count": 113.0,
+      "sessions": 19.0,
+      "users": 18.0,
+      "views": 37.0
+    },
+    {
+      "date": "2026-05-03",
+      "event_count": 19.0,
+      "sessions": 6.0,
+      "users": 6.0,
+      "views": 6.0
+    },
+    {
+      "date": "2026-05-04",
+      "event_count": 47.0,
+      "sessions": 14.0,
+      "users": 13.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-05-05",
+      "event_count": 88.0,
+      "sessions": 22.0,
+      "users": 18.0,
+      "views": 28.0
+    },
+    {
+      "date": "2026-05-06",
+      "event_count": 122.0,
+      "sessions": 18.0,
+      "users": 16.0,
+      "views": 46.0
+    },
+    {
+      "date": "2026-05-07",
+      "event_count": 50.0,
+      "sessions": 13.0,
+      "users": 10.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-05-08",
+      "event_count": 83.0,
+      "sessions": 26.0,
+      "users": 25.0,
+      "views": 27.0
+    },
+    {
+      "date": "2026-05-09",
+      "event_count": 41.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-05-10",
+      "event_count": 36.0,
+      "sessions": 9.0,
+      "users": 9.0,
+      "views": 13.0
+    },
+    {
+      "date": "2026-05-11",
+      "event_count": 107.0,
+      "sessions": 23.0,
+      "users": 18.0,
+      "views": 34.0
+    },
+    {
+      "date": "2026-05-12",
+      "event_count": 48.0,
+      "sessions": 14.0,
+      "users": 12.0,
+      "views": 14.0
+    },
+    {
+      "date": "2026-05-13",
+      "event_count": 142.0,
+      "sessions": 42.0,
+      "users": 37.0,
+      "views": 47.0
+    },
+    {
+      "date": "2026-05-14",
+      "event_count": 362.0,
+      "sessions": 41.0,
+      "users": 31.0,
+      "views": 139.0
+    },
+    {
+      "date": "2026-05-15",
+      "event_count": 86.0,
+      "sessions": 17.0,
+      "users": 14.0,
+      "views": 31.0
+    },
+    {
+      "date": "2026-05-16",
+      "event_count": 49.0,
+      "sessions": 15.0,
+      "users": 13.0,
+      "views": 16.0
+    },
+    {
+      "date": "2026-05-17",
+      "event_count": 45.0,
+      "sessions": 9.0,
+      "users": 8.0,
+      "views": 17.0
+    },
+    {
+      "date": "2026-05-18",
+      "event_count": 116.0,
+      "sessions": 35.0,
+      "users": 32.0,
+      "views": 39.0
+    },
+    {
+      "date": "2026-05-19",
+      "event_count": 126.0,
+      "sessions": 25.0,
+      "users": 23.0,
+      "views": 46.0
+    }
+  ],
+  "warnings": []
+}

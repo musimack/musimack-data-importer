@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
+from .local_config import load_local_operator_config
+
 
 class ConfigError(ValueError):
     pass
@@ -75,6 +77,7 @@ def env_value(name: str, required: bool = True) -> str | None:
 
 
 def load_ga4_config() -> Ga4Config:
+    load_local_operator_config()
     property_id = env_value("MUSIMACK_GA4_PROPERTY_ID")
     if not property_id or not property_id.isdigit():
         raise ConfigError("MUSIMACK_GA4_PROPERTY_ID must contain only digits")
@@ -117,6 +120,7 @@ def load_ga4_config() -> Ga4Config:
 
 
 def load_database_config(project_id_override: str | None = None) -> DatabaseConfig:
+    load_local_operator_config()
     database_url = env_value("MUSIMACK_PORTAL_DATABASE_URL")
     project_id = project_id_override or env_value("MUSIMACK_PORTAL_PROJECT_ID")
     if not project_id:

@@ -1,0 +1,295 @@
+{
+  "insights": [
+    "Paid Search produced the most qualified tracked calls.",
+    "Missed call follow-up is the clearest near-term conversion recovery opportunity."
+  ],
+  "local_only": true,
+  "mock_data": true,
+  "provider": "callrail",
+  "reporting_period": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "safe_call_examples": [
+    {
+      "caller_label": "Caller 001",
+      "duration_seconds": 332,
+      "qualified": true,
+      "source": "Google Ads Search",
+      "status": "answered"
+    },
+    {
+      "caller_label": "Caller 002",
+      "duration_seconds": 184,
+      "qualified": true,
+      "source": "Organic Search",
+      "status": "answered"
+    },
+    {
+      "caller_label": "Caller 003",
+      "duration_seconds": 48,
+      "qualified": false,
+      "source": "Google Ads LSA",
+      "status": "missed"
+    },
+    {
+      "caller_label": "Caller 004",
+      "duration_seconds": 276,
+      "qualified": true,
+      "source": "Direct",
+      "status": "answered"
+    }
+  ],
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_breakdown": [
+    {
+      "calls": 168,
+      "qualified_leads": 62,
+      "source": "Google Ads Search"
+    },
+    {
+      "calls": 142,
+      "qualified_leads": 44,
+      "source": "Organic Search"
+    },
+    {
+      "calls": 108,
+      "qualified_leads": 31,
+      "source": "Google Ads LSA"
+    },
+    {
+      "calls": 46,
+      "qualified_leads": 8,
+      "source": "Direct"
+    },
+    {
+      "calls": 22,
+      "qualified_leads": 3,
+      "source": "Referral"
+    }
+  ],
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "answered_calls": 421,
+    "average_call_duration_seconds": 214,
+    "calls": 486,
+    "first_time_callers": 312,
+    "missed_calls": 65,
+    "qualified_leads": 148
+  },
+  "time_series": [
+    {
+      "answered_calls": 8,
+      "calls": 10,
+      "date": "2026-04-01",
+      "missed_calls": 1,
+      "qualified_leads": 2
+    },
+    {
+      "answered_calls": 12,
+      "calls": 14,
+      "date": "2026-04-02",
+      "missed_calls": 2,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 10,
+      "calls": 12,
+      "date": "2026-04-03",
+      "missed_calls": 2,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 14,
+      "calls": 16,
+      "date": "2026-04-04",
+      "missed_calls": 3,
+      "qualified_leads": 6
+    },
+    {
+      "answered_calls": 12,
+      "calls": 14,
+      "date": "2026-04-05",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 10,
+      "calls": 11,
+      "date": "2026-04-06",
+      "missed_calls": 1,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 13,
+      "calls": 15,
+      "date": "2026-04-07",
+      "missed_calls": 3,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 11,
+      "calls": 13,
+      "date": "2026-04-08",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 9,
+      "calls": 11,
+      "date": "2026-04-09",
+      "missed_calls": 1,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 12,
+      "calls": 15,
+      "date": "2026-04-10",
+      "missed_calls": 3,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 10,
+      "calls": 12,
+      "date": "2026-04-11",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 8,
+      "calls": 10,
+      "date": "2026-04-12",
+      "missed_calls": 1,
+      "qualified_leads": 2
+    },
+    {
+      "answered_calls": 12,
+      "calls": 14,
+      "date": "2026-04-13",
+      "missed_calls": 2,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 10,
+      "calls": 12,
+      "date": "2026-04-14",
+      "missed_calls": 2,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 14,
+      "calls": 16,
+      "date": "2026-04-15",
+      "missed_calls": 3,
+      "qualified_leads": 6
+    },
+    {
+      "answered_calls": 12,
+      "calls": 14,
+      "date": "2026-04-16",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 10,
+      "calls": 11,
+      "date": "2026-04-17",
+      "missed_calls": 1,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 13,
+      "calls": 15,
+      "date": "2026-04-18",
+      "missed_calls": 3,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 11,
+      "calls": 13,
+      "date": "2026-04-19",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 9,
+      "calls": 11,
+      "date": "2026-04-20",
+      "missed_calls": 1,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 12,
+      "calls": 15,
+      "date": "2026-04-21",
+      "missed_calls": 3,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 10,
+      "calls": 12,
+      "date": "2026-04-22",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 8,
+      "calls": 10,
+      "date": "2026-04-23",
+      "missed_calls": 1,
+      "qualified_leads": 2
+    },
+    {
+      "answered_calls": 12,
+      "calls": 14,
+      "date": "2026-04-24",
+      "missed_calls": 2,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 10,
+      "calls": 12,
+      "date": "2026-04-25",
+      "missed_calls": 2,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 14,
+      "calls": 16,
+      "date": "2026-04-26",
+      "missed_calls": 3,
+      "qualified_leads": 6
+    },
+    {
+      "answered_calls": 12,
+      "calls": 14,
+      "date": "2026-04-27",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    },
+    {
+      "answered_calls": 10,
+      "calls": 11,
+      "date": "2026-04-28",
+      "missed_calls": 1,
+      "qualified_leads": 3
+    },
+    {
+      "answered_calls": 13,
+      "calls": 15,
+      "date": "2026-04-29",
+      "missed_calls": 3,
+      "qualified_leads": 5
+    },
+    {
+      "answered_calls": 11,
+      "calls": 13,
+      "date": "2026-04-30",
+      "missed_calls": 2,
+      "qualified_leads": 4
+    }
+  ],
+  "warnings": [
+    "Caller labels are synthetic and do not represent real people or phone numbers."
+  ]
+}

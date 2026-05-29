@@ -1,0 +1,311 @@
+{
+  "insights": [
+    "Organic Search generated the largest session volume and the strongest assisted service-request activity.",
+    "HVAC and plumbing landing pages are carrying most high-intent website engagement."
+  ],
+  "local_only": true,
+  "mock_data": true,
+  "provider": "ga4",
+  "reporting_period": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "average_session_duration_seconds": 138,
+    "conversions": 312,
+    "engagement_rate": 0.684,
+    "event_count": 74520,
+    "sessions": 11385,
+    "users": 8420,
+    "views": 28640
+  },
+  "time_series": [
+    {
+      "conversions": 5,
+      "date": "2026-04-01",
+      "sessions": 288,
+      "users": 218,
+      "views": 735
+    },
+    {
+      "conversions": 9,
+      "date": "2026-04-02",
+      "sessions": 347,
+      "users": 263,
+      "views": 882
+    },
+    {
+      "conversions": 7,
+      "date": "2026-04-03",
+      "sessions": 313,
+      "users": 237,
+      "views": 798
+    },
+    {
+      "conversions": 11,
+      "date": "2026-04-04",
+      "sessions": 372,
+      "users": 282,
+      "views": 945
+    },
+    {
+      "conversions": 9,
+      "date": "2026-04-05",
+      "sessions": 338,
+      "users": 256,
+      "views": 861
+    },
+    {
+      "conversions": 6,
+      "date": "2026-04-06",
+      "sessions": 305,
+      "users": 231,
+      "views": 777
+    },
+    {
+      "conversions": 10,
+      "date": "2026-04-07",
+      "sessions": 363,
+      "users": 276,
+      "views": 924
+    },
+    {
+      "conversions": 8,
+      "date": "2026-04-08",
+      "sessions": 330,
+      "users": 250,
+      "views": 840
+    },
+    {
+      "conversions": 6,
+      "date": "2026-04-09",
+      "sessions": 297,
+      "users": 224,
+      "views": 756
+    },
+    {
+      "conversions": 10,
+      "date": "2026-04-10",
+      "sessions": 355,
+      "users": 269,
+      "views": 903
+    },
+    {
+      "conversions": 7,
+      "date": "2026-04-11",
+      "sessions": 322,
+      "users": 244,
+      "views": 819
+    },
+    {
+      "conversions": 5,
+      "date": "2026-04-12",
+      "sessions": 288,
+      "users": 218,
+      "views": 735
+    },
+    {
+      "conversions": 9,
+      "date": "2026-04-13",
+      "sessions": 347,
+      "users": 263,
+      "views": 882
+    },
+    {
+      "conversions": 7,
+      "date": "2026-04-14",
+      "sessions": 313,
+      "users": 237,
+      "views": 798
+    },
+    {
+      "conversions": 11,
+      "date": "2026-04-15",
+      "sessions": 372,
+      "users": 282,
+      "views": 945
+    },
+    {
+      "conversions": 9,
+      "date": "2026-04-16",
+      "sessions": 338,
+      "users": 256,
+      "views": 861
+    },
+    {
+      "conversions": 6,
+      "date": "2026-04-17",
+      "sessions": 305,
+      "users": 231,
+      "views": 777
+    },
+    {
+      "conversions": 10,
+      "date": "2026-04-18",
+      "sessions": 363,
+      "users": 276,
+      "views": 924
+    },
+    {
+      "conversions": 8,
+      "date": "2026-04-19",
+      "sessions": 330,
+      "users": 250,
+      "views": 840
+    },
+    {
+      "conversions": 6,
+      "date": "2026-04-20",
+      "sessions": 297,
+      "users": 224,
+      "views": 756
+    },
+    {
+      "conversions": 10,
+      "date": "2026-04-21",
+      "sessions": 355,
+      "users": 269,
+      "views": 903
+    },
+    {
+      "conversions": 7,
+      "date": "2026-04-22",
+      "sessions": 322,
+      "users": 244,
+      "views": 819
+    },
+    {
+      "conversions": 5,
+      "date": "2026-04-23",
+      "sessions": 288,
+      "users": 218,
+      "views": 735
+    },
+    {
+      "conversions": 9,
+      "date": "2026-04-24",
+      "sessions": 347,
+      "users": 263,
+      "views": 882
+    },
+    {
+      "conversions": 7,
+      "date": "2026-04-25",
+      "sessions": 313,
+      "users": 237,
+      "views": 798
+    },
+    {
+      "conversions": 11,
+      "date": "2026-04-26",
+      "sessions": 372,
+      "users": 282,
+      "views": 945
+    },
+    {
+      "conversions": 9,
+      "date": "2026-04-27",
+      "sessions": 338,
+      "users": 256,
+      "views": 861
+    },
+    {
+      "conversions": 6,
+      "date": "2026-04-28",
+      "sessions": 305,
+      "users": 231,
+      "views": 777
+    },
+    {
+      "conversions": 10,
+      "date": "2026-04-29",
+      "sessions": 363,
+      "users": 276,
+      "views": 924
+    },
+    {
+      "conversions": 8,
+      "date": "2026-04-30",
+      "sessions": 330,
+      "users": 250,
+      "views": 840
+    }
+  ],
+  "top_pages": [
+    {
+      "conversions": 62,
+      "path": "/",
+      "title": "Home",
+      "users": 2840,
+      "views": 6920
+    },
+    {
+      "conversions": 74,
+      "path": "/services/hvac-repair",
+      "title": "HVAC Repair",
+      "users": 1610,
+      "views": 4310
+    },
+    {
+      "conversions": 68,
+      "path": "/services/plumbing",
+      "title": "Plumbing Services",
+      "users": 1475,
+      "views": 3860
+    },
+    {
+      "conversions": 31,
+      "path": "/service-area/portland",
+      "title": "Portland Service Area",
+      "users": 980,
+      "views": 2510
+    },
+    {
+      "conversions": 77,
+      "path": "/contact",
+      "title": "Request Service",
+      "users": 1160,
+      "views": 2280
+    }
+  ],
+  "traffic_channels": [
+    {
+      "channel": "Organic Search",
+      "conversions": 142,
+      "sessions": 4210,
+      "users": 3290,
+      "views": 11320
+    },
+    {
+      "channel": "Paid Search",
+      "conversions": 96,
+      "sessions": 2985,
+      "users": 2310,
+      "views": 7610
+    },
+    {
+      "channel": "Direct",
+      "conversions": 28,
+      "sessions": 1640,
+      "users": 1304,
+      "views": 3840
+    },
+    {
+      "channel": "Referral",
+      "conversions": 22,
+      "sessions": 1015,
+      "users": 870,
+      "views": 2510
+    },
+    {
+      "channel": "Organic Social",
+      "conversions": 14,
+      "sessions": 760,
+      "users": 646,
+      "views": 1785
+    }
+  ],
+  "warnings": []
+}

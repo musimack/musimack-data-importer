@@ -1,0 +1,84 @@
+{
+  "above_fold_module_order": [
+    "executive_summary",
+    "website_performance",
+    "paid_search",
+    "call_tracking"
+  ],
+  "active_services": [
+    "SEO/GEO",
+    "Google Ads Search",
+    "Google Ads LSA",
+    "Local SEO / Maps",
+    "Call Tracking",
+    "Website Maintenance",
+    "Hosting"
+  ],
+  "below_fold_module_order": [
+    "search_console",
+    "lsa_performance",
+    "local_map_rankings",
+    "tasks",
+    "insights"
+  ],
+  "client_name": "Riverside Home Services Demo",
+  "current_tasks": [
+    {
+      "service": "SEO/GEO",
+      "status": "in_progress",
+      "title": "Refresh HVAC repair landing page calls to action"
+    },
+    {
+      "service": "Google Ads LSA",
+      "status": "planned",
+      "title": "Review LSA disputed lead categories"
+    },
+    {
+      "service": "Local SEO / Maps",
+      "status": "planned",
+      "title": "Add Beaverton and Gresham local proof sections"
+    },
+    {
+      "service": "Call Tracking",
+      "status": "in_progress",
+      "title": "Audit missed-call follow-up workflow"
+    }
+  ],
+  "domain": "riversidehomeservices.example",
+  "latest_report_date": "2026-04-30",
+  "local_only": true,
+  "mock_data": true,
+  "modules_enabled": [
+    "executive_summary",
+    "website_performance",
+    "search_console",
+    "paid_search",
+    "lsa_performance",
+    "local_map_rankings",
+    "call_tracking",
+    "tasks",
+    "insights"
+  ],
+  "primary_market": "Portland Metro",
+  "primary_service_priority": "SEO/GEO",
+  "provider_summaries": {
+    "callrail": "callrail-summary.json",
+    "ga4": "ga4-summary.json",
+    "google_ads_lsa": "google-ads-lsa-summary.json",
+    "google_ads_search": "google-ads-search-summary.json",
+    "gsc": "gsc-summary.json",
+    "local_falcon": "local-falcon-summary.json"
+  },
+  "recent_insights": [
+    "Organic Search and Paid Search are both producing strong service-request intent.",
+    "HVAC repair has the best cross-channel momentum.",
+    "Missed calls represent a measurable conversion recovery opportunity."
+  ],
+  "schema_version": "dashboard_lab_combined_summary.v1",
+  "source_mode": "synthetic_mock",
+  "top_strategy_focus": [
+    "Grow high-intent HVAC and plumbing organic visibility.",
+    "Improve paid lead quality and missed-call recovery.",
+    "Close Local Falcon ranking gaps in west-side service areas."
+  ]
+}

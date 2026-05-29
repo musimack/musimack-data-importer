@@ -1,0 +1,264 @@
+{
+  "insights": [
+    "Booked lead rate is strongest for HVAC repair.",
+    "Dispute review should focus on out-of-area and wrong-service leads."
+  ],
+  "lead_categories": [
+    {
+      "booked_leads": 31,
+      "category": "HVAC Repair",
+      "cost_per_lead": 55.4,
+      "leads": 52
+    },
+    {
+      "booked_leads": 24,
+      "category": "Plumbing",
+      "cost_per_lead": 61.2,
+      "leads": 44
+    },
+    {
+      "booked_leads": 12,
+      "category": "Water Heater",
+      "cost_per_lead": 58.9,
+      "leads": 21
+    },
+    {
+      "booked_leads": 7,
+      "category": "Other Home Services",
+      "cost_per_lead": 66.8,
+      "leads": 15
+    }
+  ],
+  "local_only": true,
+  "mock_data": true,
+  "provider": "google_ads_lsa",
+  "reporting_period": {
+    "end": "2026-04-30",
+    "start": "2026-04-01"
+  },
+  "schema_version": "dashboard_lab_provider_summary.v1",
+  "source_mode": "synthetic_mock",
+  "summary_metrics": {
+    "booked_leads": 74,
+    "calls": 108,
+    "charged_leads": 125,
+    "cost_per_lead": 59.28,
+    "disputed_leads": 7,
+    "leads": 132,
+    "messages": 24,
+    "spend": 7825.5
+  },
+  "time_series": [
+    {
+      "calls": 2,
+      "date": "2026-04-01",
+      "leads": 2,
+      "messages": 0,
+      "spend": 175
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-02",
+      "leads": 4,
+      "messages": 1,
+      "spend": 238
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-03",
+      "leads": 2,
+      "messages": 1,
+      "spend": 202
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-04",
+      "leads": 4,
+      "messages": 2,
+      "spend": 265
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-05",
+      "leads": 3,
+      "messages": 1,
+      "spend": 229
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-06",
+      "leads": 2,
+      "messages": 1,
+      "spend": 193
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-07",
+      "leads": 4,
+      "messages": 1,
+      "spend": 256
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-08",
+      "leads": 3,
+      "messages": 1,
+      "spend": 220
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-09",
+      "leads": 2,
+      "messages": 1,
+      "spend": 184
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-10",
+      "leads": 4,
+      "messages": 1,
+      "spend": 247
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-11",
+      "leads": 3,
+      "messages": 1,
+      "spend": 211
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-12",
+      "leads": 2,
+      "messages": 0,
+      "spend": 175
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-13",
+      "leads": 4,
+      "messages": 1,
+      "spend": 238
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-14",
+      "leads": 2,
+      "messages": 1,
+      "spend": 202
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-15",
+      "leads": 4,
+      "messages": 2,
+      "spend": 265
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-16",
+      "leads": 3,
+      "messages": 1,
+      "spend": 229
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-17",
+      "leads": 2,
+      "messages": 1,
+      "spend": 193
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-18",
+      "leads": 4,
+      "messages": 1,
+      "spend": 256
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-19",
+      "leads": 3,
+      "messages": 1,
+      "spend": 220
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-20",
+      "leads": 2,
+      "messages": 1,
+      "spend": 184
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-21",
+      "leads": 4,
+      "messages": 1,
+      "spend": 247
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-22",
+      "leads": 3,
+      "messages": 1,
+      "spend": 211
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-23",
+      "leads": 2,
+      "messages": 0,
+      "spend": 175
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-24",
+      "leads": 4,
+      "messages": 1,
+      "spend": 238
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-25",
+      "leads": 2,
+      "messages": 1,
+      "spend": 202
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-26",
+      "leads": 4,
+      "messages": 2,
+      "spend": 265
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-27",
+      "leads": 3,
+      "messages": 1,
+      "spend": 229
+    },
+    {
+      "calls": 2,
+      "date": "2026-04-28",
+      "leads": 2,
+      "messages": 1,
+      "spend": 193
+    },
+    {
+      "calls": 4,
+      "date": "2026-04-29",
+      "leads": 4,
+      "messages": 1,
+      "spend": 256
+    },
+    {
+      "calls": 3,
+      "date": "2026-04-30",
+      "leads": 3,
+      "messages": 1,
+      "spend": 220
+    }
+  ],
+  "warnings": []
+}

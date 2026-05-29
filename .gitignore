@@ -1,0 +1,7 @@
+.env
+.env.local
+*.token.json
+.pytest_cache/
+.test-tmp-*/
+__pycache__/
+

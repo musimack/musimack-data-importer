@@ -20,6 +20,7 @@ from src.console_ops import (
     run_validation,
     run_workflow_helper,
 )
+from src.local_config import load_local_operator_config
 from src.oauth_readiness import report_has_failures
 
 
@@ -31,6 +32,7 @@ st.set_page_config(
 
 
 def main() -> None:
+    local_config_status = load_local_operator_config()
     st.title("Musimack GA4 Importer Console")
     st.caption("Local GA4 export, validation, internal/draft import, and portal workflow checks.")
 
@@ -42,9 +44,10 @@ def main() -> None:
     clients = load_clients()
     client = _client_picker(clients)
     start_date, end_date = _date_controls(client)
-    out_path = output_path_for(client, start_date, end_date)
+    default_out_path = output_path_for(client, start_date, end_date)
+    out_path = _output_path_control(default_out_path)
 
-    _readiness_panel()
+    _readiness_panel(local_config_status)
     _client_details(client, out_path)
 
     left, right = st.columns(2)
@@ -80,8 +83,30 @@ def _date_controls(client):
     return start_date, end_date
 
 
-def _readiness_panel() -> None:
+def _output_path_control(default_out_path: Path) -> Path:
+    st.subheader("Output")
+    text = st.text_input(
+        "Export file",
+        value=str(default_out_path),
+        help="Use the smoke path for Aluma smoke tests, or the YTD path for batch-prep single-client exports.",
+    )
+    if not text.strip():
+        st.error("Output file is required before export or validation.")
+        return default_out_path
+    return Path(text.strip())
+
+
+def _readiness_panel(local_config_status) -> None:
     st.subheader("Environment Readiness")
+    for line in local_config_status.safe_summary_lines():
+        if line.startswith("PASS"):
+            st.success(line)
+        elif line.startswith("FAIL"):
+            st.error(line)
+        elif line.startswith("INFO"):
+            st.info(line)
+        else:
+            st.warning(line)
     checks = build_console_readiness_report()
     for check in checks:
         if check.level == "PASS":
@@ -94,16 +119,14 @@ def _readiness_panel() -> None:
         st.code(
             '\n'.join(
                 [
-                    '$env:MUSIMACK_GA4_AUTH_METHOD="oauth"',
-                    '$env:MUSIMACK_GA4_OAUTH_CLIENT_SECRETS="C:\\path\\outside\\repos\\oauth-client-secrets.json"',
-                    '$env:MUSIMACK_GA4_OAUTH_TOKEN_FILE="C:\\path\\outside\\repos\\ga4-oauth-token.json"',
-                    '$env:MUSIMACK_PORTAL_DATABASE_URL="<local portal database url>"',
-                    'streamlit run app/importer_console.py',
+                    'Copy-Item .env.local.example .env.local',
+                    'notepad .env.local',
+                    'python -m streamlit run app/importer_console.py',
                 ]
             ),
             language="powershell",
         )
-        st.info("Set the variables before launching the console. OAuth file contents are never displayed.")
+        st.info("Fill .env.local with local paths/DB URL, keep OAuth files outside the repo, then restart Streamlit. Values are never displayed.")
 
 
 def _client_details(client, out_path: Path) -> None:
@@ -169,8 +192,11 @@ def _workflow_panel(client) -> None:
 
 def _portal_follow_up() -> None:
     st.subheader("Portal Follow-Up Checklist")
+    st.caption("Monthly replacement remains manual: imports start internal/draft, and the portal owns link, active-source selection, promotion, and access QA.")
+    st.checkbox("Confirm the new import is internal/draft before portal review", value=False)
     st.checkbox("Link the imported snapshot to the intended report in the portal", value=False)
-    st.checkbox("Set the active GA4 snapshot link in the portal", value=False)
+    st.checkbox("Set the new GA4 snapshot as the active report source in the portal", value=False)
+    st.checkbox("Confirm older linked snapshots are historical/inactive, not deleted", value=False)
     st.checkbox("Preview the Website Performance Summary as admin/internal user", value=False)
     st.checkbox("Promote/publish only after review", value=False)
     st.checkbox("Verify assigned-client access and unrelated-client denial", value=False)

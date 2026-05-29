@@ -1,0 +1,474 @@
+{
+  "comparison_date_range": null,
+  "date_range": {
+    "end": "2026-05-02",
+    "start": "2026-05-01"
+  },
+  "dimension_rows": [
+    {
+      "kind": "traffic_channels",
+      "label": "Organic Search",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 36.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 26.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 75.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.611111
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Direct",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 30.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 30.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 34.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.1
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Referral",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 0.75
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "traffic_channels",
+      "label": "Unassigned",
+      "metrics": [
+        {
+          "name": "sessions",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 6.0
+        },
+        {
+          "name": "engagement_rate",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "key_events",
+          "unit": "count",
+          "value": 0.0
+        },
+        {
+          "name": "conversions",
+          "unit": "count",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Professional Botox, Fillers & Threads in Portland, OR | Aluma Aesthetic Medicine (/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 44.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 35.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 137.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 61.57499
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Book Appointment\u00a0 - Aluma Aesthetic Medicine | Portland, OR (/book-appointment/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 12.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 19.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 103.100494
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Gallery\u00a0 - Aluma Aesthetic Medicine | Portland, OR (/gallery/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 9.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 7.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 21.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 60.833142
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Botox & Dysport - Aluma Aesthetic Medicine | Portland, OR (/treatments/dysport-and-botox-portland/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 7.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 17.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 128.087408
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Aimee Brigham - Aluma Aesthetic Medicine | Portland, OR (/aimee-brigham-bio/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 15.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 149.197339
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Kybella vs. Generic Kybella: What\u2019s the Difference - Aluma Aesthetic Medicine | Portland, OR (/kybella-vs-generic-kybella-whats-the-difference/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 12.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Our Policies - Aluma Aesthetic Medicine | Portland, OR (/our-policies/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 5.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 219.558833
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Cheek Filler vs. Sculptra: Lift Now or Build Over Time? - Aluma Aesthetic Medicine | Portland, OR (/cheek-filler-vs-sculptra-lift-now-or-build-over-time/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 14.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 417.328714
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "Face Shape and Dermal Fillers \u2013 It Matters - Aluma Aesthetic Medicine | Portland, OR (/face-shape-and-dermal-fillers-it-matters-copy/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 4.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 1.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 7.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 64.898956
+        }
+      ]
+    },
+    {
+      "kind": "top_pages",
+      "label": "About Aluma - Aluma Aesthetic Medicine | Portland, OR (/about/about-aluma/)",
+      "metrics": [
+        {
+          "name": "views",
+          "unit": "count",
+          "value": 3.0
+        },
+        {
+          "name": "users",
+          "unit": "count",
+          "value": 2.0
+        },
+        {
+          "name": "event_count",
+          "unit": "count",
+          "value": 8.0
+        },
+        {
+          "name": "average_session_duration_seconds",
+          "unit": "seconds",
+          "value": 33.228229
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "users",
+      "unit": "count",
+      "value": 59.0
+    },
+    {
+      "name": "sessions",
+      "unit": "count",
+      "value": 71.0
+    },
+    {
+      "name": "engagement_rate",
+      "unit": "ratio",
+      "value": 0.408451
+    },
+    {
+      "name": "average_session_duration_seconds",
+      "unit": "seconds",
+      "value": 146.313691
+    },
+    {
+      "name": "views",
+      "unit": "count",
+      "value": 129.0
+    },
+    {
+      "name": "event_count",
+      "unit": "count",
+      "value": 354.0
+    }
+  ],
+  "property_resource": "properties/341923472",
+  "provider": "ga4",
+  "provider_key": "google_analytics",
+  "report_type": "traffic_overview",
+  "schema_version": "ga4_snapshot.v1",
+  "source": "future_live",
+  "summary": "Sanitized GA4 traffic overview for local Musimack internal review: 59 users, 71 sessions, and 129 views.",
+  "summary_counts": {
+    "dimension_row_count": 14,
+    "metric_count": 6,
+    "time_series_count": 2
+  },
+  "time_series": [
+    {
+      "date": "2026-05-01",
+      "event_count": 181.0,
+      "sessions": 33.0,
+      "users": 30.0,
+      "views": 65.0
+    },
+    {
+      "date": "2026-05-02",
+      "event_count": 173.0,
+      "sessions": 38.0,
+      "users": 29.0,
+      "views": 64.0
+    }
+  ],
+  "warnings": []
+}

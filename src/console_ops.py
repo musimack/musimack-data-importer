@@ -16,6 +16,8 @@ from .oauth_readiness import ReadinessCheck, build_oauth_readiness_report
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT_CONFIG_PATH = ROOT / "examples" / "ga4_clients.local.example.json"
 DEFAULT_UNRELATED_EMAIL = "unrelated.client@musimack.local"
+ALUMA_SMOKE_START = date(2026, 5, 1)
+ALUMA_SMOKE_END = date(2026, 5, 2)
 
 SECRET_PATTERNS = [
     re.compile(r"(?i)(authorization\s*:\s*bearer\s+)[^\s,;]+"),
@@ -83,11 +85,18 @@ def load_clients(path: Path = CLIENT_CONFIG_PATH) -> list[ConsoleClient]:
 
 
 def output_path_for(client: ConsoleClient, start: date, end: date) -> Path:
+    if client.key == "aluma" and start == ALUMA_SMOKE_START and end == ALUMA_SMOKE_END:
+        return smoke_output_path_for(client, start, end)
     filename = (
         f"{client.suggested_export_slug}_ga4_ytd_2026_"
         f"{start.isoformat()}_to_{end.isoformat()}.json"
     )
     return Path("exports") / "ytd_2026" / filename
+
+
+def smoke_output_path_for(client: ConsoleClient, start: date, end: date) -> Path:
+    filename = f"{client.suggested_export_slug}_ga4_smoke_{start.isoformat()}_to_{end.isoformat()}.json"
+    return Path("exports") / "smoke" / filename
 
 
 def redact_sensitive_text(value: str) -> str:

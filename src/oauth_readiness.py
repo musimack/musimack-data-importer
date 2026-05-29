@@ -33,7 +33,7 @@ class ReadinessCheck:
 def build_oauth_readiness_report(
     env: Mapping[str, str] | None = None,
 ) -> list[ReadinessCheck]:
-    env = env or os.environ
+    env = os.environ if env is None else env
     checks: list[ReadinessCheck] = []
 
     checks.extend(_check_required_env(env))

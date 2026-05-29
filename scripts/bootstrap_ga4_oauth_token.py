@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.ga4_client import OAuthCredentialError, load_oauth_credentials
+from src.local_config import load_local_operator_config
 from src.oauth_readiness import build_oauth_readiness_report
 
 
@@ -19,6 +20,7 @@ def main() -> int:
     )
     parser.parse_args()
 
+    load_local_operator_config()
     checks = build_oauth_readiness_report()
     failures = [check for check in checks if check.failed]
     if failures:
