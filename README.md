@@ -4,7 +4,7 @@ Local-only Python transport/importer and dashboard fixture builder for Musimack 
 
 The GA4 path pulls Musimack-owned GA4 data, normalizes it, writes a sanitized `ga4_snapshot.v1` JSON export, and can optionally insert that sanitized snapshot into the local portal Postgres database as an internal/draft integration snapshot.
 
-The dashboard-lab path generates local-only synthetic fixture folders for `musimack-dashboard-lab`. These fixtures are mock data for prototyping only and do not call live providers or mutate portal data.
+The dashboard-lab path generates local-only synthetic fixture folders for `musimack-dashboard-lab`. It also has a local-only Google Search Console fetcher for writing clean dashboard-lab GSC summary JSON. These workflows do not mutate portal data.
 
 ## What This Does Not Do
 
@@ -14,7 +14,7 @@ The dashboard-lab path generates local-only synthetic fixture folders for `musim
 - It does not link snapshots to reports.
 - It does not create generated report sections.
 - It does not change client visibility.
-- It does not use live non-GA4 provider APIs for dashboard-lab fixtures.
+- It does not use live non-GA4 provider APIs except the explicit local-only GSC fetch command.
 - It does not store raw GA4 provider responses, access tokens, refresh tokens, client secrets, service account keys, or Authorization headers in exports or Postgres.
 - It is not a portal web app, React UI, scheduler, or final production OAuth/token-refresh system.
 
@@ -105,10 +105,41 @@ OAuth is preferred for local Google Workspace internal authentication.
 - `MUSIMACK_GA4_AUTH_METHOD`: `oauth` recommended; defaults to `oauth`. Use `service_account` only for fallback.
 - `MUSIMACK_GA4_OAUTH_CLIENT_SECRETS`: OAuth desktop client secrets JSON path.
 - `MUSIMACK_GA4_OAUTH_TOKEN_FILE`: Local OAuth authorized-user token cache path.
+- `MUSIMACK_GSC_OAUTH_CLIENT_SECRETS`: OAuth desktop client secrets JSON path for GSC. This may point to the same file as `MUSIMACK_GA4_OAUTH_CLIENT_SECRETS`.
+- `MUSIMACK_GSC_OAUTH_TOKEN_FILE`: Separate local GSC OAuth authorized-user token cache path. Do not reuse the GA4 token file.
 - `GOOGLE_APPLICATION_CREDENTIALS`: Optional service account JSON path when using service account auth.
 - `MUSIMACK_GA4_SERVICE_ACCOUNT_JSON`: Optional inline service account JSON when using service account auth.
 - `MUSIMACK_PORTAL_DATABASE_URL`: Local portal Postgres URL for optional import.
 - `MUSIMACK_PORTAL_PROJECT_ID`: Local portal project UUID, unless passed with `--project-id`.
+
+## Local GSC API Fetcher
+
+The GSC fetcher uses Google Search Console API read-only access:
+
+```text
+https://www.googleapis.com/auth/webmasters.readonly
+```
+
+The Google Cloud project for the OAuth client must have the Google Search Console API enabled, and the signed-in Google account must have access to the exact Search Console property passed with `--site-url`. The first run may open a browser to authorize Search Console read-only access.
+
+GSC can reuse the same OAuth client secrets JSON as GA4, but it must use a separate token cache, for example `secrets/gsc_token.local.json`. Token contents, client secrets, and credential paths are not written to output JSON.
+
+Real client data is supported for local dashboard testing. By default, live API pulls should use `--real-output`, which writes under ignored `exports/local-real/dashboard-lab/{profile}/`. The tracked `exports/dashboard-lab/` folder is reserved for synthetic/demo fixtures unless a real client export is explicitly approved for version control.
+
+Fetch Aluma organic Search Console data into the ignored real-data profile folder:
+
+```powershell
+python scripts/fetch_gsc_api.py --profile aluma-seo-geo --site-url https://alumapdx.com/ --start-date 2026-01-01 --end-date 2026-05-19 --real-output
+```
+
+Optional overrides:
+
+```powershell
+python scripts/fetch_gsc_api.py --profile aluma-seo-geo --site-url https://alumapdx.com/ --start-date 2026-01-01 --end-date 2026-05-19 --real-output --credentials C:\path\outside\repos\ga4-oauth-client.json --token secrets\gsc_token.local.json --row-limit 25000
+python scripts/fetch_gsc_api.py --profile aluma-seo-geo --real-output --validate-only
+```
+
+The command writes `gsc-summary.json`, rebuilds `combined-dashboard-summary.json`, and ensures the real-output folder has `client-profile.json` plus any non-GSC profile summaries needed for local dashboard testing. Explicit `--out` is still supported, but writing real API output into `exports/dashboard-lab/` may overwrite tracked synthetic fixtures. For `aluma-seo-geo`, the combined summary remains organic-only: GA4 and GSC are referenced, while Ads Search, LSA, and CallRail stay disabled.
 
 ## Date Range Behavior
 
