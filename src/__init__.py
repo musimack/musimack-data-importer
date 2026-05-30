@@ -1,1 +1,1 @@
-"""Local-only GA4 importer for Musimack-owned analytics data."""
+"""Local-only Musimack data importer and dashboard fixture helpers."""

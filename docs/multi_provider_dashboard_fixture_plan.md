@@ -1,17 +1,19 @@
 # Multi-Provider Dashboard Fixture Plan
 
-Planning pass for evolving this local `ga4-local-importer` repo into a broader local data importer and fixture builder for `musimack-dashboard-lab`.
+Planning pass for evolving this local `musimack-data-importer` repo into a broader local data importer and fixture builder for `musimack-dashboard-lab`.
 
-This document is intentionally documentation-only. It does not rename the repo, add provider integrations, add credentials, add OAuth flows, add schedulers, connect to staging or production, or mutate the Musimack Client Portal database.
+This document is intentionally documentation-only. It does not add provider integrations, add credentials, add OAuth flows, add schedulers, connect to staging or production, or mutate the Musimack Client Portal database.
 
 ## Current Importer Structure
 
-The current repo is a local GA4 transport/importer with a small Streamlit console:
+The current repo is a local GA4 transport/importer plus a synthetic dashboard-lab fixture builder:
 
-- `src/ga4_client.py`: GA4 Data API client, OAuth/service-account credential loading, sanitized API error handling, and GA4 request builders.
-- `src/normalize.py`: GA4 response normalization into display-compatible metric names, daily time series, traffic channel rows, and top page rows.
-- `src/snapshot_builder.py`: Builds the sanitized `ga4_snapshot.v1` transport payload.
-- `src/validate.py`: Validates `ga4_snapshot.v1`, rejects secret-like fields, and produces safe inspection summaries.
+- `src/providers/ga4/client.py`: GA4 Data API client, OAuth/service-account credential loading, sanitized API error handling, and GA4 request builders.
+- `src/providers/ga4/normalize.py`: GA4 response normalization into display-compatible metric names, daily time series, traffic channel rows, and top page rows.
+- `src/providers/ga4/snapshot_builder.py`: Builds the sanitized `ga4_snapshot.v1` transport payload.
+- `src/providers/ga4/validate.py`: Validates `ga4_snapshot.v1`, rejects secret-like fields, and produces safe inspection summaries.
+- `src/ga4_client.py`, `src/normalize.py`, `src/snapshot_builder.py`, and `src/validate.py`: Compatibility wrappers for the existing CLI scripts, tests, and external local imports.
+- `src/dashboard_lab/fixture_builder.py`: Generates and validates local-only synthetic dashboard-lab fixture profiles.
 - `src/postgres_writer.py`: Optionally imports a validated GA4 snapshot into local portal Postgres as `internal` / `draft`.
 - `src/config.py` and `src/local_config.py`: Load local operator settings, date ranges, GA4 config, output paths, and database config.
 - `src/console_ops.py`: Loads the client roster, calculates output paths, runs export/validate/import/workflow commands, and redacts sensitive text from command output.
@@ -58,7 +60,7 @@ These should be treated carefully during the broader importer design:
 
 ## What Should Stay GA4-Specific
 
-Keep these inside a future `providers/ga4` boundary:
+Keep these inside the `providers/ga4` boundary:
 
 - GA4 auth loading, OAuth bootstrap/readiness, scopes, token-cache handling, and service-account fallback.
 - GA4 Data API request construction.
@@ -118,13 +120,9 @@ src/
       normalize.py
       sample_input.py
   dashboard_lab/
-    client_profile.py
-    fixture_writer.py
-    combined_summary.py
-    module_order.py
+    fixture_builder.py
 scripts/
-  export_dashboard_lab_fixture.py
-  validate_dashboard_lab_fixture.py
+  build_dashboard_lab_fixture.py
 examples/
   dashboard_lab_clients.local.example.json
   provider_samples/
@@ -317,31 +315,32 @@ Phone numbers, caller names, full recordings, and transcript bodies should not b
 Initial local-only commands:
 
 ```powershell
-python scripts/export_dashboard_lab_fixture.py --client all-services-client --out exports/dashboard-lab/all-services-client
-python scripts/validate_dashboard_lab_fixture.py --dir exports/dashboard-lab/all-services-client
+python scripts/build_dashboard_lab_fixture.py --profile all-services-client --out exports/dashboard-lab/all-services-client
+python scripts/build_dashboard_lab_fixture.py --validate-only --profile all-services-client --out exports/dashboard-lab/all-services-client
+python scripts/build_dashboard_lab_fixture.py --all
 ```
 
 Potential later provider-specific local commands:
 
 ```powershell
-python scripts/export_dashboard_lab_fixture.py --client all-services-client --providers ga4,gsc,google_ads_search,google_ads_lsa,local_falcon,callrail
-python scripts/export_dashboard_lab_fixture.py --client all-services-client --source examples/provider_samples/all_services_client
+python scripts/build_dashboard_lab_fixture.py --profile all-services-client --providers ga4,gsc,google_ads_search,google_ads_lsa,local_falcon,callrail
+python scripts/build_dashboard_lab_fixture.py --profile all-services-client --source examples/provider_samples/all_services_client
 ```
 
 These should only read local sample inputs until live provider integration is explicitly approved.
 
 ## Implementation Order
 
-Recommended first implementation milestone:
+First implementation milestone completed:
 
 1. Add common dashboard-lab schema dataclasses or typed dictionaries.
 2. Add `exports/dashboard-lab/all-services-client/` sample output using mocked/synthetic values.
 3. Add a validation helper that rejects secrets and checks required summary files.
-4. Add `scripts/export_dashboard_lab_fixture.py` that writes local synthetic summaries only.
+4. Add `scripts/build_dashboard_lab_fixture.py` that writes local synthetic summaries only.
 5. Add tests for the fixture writer, combined summary, and redaction.
 6. Document how `musimack-dashboard-lab` should read or copy the generated fixture folder.
 
-After that, migrate current GA4 normalization behind a `providers/ga4` boundary while preserving the existing scripts as compatibility wrappers.
+Provider-boundary follow-up completed: current GA4 client, normalization, snapshot-builder, and validation code now live under `src/providers/ga4/`, with compatibility wrappers preserving existing import paths.
 
 ## Deferred Work
 
@@ -357,7 +356,7 @@ Defer all of the following until explicitly approved:
 - Schedulers, background jobs, or monthly automation.
 - Portal database mutations for non-GA4 providers.
 - Publishing, linking, setting active snapshots, or promoting reports.
-- Repo rename.
+- Additional repo renames.
 - Staging or production connections.
 
 ## Risks And Guardrails
@@ -374,4 +373,4 @@ Defer all of the following until explicitly approved:
 
 ## Recommended Next Milestone
 
-Create a local-only dashboard-lab fixture writer that emits the all-services prototype folder from synthetic inputs, plus validation tests. That gives `musimack-dashboard-lab` a stable fixture target before any provider-specific live API work begins.
+Add shared common helpers only where duplication becomes real, starting with redaction/secret validation or JSON IO if future provider fixture work needs it. Keep the dashboard-lab fixture builder local-only and synthetic until live provider integrations are explicitly approved.

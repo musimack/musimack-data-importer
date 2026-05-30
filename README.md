@@ -1,8 +1,10 @@
-# GA4 Local Importer
+# Musimack Data Importer
 
-Local-only Python transport/importer for Musimack Marketing and Development GA4 traffic overview data.
+Local-only Python transport/importer and dashboard fixture builder for Musimack Marketing and Development data workflows.
 
-This project pulls Musimack-owned GA4 data, normalizes it, writes a sanitized `ga4_snapshot.v1` JSON export, and can optionally insert that sanitized snapshot into the local portal Postgres database as an internal/draft integration snapshot.
+The GA4 path pulls Musimack-owned GA4 data, normalizes it, writes a sanitized `ga4_snapshot.v1` JSON export, and can optionally insert that sanitized snapshot into the local portal Postgres database as an internal/draft integration snapshot.
+
+The dashboard-lab path generates local-only synthetic fixture folders for `musimack-dashboard-lab`. These fixtures are mock data for prototyping only and do not call live providers or mutate portal data.
 
 ## What This Does Not Do
 
@@ -12,6 +14,7 @@ This project pulls Musimack-owned GA4 data, normalizes it, writes a sanitized `g
 - It does not link snapshots to reports.
 - It does not create generated report sections.
 - It does not change client visibility.
+- It does not use live non-GA4 provider APIs for dashboard-lab fixtures.
 - It does not store raw GA4 provider responses, access tokens, refresh tokens, client secrets, service account keys, or Authorization headers in exports or Postgres.
 - It is not a portal web app, React UI, scheduler, or final production OAuth/token-refresh system.
 
