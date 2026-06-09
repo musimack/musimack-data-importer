@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
 
 from src.config import ConfigError, parse_date_range
 from src.local_config import load_local_operator_config
+from src.profile_local_config import load_profile_local_config
 from src.providers.gsc.client import (
     DEFAULT_GSC_TOKEN_FILE,
     GscClientError,
@@ -60,23 +61,27 @@ def main() -> int:
                 print(f"- {path}")
             return 0
 
-        if not args.site_url:
-            raise ConfigError("--site-url is required unless --validate-only is used")
+        profile_config = load_profile_local_config(args.profile).provider("gsc")
+        site_url = args.site_url or profile_config.get("_safe_site_url")
+        if not site_url:
+            raise ConfigError("--site-url or per-profile GSC site_url is required unless --validate-only is used")
         date_range = parse_date_range(args.start_date, args.end_date)
         if args.row_limit < 1 or args.row_limit > 25000:
             raise ConfigError("--row-limit must be between 1 and 25000")
 
         load_local_operator_config()
-        credentials_path = args.credentials or os.environ.get("MUSIMACK_GSC_OAUTH_CLIENT_SECRETS")
+        credentials_env = str(profile_config.get("oauth_client_secrets_env") or "MUSIMACK_GSC_OAUTH_CLIENT_SECRETS")
+        token_env = str(profile_config.get("oauth_token_file_env") or "MUSIMACK_GSC_OAUTH_TOKEN_FILE")
+        credentials_path = args.credentials or os.environ.get(credentials_env)
         if not credentials_path:
-            raise ConfigError("MUSIMACK_GSC_OAUTH_CLIENT_SECRETS is required unless --credentials is provided")
-        token_path = args.token or os.environ.get("MUSIMACK_GSC_OAUTH_TOKEN_FILE") or str(DEFAULT_GSC_TOKEN_FILE)
+            raise ConfigError(f"{credentials_env} is required unless --credentials is provided")
+        token_path = args.token or os.environ.get(token_env) or str(DEFAULT_GSC_TOKEN_FILE)
 
         client = GscSearchConsoleClient(
             GscFetchConfig(
                 client_secrets_file=credentials_path,
                 token_file=token_path,
-                site_url=args.site_url,
+                site_url=site_url,
                 row_limit=args.row_limit,
             )
         )
@@ -86,7 +91,7 @@ def main() -> int:
         )
         summary = build_gsc_summary(
             args.profile,
-            args.site_url,
+            site_url,
             date_range.start.isoformat(),
             date_range.end.isoformat(),
             response,

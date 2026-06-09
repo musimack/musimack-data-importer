@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from .local_config import load_local_operator_config
+from .profile_local_config import DEFAULT_LOCAL_PROFILE_CONFIG_DIR, load_profile_local_config
 
 
 class ConfigError(ValueError):
@@ -76,20 +77,31 @@ def env_value(name: str, required: bool = True) -> str | None:
     return None
 
 
-def load_ga4_config() -> Ga4Config:
+def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
     load_local_operator_config()
-    property_id = env_value("MUSIMACK_GA4_PROPERTY_ID")
+    profile_ga4 = {}
+    if profile_slug:
+        profile_ga4 = load_profile_local_config(
+            profile_slug,
+            config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR,
+            env=os.environ,
+        ).provider("ga4")
+    property_id_env = str(profile_ga4.get("property_id_env") or "MUSIMACK_GA4_PROPERTY_ID")
+    oauth_client_env = str(profile_ga4.get("oauth_client_secrets_env") or "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS")
+    oauth_token_env = str(profile_ga4.get("oauth_token_file_env") or "MUSIMACK_GA4_OAUTH_TOKEN_FILE")
+
+    property_id = env_value(property_id_env)
     if not property_id or not property_id.isdigit():
-        raise ConfigError("MUSIMACK_GA4_PROPERTY_ID must contain only digits")
+        raise ConfigError(f"{property_id_env} must contain only digits")
 
     auth_method = (env_value("MUSIMACK_GA4_AUTH_METHOD", required=False) or "oauth").lower()
     if auth_method not in {"oauth", "service_account"}:
         raise ConfigError("MUSIMACK_GA4_AUTH_METHOD must be oauth or service_account")
 
     oauth_client_secrets_file = env_value(
-        "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS", required=False
+        oauth_client_env, required=False
     )
-    oauth_token_file = env_value("MUSIMACK_GA4_OAUTH_TOKEN_FILE", required=False)
+    oauth_token_file = env_value(oauth_token_env, required=False)
     service_account_file = env_value("GOOGLE_APPLICATION_CREDENTIALS", required=False)
     service_account_json = env_value("MUSIMACK_GA4_SERVICE_ACCOUNT_JSON", required=False)
     service_account_info = None
@@ -101,7 +113,7 @@ def load_ga4_config() -> Ga4Config:
 
     if auth_method == "oauth" and (not oauth_client_secrets_file or not oauth_token_file):
         raise ConfigError(
-            "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS and MUSIMACK_GA4_OAUTH_TOKEN_FILE are required for oauth"
+            f"{oauth_client_env} and {oauth_token_env} are required for oauth"
         )
 
     if auth_method == "service_account" and not service_account_file and not service_account_info:

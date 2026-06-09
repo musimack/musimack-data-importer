@@ -30,6 +30,7 @@ Generate a specific profile:
 
 ```powershell
 python scripts/build_dashboard_lab_fixture.py --profile aluma-seo-geo
+python scripts/build_dashboard_lab_fixture.py --profile inn-at-spanish-head
 ```
 
 Generate every profile:
@@ -44,10 +45,22 @@ Validate an existing profile folder:
 python scripts/build_dashboard_lab_fixture.py --validate-only --out exports/dashboard-lab/aluma-seo-geo
 ```
 
+Validate an ignored local-real export folder shape:
+
+```powershell
+python scripts/build_dashboard_lab_fixture.py --profile inn-at-spanish-head --validate-only --export-folder --out exports/local-real/dashboard-lab/inn-at-spanish-head
+```
+
 Fetch local GSC API data for Aluma:
 
 ```powershell
 python scripts/fetch_gsc_api.py --profile aluma-seo-geo --site-url https://alumapdx.com/ --start-date 2026-01-01 --end-date 2026-05-19 --real-output
+```
+
+Fetch local GSC API data for Spanish Head when the operator has the verified Search Console property and OAuth ready:
+
+```powershell
+python scripts/fetch_gsc_api.py --profile inn-at-spanish-head --site-url sc-domain:spanishhead.com --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output
 ```
 
 Validate an existing GSC output without OAuth or API calls:
@@ -89,6 +102,40 @@ Generated files:
 - `ga4-summary.json`
 - `gsc-summary.json`
 - `combined-dashboard-summary.json`
+
+### inn-at-spanish-head
+
+Synthetic organic/local SEO/GEO hospitality profile for Spanish Head.
+
+Inn is modeled for SEO/GEO, GA4, GSC, Local Visibility, and content performance. It intentionally has no Ads Search, LSA, CallRail, paid lead-gen, or contractor lead-gen modules.
+
+Generated files:
+
+- `client-profile.json`
+- `ga4-summary.json`
+- `gsc-summary.json`
+- `local-falcon-summary.json`
+- `combined-dashboard-summary.json`
+
+Real local dashboard-lab exports should stay ignored under:
+
+```text
+exports/local-real/dashboard-lab/inn-at-spanish-head/
+```
+
+For manual dashboard-lab visual QA, the operator may later copy ignored real output into the dashboard repo's ignored local fixture destination:
+
+```text
+musimack-dashboard-lab/public/local-fixtures/inn-at-spanish-head/
+```
+
+The committed dashboard-lab synthetic fallback lives in:
+
+```text
+musimack-dashboard-lab/public/fixtures/inn-at-spanish-head/
+```
+
+Real GA4/GSC pulls still require operator-owned property inputs and local OAuth access. Real Local Falcon imports require either local CSV/TXT exports or ignored read-only API manifests with existing report IDs. Do not commit real analytics, Search Console exports, Local Falcon outputs, report IDs, API responses, or credentials.
 
 ### priority-tree-lead-gen
 

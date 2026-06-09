@@ -1,0 +1,192 @@
+{
+  "profiles": [
+    {
+      "slug": "aluma-seo-geo",
+      "display_name": "Aluma SEO/GEO",
+      "domain": "alumapdx.com",
+      "vertical": "aesthetic medicine",
+      "service_model": "SEO/GEO + organic content",
+      "dashboard_lab_route": "/lab/aluma-seo-geo",
+      "importer_output_folder": "exports/local-real/dashboard-lab/aluma-seo-geo",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/aluma-seo-geo",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/aluma-seo-geo",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "AI visibility is represented through Local Falcon local visibility output when available."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "inn-at-spanish-head",
+      "display_name": "Spanish Head",
+      "domain": "spanishhead.com",
+      "vertical": "hospitality / oceanfront hotel / Lincoln City lodging",
+      "service_model": "Alpha priority: oceanfront hospitality SEO/GEO + Local Visibility + content; real provider output pending",
+      "dashboard_lab_route": "/lab/inn-at-spanish-head",
+      "importer_output_folder": "exports/local-real/dashboard-lab/inn-at-spanish-head",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/inn-at-spanish-head",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/inn-at-spanish-head",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Alpha planned capability; source-aware AI visibility output is not connected yet."},
+        {"key": "google_ads_search", "label": "Google Ads Search", "status": "planned", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-search-summary.json", "notes": "Hospitality paid search capability for booking-intent campaigns; real Google Ads Search import is not implemented yet. Do not fake output."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "lucy-escobar",
+      "display_name": "Lucy Escobar",
+      "domain": "lucyescobar.com",
+      "vertical": "SEO/GEO content",
+      "service_model": "SEO/GEO + content profile",
+      "dashboard_lab_route": "/lab/lucy-escobar",
+      "importer_output_folder": "exports/local-real/dashboard-lab/lucy-escobar",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/lucy-escobar",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/lucy-escobar",
+      "data_sources": ["ga4", "gsc"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "planned", "kind": "dashboard_room", "notes": "Optional later if local visibility is configured."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "pinnacle-contractors",
+      "display_name": "Pinnacle Contractors",
+      "domain": "pinnaclecontractorsllc.com",
+      "vertical": "lead-gen contracting / local service",
+      "service_model": "Lead-gen SEO/GEO + paid/ads capable profile",
+      "dashboard_lab_route": "/lab/pinnacle-contractors",
+      "importer_output_folder": "exports/local-real/dashboard-lab/pinnacle-contractors",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/pinnacle-contractors",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/pinnacle-contractors",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "AI visibility is represented through Local Falcon local visibility output when available."},
+        {"key": "google_ads_search", "label": "Google Ads Search", "status": "planned", "kind": "paid_provider"},
+        {"key": "google_lsa", "label": "Google LSA", "status": "planned", "kind": "paid_provider"},
+        {"key": "callrail", "label": "CallRail", "status": "planned", "kind": "lead_provider"},
+        {"key": "leads", "label": "Leads", "status": "planned", "kind": "dashboard_room"},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "musimack-marketing",
+      "display_name": "Musimack Marketing",
+      "domain": "musimackmarketing.com",
+      "vertical": "agency / internal SEO/GEO",
+      "service_model": "Agency/internal SEO/GEO profile",
+      "dashboard_lab_route": "/lab/musimack-marketing",
+      "importer_output_folder": "exports/local-real/dashboard-lab/musimack-marketing",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/musimack-marketing",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/musimack-marketing",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "Agency/internal AI visibility planning; no paid rooms enabled by default."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "wc-land-renewal",
+      "display_name": "WC Land Renewal",
+      "domain": "wclandrenewal.com",
+      "vertical": "local/service SEO/GEO",
+      "service_model": "Local/service SEO/GEO profile",
+      "dashboard_lab_route": "/lab/wc-land-renewal",
+      "importer_output_folder": "exports/local-real/dashboard-lab/wc-land-renewal",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/wc-land-renewal",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/wc-land-renewal",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "steadfast-decks",
+      "display_name": "Steadfast Decks",
+      "domain": "steadfastdecks.com",
+      "vertical": "local/service SEO/GEO",
+      "service_model": "Local/service SEO/GEO profile",
+      "dashboard_lab_route": "/lab/steadfast-decks",
+      "importer_output_folder": "exports/local-real/dashboard-lab/steadfast-decks",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/steadfast-decks",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/steadfast-decks",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "portland-tattoo-co",
+      "display_name": "Portland Tattoo Co",
+      "domain": "portlandtattooco.com",
+      "vertical": "local SEO/GEO",
+      "service_model": "Local SEO/GEO profile",
+      "dashboard_lab_route": "/lab/portland-tattoo-co",
+      "importer_output_folder": "exports/local-real/dashboard-lab/portland-tattoo-co",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/portland-tattoo-co",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/portland-tattoo-co",
+      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    }
+  ]
+}

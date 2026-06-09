@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ...dashboard_lab.fixture_builder import PROVIDER_FILES, PROFILES
+from ...dashboard_lab.fixture_builder import profile_payloads
 
 
 FORBIDDEN_OUTPUT_TERMS = {
@@ -163,6 +164,8 @@ def ensure_dashboard_profile_files(
     synthetic_root: Path = SYNTHETIC_DASHBOARD_LAB_ROOT,
 ) -> list[Path]:
     _profile(profile_slug)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    fallback_payloads = profile_payloads(profile_slug)
     copied = []
     source_dir = synthetic_root / profile_slug
     for filename in _expected_support_files(profile_slug):
@@ -171,10 +174,14 @@ def ensure_dashboard_profile_files(
             continue
         source = source_dir / filename
         if not source.exists():
-            raise GscSummaryError(
-                f"missing source support file for real-output profile: {source}"
-            )
-        shutil.copyfile(source, target)
+            payload = fallback_payloads.get(filename)
+            if payload is None:
+                raise GscSummaryError(
+                    f"missing source support file for real-output profile: {source}"
+                )
+            _write_json(target, payload)
+        else:
+            shutil.copyfile(source, target)
         copied.append(target)
     return copied
 
@@ -214,7 +221,7 @@ def validate_gsc_summary(payload: dict[str, Any]) -> None:
 
 
 def validate_aluma_combined_summary(payload: dict[str, Any], profile_slug: str) -> None:
-    _profile(profile_slug)
+    profile = _profile(profile_slug)
     _require_fields(
         payload,
         "combined-dashboard-summary.json",
@@ -232,6 +239,21 @@ def validate_aluma_combined_summary(payload: dict[str, Any], profile_slug: str) 
         forbidden = {"paid_search", "lsa_performance", "call_tracking"}
         if forbidden.intersection(modules):
             raise GscSummaryError("Aluma combined summary must not enable Ads, LSA, or CallRail")
+    else:
+        expected = {provider: PROVIDER_FILES[provider] for provider in profile.providers}
+        if summaries != expected:
+            raise GscSummaryError("combined-dashboard-summary.json must reference enabled profile providers only")
+        modules = payload.get("modules_enabled")
+        if not isinstance(modules, list):
+            raise GscSummaryError("combined-dashboard-summary.json modules_enabled must be a list")
+        provider_forbidden_modules = {
+            "google_ads_search": "paid_search",
+            "google_ads_lsa": "lsa_performance",
+            "callrail": "call_tracking",
+        }
+        for provider, module in provider_forbidden_modules.items():
+            if provider not in profile.providers and module in modules:
+                raise GscSummaryError(f"combined-dashboard-summary.json must not enable {module}")
     _reject_secret_like(payload, "combined-dashboard-summary.json")
 
 

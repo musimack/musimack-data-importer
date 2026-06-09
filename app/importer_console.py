@@ -22,10 +22,23 @@ from src.console_ops import (
 )
 from src.local_config import load_local_operator_config
 from src.oauth_readiness import report_has_failures
+from src.operator_console import (
+    command_guidance,
+    copy_dry_run,
+    copy_guidance,
+    copy_local_real_to_dashboard_lab,
+    guarded_import_sequence,
+    load_dashboard_lab_profiles,
+    output_folder_status,
+    provider_readiness,
+    provider_setup_checklist,
+    readiness_matrix,
+    validate_profile_output,
+)
 
 
 st.set_page_config(
-    page_title="Musimack GA4 Importer Console",
+    page_title="Musimack Data Importer Console",
     page_icon="M",
     layout="wide",
 )
@@ -33,14 +46,22 @@ st.set_page_config(
 
 def main() -> None:
     local_config_status = load_local_operator_config()
-    st.title("Musimack GA4 Importer Console")
-    st.caption("Local GA4 export, validation, internal/draft import, and portal workflow checks.")
+    st.title("Musimack Data Importer Console")
+    st.caption("Local-only importer helper for dashboard-lab data sources and legacy GA4 snapshot operations.")
 
     if "run_log" not in st.session_state:
         st.session_state.run_log = []
     if "validated_files" not in st.session_state:
         st.session_state.validated_files = set()
 
+    dashboard_tab, ga4_tab = st.tabs(["Dashboard-Lab Profiles", "GA4 Snapshot Workflow"])
+    with dashboard_tab:
+        _dashboard_lab_console(local_config_status)
+    with ga4_tab:
+        _ga4_snapshot_console(local_config_status)
+
+
+def _ga4_snapshot_console(local_config_status) -> None:
     clients = load_clients()
     client = _client_picker(clients)
     start_date, end_date = _date_controls(client)
@@ -62,11 +83,185 @@ def main() -> None:
     _run_log()
 
 
+def _dashboard_lab_console(local_config_status) -> None:
+    st.subheader("Dashboard-Lab Profile Registry")
+    st.warning(
+        "Local-only helper. Real data stays in ignored folders. Do not commit exports/local-real/, "
+        "public/local-fixtures/, .env.local, API keys, service account files, or raw provider outputs."
+    )
+    try:
+        profiles = load_dashboard_lab_profiles()
+    except Exception as exc:
+        st.error(f"Profile registry could not be loaded: {exc}")
+        return
+
+    selected = st.selectbox(
+        "Dashboard-lab profile",
+        [profile.slug for profile in profiles],
+        format_func=lambda slug: next(profile.display_name for profile in profiles if profile.slug == slug),
+    )
+    profile = next(item for item in profiles if item.slug == selected)
+
+    st.table(
+        [
+            {"Field": "Slug", "Value": profile.slug},
+            {"Field": "Display name", "Value": profile.display_name},
+            {"Field": "Domain", "Value": profile.domain},
+            {"Field": "Vertical", "Value": profile.vertical},
+            {"Field": "Service model", "Value": profile.service_model},
+            {"Field": "Dashboard-lab route", "Value": profile.dashboard_lab_route},
+            {"Field": "Importer output folder", "Value": str(profile.importer_output_folder)},
+            {"Field": "Dashboard-lab local fixture target", "Value": str(profile.dashboard_lab_local_fixture_folder)},
+            {"Field": "Synthetic fallback", "Value": str(profile.dashboard_lab_synthetic_fixture_folder)},
+            {"Field": "Supported importer providers", "Value": ", ".join(profile.data_sources)},
+            {"Field": "Capabilities", "Value": ", ".join(f"{item.label} ({item.status})" for item in profile.capabilities)},
+        ]
+    )
+
+    st.subheader("Safe Config Boundary")
+    st.write("Committed registry contains slugs, names, domains, verticals, service model, routes, paths, and provider types only.")
+    st.write("Ignored local config should hold GA4 property IDs, GSC site URLs if sensitive, Local Falcon report IDs/manifests, API keys, token paths, and service account paths.")
+    _readiness_panel(local_config_status)
+
+    st.subheader("Provider Readiness")
+    st.table(provider_readiness(profile))
+
+    st.subheader("Readiness Matrix")
+    st.caption(
+        "Local output, live fetch config, validation, and dashboard-lab copy readiness are separate states. "
+        "Missing local output for planning profiles is normal until an operator creates a real local export."
+    )
+    matrix = readiness_matrix(profile)
+    st.dataframe(
+        [
+            {
+                "Capability": row["provider_label"],
+                "Status": row["capability_status"],
+                "Local output": row["local_output_status"],
+                "Live fetch": row["live_fetch_status"],
+                "Validation": row["validate_readiness"],
+                "Dashboard copy": row["dashboard_copy_readiness"],
+                "Expected file": row["expected_output_file"],
+                "Schema": row["output_schema"],
+                "Size": row["output_size"],
+                "Last modified": row["last_modified"],
+                "Overall": row["status_label"],
+                "Severity": row["status_severity"],
+            }
+            for row in matrix
+        ],
+        use_container_width=True,
+    )
+    future_notes = [row for row in matrix if row["capability_status"] == "planned" or row["notes"]]
+    if future_notes:
+        st.subheader("Future Provider And Capability Notes")
+        for row in future_notes:
+            note = row["notes"] or row["status_label"]
+            st.write(f"- {row['provider_label']}: {note}")
+
+    st.subheader("Provider Setup Checklist")
+    st.caption(
+        "Checklist values are safe booleans and labels only. It does not print API keys, OAuth tokens, "
+        "credential contents, Local Falcon report IDs, or raw provider payloads."
+    )
+    checklist = provider_setup_checklist(profile)
+    st.dataframe(
+        [
+            {
+                "Provider": row["provider_label"],
+                "Output": row["local_output_state"],
+                "Config": _config_state_label(row["config_state"]),
+                "Next action": row["safe_next_action"],
+                "Blocked reason": row["blocked_reason"],
+                "Status": row["status"],
+                "Severity": row["severity"],
+            }
+            for row in checklist
+        ],
+        use_container_width=True,
+    )
+    for row in checklist:
+        if row["suggested_command"]:
+            with st.expander(f"{row['provider_label']} safe command shape"):
+                st.code(row["suggested_command"], language="powershell")
+
+    st.subheader("Output Folder Status")
+    st.table(output_folder_status(profile))
+
+    st.subheader("Validate Local-Real Output")
+    if st.button("Validate local-real output"):
+        report = validate_profile_output(profile)
+        if report.ok:
+            st.success(f"Output folder is ready: {report.folder}")
+        else:
+            st.warning(f"Output folder needs attention: {report.folder}")
+        st.write(f"Folder exists: {'yes' if report.folder_exists else 'no'}")
+        st.table([item.as_row() for item in report.files])
+        if report.warnings:
+            st.warning("\n".join(f"- {warning}" for warning in report.warnings))
+
+    st.subheader("Command Guidance")
+    for item in command_guidance(profile):
+        st.markdown(f"**{item['provider']}**")
+        st.code(item["command"], language="powershell")
+
+    st.subheader("Guarded Real Import Sequence")
+    sequence = guarded_import_sequence(profile)
+    st.caption(sequence["summary"])
+    for phase in sequence["phases"]:
+        with st.expander(f"{phase['label']}"):
+            st.write(f"Network allowed: {'yes' if phase['network_allowed'] else 'no'}")
+            st.write(f"Explicit approval required: {'yes' if phase['requires_explicit_approval'] else 'no'}")
+            for command in phase.get("commands", []):
+                st.code(command, language="powershell")
+            for provider_step in phase.get("providers", []):
+                st.markdown(f"**{provider_step['label']}**")
+                if provider_step["command"]:
+                    st.code(provider_step["command"], language="powershell")
+                st.write(provider_step["approval_prompt"])
+                for guardrail in provider_step["guardrails"]:
+                    st.write(f"- {guardrail}")
+
+    st.subheader("Dashboard-Lab Copy Guidance")
+    st.write("Copy only into dashboard-lab `public/local-fixtures/{profile}`. Never copy real data into committed `public/fixtures/{profile}`.")
+    st.code(copy_guidance(profile), language="powershell")
+
+    st.subheader("Guarded Copy Preview")
+    try:
+        plan = copy_dry_run(profile)
+        st.table([item.as_row() for item in plan])
+    except Exception as exc:
+        st.error(f"Copy preview failed safety checks: {exc}")
+        return
+
+    confirmed = st.checkbox(
+        "I understand this copies ignored real local data into dashboard-lab public/local-fixtures only.",
+        value=False,
+    )
+    if st.button("Copy local-real output to dashboard-lab local fixtures", disabled=not confirmed):
+        results = copy_local_real_to_dashboard_lab(profile)
+        st.table([item.as_row() for item in results])
+        failures = [item for item in results if item.status == "failed"]
+        copied = [item for item in results if item.status in {"copied", "overwritten"}]
+        if failures:
+            st.error(f"Copy completed with {len(failures)} failure(s).")
+        elif copied:
+            st.success(f"Copy completed for {len(copied)} file(s). Missing source files were skipped.")
+        else:
+            st.warning("No files were copied. Source files may be missing.")
+
+
 def _client_picker(clients):
     st.subheader("Client")
     labels = [client.client_label for client in clients]
     selected = st.selectbox("Client roster", labels, index=0)
     return next(client for client in clients if client.client_label == selected)
+
+
+def _config_state_label(config_state: dict[str, bool]) -> str:
+    if not config_state:
+        return "not required"
+    return "; ".join(f"{key}: {'yes' if value else 'no'}" for key, value in config_state.items())
 
 
 def _date_controls(client):

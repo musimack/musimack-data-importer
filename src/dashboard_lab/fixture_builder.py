@@ -201,6 +201,47 @@ PROFILES = {
             "No Ads Search, LSA, or CallRail modules are enabled for this fixture.",
         ],
     ),
+    "inn-at-spanish-head": FixtureProfile(
+        slug="inn-at-spanish-head",
+        client_name="Spanish Head",
+        domain="spanishhead.com",
+        primary_market="Lincoln City, Oregon",
+        active_services=[
+            "SEO/GEO",
+            "GA4 reporting",
+            "GSC reporting",
+            "Local SEO / Maps",
+            "content performance",
+        ],
+        providers=["ga4", "gsc", "local_falcon"],
+        primary_service_priority="SEO/GEO + Local Visibility",
+        modules_enabled=[
+            "executive_summary",
+            "website_performance",
+            "search_console",
+            "local_map_rankings",
+            "content_performance",
+            "tasks",
+            "insights",
+        ],
+        above_fold_module_order=["executive_summary", "website_performance", "search_console"],
+        below_fold_module_order=["local_map_rankings", "content_performance", "tasks", "insights"],
+        top_strategy_focus=[
+            "Grow organic visibility for Lincoln City oceanfront hotel searches.",
+            "Use local visibility data to understand lodging and ocean-view search demand.",
+            "Prioritize content around oceanfront stays, romantic getaways, and Oregon Coast lodging.",
+        ],
+        current_tasks=[
+            {"title": "Review oceanfront hotel query visibility", "service": "GSC reporting", "status": "planned"},
+            {"title": "Prepare Lincoln City lodging content refresh plan", "service": "SEO/GEO", "status": "planned"},
+            {"title": "Validate Local Falcon query set for hospitality searches", "service": "Local SEO / Maps", "status": "planned"},
+        ],
+        recent_insights=[
+            "Hospitality reporting is modeled as organic/local SEO and content performance.",
+            "Local visibility should focus on Lincoln City and Oregon Coast lodging intent.",
+            "No Ads Search, LSA, CallRail, or contractor lead-gen modules are enabled for this fixture.",
+        ],
+    ),
     "priority-tree-lead-gen": FixtureProfile(
         slug="priority-tree-lead-gen",
         client_name="Priority Tree Service Demo",
@@ -429,6 +470,33 @@ def validate_dashboard_lab_fixture(output_dir: Path) -> list[Path]:
     return [output_dir / name for name in expected_files]
 
 
+def validate_dashboard_lab_export_folder(output_dir: Path, profile_slug: str) -> list[Path]:
+    """Lightweight validation for synthetic or ignored local-real dashboard-lab export folders."""
+    profile = _profile(profile_slug)
+    missing = [filename for filename in profile.expected_files if not (output_dir / filename).exists()]
+    if missing:
+        raise FixtureValidationError(f"missing expected export files: {', '.join(missing)}")
+
+    payloads = {}
+    for filename in profile.expected_files:
+        payload = _load_json(output_dir / filename)
+        _reject_secret_like_keys(payload, filename)
+        payloads[filename] = payload
+
+    client_profile = payloads["client-profile.json"]
+    if client_profile.get("fixture_profile") != profile.slug:
+        raise FixtureValidationError("client-profile.json fixture_profile mismatch")
+
+    combined = payloads["combined-dashboard-summary.json"]
+    if combined.get("fixture_profile") != profile.slug:
+        raise FixtureValidationError("combined-dashboard-summary.json fixture_profile mismatch")
+    expected_summaries = {provider: PROVIDER_FILES[provider] for provider in profile.providers}
+    if combined.get("provider_summaries") != expected_summaries:
+        raise FixtureValidationError("combined-dashboard-summary.json must reference enabled profile providers only")
+
+    return [output_dir / filename for filename in profile.expected_files]
+
+
 def _profile(profile_slug: str) -> FixtureProfile:
     try:
         return PROFILES[profile_slug]
@@ -537,6 +605,33 @@ def _ga4_summary(profile: FixtureProfile) -> dict[str, Any]:
             "Organic traffic is concentrated around treatment and service education pages.",
             "Botox, dermal filler, and lip filler pages are the strongest organic engagement surfaces.",
         ]
+    elif profile.slug == "inn-at-spanish-head":
+        top_pages = [
+            {"path": "/", "title": "Oceanfront Hotel in Lincoln City", "views": 5840, "users": 2520, "conversions": 96},
+            {"path": "/rooms", "title": "Oceanfront Rooms", "views": 4120, "users": 1840, "conversions": 74},
+            {"path": "/specials", "title": "Oregon Coast Hotel Specials", "views": 2380, "users": 1120, "conversions": 38},
+            {"path": "/dining", "title": "Ocean View Dining", "views": 1920, "users": 870, "conversions": 22},
+            {"path": "/lincoln-city", "title": "Lincoln City Getaway Guide", "views": 1680, "users": 760, "conversions": 18},
+        ]
+        channels = [
+            {"channel": "Organic Search", "sessions": 4620, "users": 3510, "views": 12880, "conversions": 154},
+            {"channel": "Direct", "sessions": 2180, "users": 1660, "views": 5720, "conversions": 66},
+            {"channel": "Referral", "sessions": 940, "users": 790, "views": 2460, "conversions": 24},
+            {"channel": "Organic Social", "sessions": 520, "users": 440, "views": 1260, "conversions": 10},
+        ]
+        metrics = {
+            "users": 7380,
+            "sessions": 9820,
+            "views": 26340,
+            "engagement_rate": 0.694,
+            "average_session_duration_seconds": 164,
+            "event_count": 60420,
+            "conversions": 254,
+        }
+        insights = [
+            "Organic Search is the strongest synthetic acquisition surface for lodging intent.",
+            "Rooms, specials, and Lincoln City destination content are the primary engagement paths.",
+        ]
     else:
         top_pages = [
             {"path": "/", "title": "Home", "views": 6920, "users": 2840, "conversions": 62},
@@ -615,6 +710,30 @@ def _gsc_summary(profile: FixtureProfile) -> dict[str, Any]:
         insights = [
             "Treatment page demand is strongest for Botox, dermal fillers, and lip filler searches.",
             "Sculptra and Kybella queries are useful expansion areas for content updates.",
+        ]
+    elif profile.slug == "inn-at-spanish-head":
+        top_queries = [
+            {"query": "lincoln city oceanfront hotel", "clicks": 620, "impressions": 11800, "position": 4.7},
+            {"query": "lincoln city hotel", "clicks": 540, "impressions": 15200, "position": 6.2},
+            {"query": "oregon coast oceanfront lodging", "clicks": 318, "impressions": 8700, "position": 7.8},
+            {"query": "hotel with ocean views lincoln city", "clicks": 286, "impressions": 6400, "position": 5.9},
+            {"query": "lincoln city romantic getaway", "clicks": 174, "impressions": 3900, "position": 8.4},
+        ]
+        top_pages = [
+            {"path": "/", "clicks": 980, "impressions": 22600, "ctr": 0.0434},
+            {"path": "/rooms", "clicks": 710, "impressions": 17100, "ctr": 0.0415},
+            {"path": "/specials", "clicks": 390, "impressions": 9200, "ctr": 0.0424},
+            {"path": "/lincoln-city", "clicks": 245, "impressions": 7600, "ctr": 0.0322},
+        ]
+        movement = [
+            {"query": "lincoln city oceanfront hotel", "previous_position": 5.8, "current_position": 4.7, "change": -1.1},
+            {"query": "hotel with ocean views lincoln city", "previous_position": 7.4, "current_position": 5.9, "change": -1.5},
+            {"query": "oregon coast oceanfront lodging", "previous_position": 8.1, "current_position": 7.8, "change": -0.3},
+        ]
+        metrics = {"clicks": 4120, "impressions": 126800, "ctr": 0.0325, "average_position": 8.3}
+        insights = [
+            "Oceanfront hotel and Lincoln City lodging terms are the strongest organic demand surfaces.",
+            "Destination and room content can support both discovery and booking-intent queries.",
         ]
     elif profile.slug == "priority-tree-lead-gen":
         top_queries = [
@@ -780,8 +899,47 @@ def _google_ads_lsa_summary(profile: FixtureProfile) -> dict[str, Any]:
 
 def _local_falcon_summary(profile: FixtureProfile) -> dict[str, Any]:
     keywords = ["hvac repair", "plumber", "water heater repair"]
+    center_point_label = "Portland, OR"
+    top_areas = [
+        {"area": "North Portland", "average_rank": 2.4},
+        {"area": "Pearl District", "average_rank": 3.1},
+        {"area": "Sellwood", "average_rank": 3.6},
+    ]
+    weak_areas = [
+        {"area": "Beaverton", "average_rank": 11.2},
+        {"area": "Gresham", "average_rank": 10.7},
+        {"area": "Lake Oswego", "average_rank": 9.8},
+    ]
+    insights = [
+        "Map visibility improved for tracked service keywords month over month.",
+        "Outer west-side ranking gaps should guide location page priorities.",
+    ]
     if profile.slug == "priority-tree-lead-gen":
         keywords = ["tree removal", "emergency tree service", "tree pruning"]
+    elif profile.slug == "inn-at-spanish-head":
+        keywords = [
+            "lincoln city oceanfront hotel",
+            "lincoln city hotel",
+            "oregon coast oceanfront lodging",
+            "hotel with ocean views lincoln city",
+            "lincoln city romantic getaway",
+            "can you recommend an oceanfront hotel in lincoln city oregon?",
+        ]
+        center_point_label = "Lincoln City, OR"
+        top_areas = [
+            {"area": "Oceanlake", "average_rank": 2.8},
+            {"area": "Nelscott", "average_rank": 3.4},
+            {"area": "Roads End", "average_rank": 4.1},
+        ]
+        weak_areas = [
+            {"area": "South Beach", "average_rank": 10.6},
+            {"area": "Depoe Bay", "average_rank": 11.4},
+            {"area": "Newport", "average_rank": 12.1},
+        ]
+        insights = [
+            "Local visibility is strongest for Lincoln City oceanfront lodging intent.",
+            "Regional Oregon Coast terms should be monitored without overextending local relevance.",
+        ]
     payload = _provider_base("local_falcon", profile)
     payload.update(
         {
@@ -789,7 +947,7 @@ def _local_falcon_summary(profile: FixtureProfile) -> dict[str, Any]:
             "location_metadata": {
                 "business_name": profile.client_name,
                 "primary_market": profile.primary_market,
-                "center_point_label": "Portland, OR",
+                "center_point_label": center_point_label,
             },
             "grid_metadata": {
                 "grid_size": "7x7",
@@ -802,16 +960,8 @@ def _local_falcon_summary(profile: FixtureProfile) -> dict[str, Any]:
                 "top_3_grid_share": 0.38,
                 "top_10_grid_share": 0.86,
             },
-            "top_ranking_areas": [
-                {"area": "North Portland", "average_rank": 2.4},
-                {"area": "Pearl District", "average_rank": 3.1},
-                {"area": "Sellwood", "average_rank": 3.6},
-            ],
-            "weak_ranking_areas": [
-                {"area": "Beaverton", "average_rank": 11.2},
-                {"area": "Gresham", "average_rank": 10.7},
-                {"area": "Lake Oswego", "average_rank": 9.8},
-            ],
+            "top_ranking_areas": top_areas,
+            "weak_ranking_areas": weak_areas,
             "keyword_location_scans": [
                 {"keyword": keywords[0], "average_rank": 4.6, "visibility_score": 78},
                 {"keyword": keywords[1], "average_rank": 6.1, "visibility_score": 69},
@@ -822,10 +972,7 @@ def _local_falcon_summary(profile: FixtureProfile) -> dict[str, Any]:
                 {"scan_date": "2026-03-28", "average_rank": 6.4, "visibility_score": 68},
                 {"scan_date": "2026-04-28", "average_rank": 5.7, "visibility_score": 71},
             ],
-            "insights": [
-                "Map visibility improved for tracked service keywords month over month.",
-                "Outer west-side ranking gaps should guide location page priorities.",
-            ],
+            "insights": insights,
             "warnings": [],
         }
     )

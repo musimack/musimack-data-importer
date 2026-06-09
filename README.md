@@ -141,6 +141,471 @@ python scripts/fetch_gsc_api.py --profile aluma-seo-geo --real-output --validate
 
 The command writes `gsc-summary.json`, rebuilds `combined-dashboard-summary.json`, and ensures the real-output folder has `client-profile.json` plus any non-GSC profile summaries needed for local dashboard testing. Explicit `--out` is still supported, but writing real API output into `exports/dashboard-lab/` may overwrite tracked synthetic fixtures. For `aluma-seo-geo`, the combined summary remains organic-only: GA4 and GSC are referenced, while Ads Search, LSA, and CallRail stay disabled.
 
+Spanish Head is also supported as an organic/local SEO/GEO dashboard-lab profile:
+
+```powershell
+python scripts/build_dashboard_lab_fixture.py --profile inn-at-spanish-head
+python scripts/pull_ga4_traffic_overview.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD --out "exports/local-real/dashboard-lab/inn-at-spanish-head/ga4-snapshot.json"
+python scripts/validate_ga4_snapshot.py --file "exports/local-real/dashboard-lab/inn-at-spanish-head/ga4-snapshot.json"
+python scripts/write_ga4_dashboard_lab_summary.py --profile inn-at-spanish-head --snapshot "exports/local-real/dashboard-lab/inn-at-spanish-head/ga4-snapshot.json" --real-output
+python scripts/write_ga4_dashboard_lab_summary.py --profile inn-at-spanish-head --real-output --validate-only
+python scripts/fetch_gsc_api.py --profile inn-at-spanish-head --site-url sc-domain:spanishhead.com --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output
+python scripts/fetch_gsc_api.py --profile inn-at-spanish-head --real-output --validate-only
+python scripts/build_dashboard_lab_fixture.py --profile inn-at-spanish-head --validate-only --export-folder --out exports/local-real/dashboard-lab/inn-at-spanish-head
+```
+
+Real Spanish Head outputs should stay under ignored `exports/local-real/dashboard-lab/inn-at-spanish-head/`. For manual dashboard-lab visual QA, copy ignored real output later into `musimack-dashboard-lab/public/local-fixtures/inn-at-spanish-head/`; do not modify that dashboard repo from this importer workflow. The committed synthetic dashboard-lab fallback is `public/fixtures/inn-at-spanish-head/` in the dashboard-lab repo. Spanish Head expected files are `client-profile.json`, `ga4-summary.json`, `gsc-summary.json`, `local-falcon-summary.json`, and `combined-dashboard-summary.json`. Real GA4/GSC pulls still need operator-owned property IDs/site URLs and local OAuth access; real Local Falcon imports need local CSV/TXT exports or ignored read-only manifests with existing report IDs.
+
+### Spanish Head Real-Data Onboarding Checklist
+
+The Spanish Head alpha profile is `inn-at-spanish-head` for `spanishhead.com`. Real local dashboard-lab output belongs only in:
+
+```text
+exports/local-real/dashboard-lab/inn-at-spanish-head/
+```
+
+Validated real local fixtures may later be copied for visual QA into the ignored dashboard-lab path:
+
+```text
+../musimack-dashboard-lab/public/local-fixtures/inn-at-spanish-head/
+```
+
+Do not copy Aluma output into this profile, do not commit real output, and do not place credentials, raw provider IDs, tokens, or client secrets in README examples.
+
+Provider setup status:
+
+| Provider | Expected output | Current readiness | Safe next command shape |
+| --- | --- | --- | --- |
+| GA4 | `ga4-summary.json` | GA4 snapshot fetch support exists and the dashboard-lab summary writer is available. Needs operator-owned property id and local OAuth credentials before any real pull. | `$env:MUSIMACK_GA4_PROPERTY_ID="<ignored local property id>"; python scripts/pull_ga4_traffic_overview.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD --out "exports/local-real/dashboard-lab/inn-at-spanish-head/ga4-snapshot.json"; python scripts/validate_ga4_snapshot.py --file "exports/local-real/dashboard-lab/inn-at-spanish-head/ga4-snapshot.json"; python scripts/write_ga4_dashboard_lab_summary.py --profile inn-at-spanish-head --snapshot "exports/local-real/dashboard-lab/inn-at-spanish-head/ga4-snapshot.json" --real-output` |
+| GSC | `gsc-summary.json` | Fetch support exists and writes dashboard-lab-compatible output with `--real-output`. Needs exact Search Console property access and local OAuth credentials. Spanish Head has been verified with `sc-domain:spanishhead.com`. | `python scripts/fetch_gsc_api.py --profile inn-at-spanish-head --site-url sc-domain:spanishhead.com --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output` |
+| Local Falcon | `local-falcon-summary.json` | Real Local Falcon imports need ignored local source exports or an ignored manifest plus `LOCAL_FALCON_API_KEY`. Placeholder/synthetic local visibility files may exist for dashboard layout continuity and should not be described as a real Local Falcon pull. No on-demand scans or mutation. | `python scripts/fetch_local_falcon_api.py --manifest "local-falcon-manifests/inn-at-spanish-head.json" --transport live --execute --write` |
+| Google Ads Search | `google-ads-search-summary.json` | Planned only. No real Google Ads importer/fetcher exists yet for this alpha. | No command yet. Do not fake output; keep Ads Search as planned/pending until a future read-only importer milestone. |
+
+Before copying anything to the dashboard lab, validate the ignored real output folder:
+
+```powershell
+python scripts/build_dashboard_lab_fixture.py --profile inn-at-spanish-head --validate-only --export-folder --out "exports/local-real/dashboard-lab/inn-at-spanish-head"
+```
+
+The guarded copy workflow should only be used after the expected local files exist and validate. The dashboard lab already falls back from ignored `public/local-fixtures/{profile}/` to committed synthetic `public/fixtures/{profile}/`, so missing real files should not be patched with fake real output.
+
+The GA4 dashboard-lab writer reads an existing sanitized `ga4_snapshot.v1` export and writes only `ga4-summary.json`. It does not call GA4, does not use OAuth, does not write raw property ids, and does not write credential or token paths into dashboard-lab output. If the snapshot lacks optional values such as conversions or key events, the writer leaves those fields as `null` and records a warning instead of inventing metrics.
+
+The operator console exposes this as a guarded real import sequence for each dashboard-lab profile:
+
+1. Read-only preflight: validate profile shape and local-real folder expectations; no network calls.
+2. Operator-approved provider fetches: GA4, GSC, and Local Falcon command shapes only; live runs require explicit operator approval and local credentials outside git.
+3. Validation-only checks: validate existing `exports/local-real/dashboard-lab/inn-at-spanish-head/` output; no network calls.
+4. Dashboard-lab local copy: copy expected JSON files only into ignored `public/local-fixtures/inn-at-spanish-head/`; never into committed `public/fixtures/`.
+5. Planned capabilities: Google Ads Search remains commandless and planned-only; do not create fake real output.
+
+### Per-Profile Local Provider Config
+
+Milestone 68 adds optional per-profile local provider config files under:
+
+```text
+local-profile-configs/{profile}.local.json
+```
+
+These files are ignored by Git and are for operator machines only. They let each dashboard-lab profile declare which environment variable names hold that profile's provider identifiers and credential file paths. The importer still reads actual values from the local shell or `.env.local`; it does not commit or display values.
+
+Committed examples live in:
+
+```text
+docs/examples/profile-local-config.example.json
+docs/examples/inn-at-spanish-head.local.example.json
+```
+
+Example shape:
+
+```json
+{
+  "profile": "inn-at-spanish-head",
+  "ga4": {
+    "property_id_env": "INN_GA4_PROPERTY_ID",
+    "oauth_client_secrets_env": "INN_GA4_OAUTH_CLIENT_SECRETS",
+    "oauth_token_file_env": "INN_GA4_OAUTH_TOKEN_FILE"
+  },
+  "gsc": {
+    "site_url": "sc-domain:spanishhead.com",
+    "oauth_client_secrets_env": "INN_GSC_OAUTH_CLIENT_SECRETS",
+    "oauth_token_file_env": "INN_GSC_OAUTH_TOKEN_FILE"
+  },
+  "local_falcon": {
+    "manifest_path": "local-falcon-manifests/inn-at-spanish-head.json",
+    "api_key_env": "LOCAL_FALCON_API_KEY"
+  },
+  "google_ads_search": {
+    "status": "planned"
+  }
+}
+```
+
+The loader validates JSON shape, confirms the file profile matches the selected slug, checks whether named env vars are present, checks whether referenced OAuth/token files exist, and checks whether the Local Falcon manifest exists. It returns only safe metadata: yes/no readiness flags, missing item labels, and redacted path labels. It does not read credential contents, token contents, API key values, raw provider output, or report IDs.
+
+To configure Spanish Head locally:
+
+1. Copy `docs/examples/inn-at-spanish-head.local.example.json` to `local-profile-configs/inn-at-spanish-head.local.json`.
+2. Edit the ignored local file only if you want different env var names.
+3. Set the named env vars in `.env.local` or your shell with real local values.
+4. Put the Local Falcon manifest at the ignored path listed in the local config.
+5. Restart the operator console or rerun scripts from a shell with those env vars loaded.
+6. Run the readiness/checklist view before any provider fetch.
+
+Current profile-aware script support:
+
+```powershell
+python scripts/pull_ga4_traffic_overview.py --profile inn-at-spanish-head --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output
+python scripts/fetch_gsc_api.py --profile inn-at-spanish-head --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output
+python scripts/fetch_local_falcon_api.py --profile inn-at-spanish-head --transport live
+python scripts/fetch_local_falcon_api.py --profile inn-at-spanish-head --transport live --execute --write
+```
+
+`pull_ga4_traffic_overview.py --profile` resolves GA4 env var names from `local-profile-configs/{profile}.local.json`. `--real-output` writes the sanitized snapshot to `exports/local-real/dashboard-lab/{profile}/ga4-snapshot.json`.
+
+`fetch_gsc_api.py --profile` can resolve the GSC site URL and GSC OAuth env var names from the local profile config. Explicit `--site-url`, `--credentials`, and `--token` still override local config for manual runs.
+
+`fetch_local_falcon_api.py --profile` can resolve the ignored manifest path from local profile config. Live mode is still read-only existing-report retrieval only; `--transport live` without `--execute` is preflight only.
+
+Remaining migration limits:
+
+- Some legacy GA4/import scripts still use shared env var names unless updated in a future milestone.
+- The Streamlit and FastAPI consoles expose provider readiness and command shapes, but they do not run live provider fetches from the browser.
+- Google Ads Search remains planned-only and has no importer command.
+- The older aggregate `config/dashboard_lab_profiles.local.json` compatibility remains for tests/local experiments, but new per-profile config should use `local-profile-configs/{profile}.local.json`.
+
+## Local Falcon CSV Importer
+
+The Local Falcon importer converts local CSV exports into dashboard-lab-compatible `local_falcon_summary.v2` JSON. It is local-only: there is no Local Falcon API integration, no Local Falcon credentials, no OAuth, no provider sync, no uploads, and no portal/database write path.
+
+Real Local Falcon CSV inputs and normalized real outputs must stay in ignored local folders. The default real output convention is:
+
+```text
+exports/local-real/dashboard-lab/{profile}/local-falcon-summary.json
+```
+
+Example local import:
+
+```powershell
+python scripts/import_local_falcon_csv.py `
+  --profile aluma-seo-geo `
+  --keyword "sculptra treatment" `
+  --business-name "Local client business name" `
+  --scan-report "C:\path\to\local\scan-report.csv" `
+  --data-points "C:\path\to\local\data-points.csv" `
+  --ai-analysis "C:\path\to\local\ai-analysis.txt"
+```
+
+The command creates parent directories, writes valid JSON, preserves existing keyword scans in the output file, and replaces the scan with the same keyword id when re-importing. Use `--overwrite` only when intentionally replacing the whole local output file. Use `--featured-keyword-id` to explicitly control the dashboard's featured keyword; otherwise the importer preserves the existing featured keyword or chooses the strongest scan by data point coverage.
+
+For a multi-keyword local visibility package, repeat the same command for each keyword with the same `--profile` and `--output`. A normal dashboard setup is around 5 keywords; the importer supports up to 10 cleanly and warns beyond that. Each keyword scan remains separate under `keyword_scans`, so per-keyword data points, grid points, competitors, AI analysis, and action bridge recommendations stay first-class.
+
+For Spanish Head, safe Local Falcon planning examples include:
+
+- `lincoln city oceanfront hotel`
+- `lincoln city hotel`
+- `oregon coast oceanfront lodging`
+- `hotel with ocean views lincoln city`
+- `lincoln city romantic getaway`
+- AI visibility prompt: `can you recommend an oceanfront hotel in lincoln city oregon?`
+
+Use ignored local manifests under `local-falcon-manifests/` for real existing report IDs. Do not commit real report IDs or raw Local Falcon exports.
+
+Suggested ignored source folder convention:
+
+```text
+local-falcon-exports/{profile}/{keyword-slug}/
+  scan-report.csv
+  data-points.csv
+  ai-analysis.txt
+  optional-original-report.pdf
+```
+
+Example repeated import:
+
+```powershell
+python scripts/import_local_falcon_csv.py `
+  --profile aluma-seo-geo `
+  --keyword "sculptra treatment" `
+  --business-name "Aluma Aesthetic Medicine" `
+  --scan-report "local-falcon-exports\aluma-seo-geo\sculptra-treatment\scan-report.csv" `
+  --data-points "local-falcon-exports\aluma-seo-geo\sculptra-treatment\data-points.csv" `
+  --ai-analysis "local-falcon-exports\aluma-seo-geo\sculptra-treatment\ai-analysis.txt"
+
+python scripts/import_local_falcon_csv.py `
+  --profile aluma-seo-geo `
+  --keyword "dermal fillers" `
+  --business-name "Aluma Aesthetic Medicine" `
+  --scan-report "local-falcon-exports\aluma-seo-geo\dermal-fillers\scan-report.csv" `
+  --data-points "local-falcon-exports\aluma-seo-geo\dermal-fillers\data-points.csv"
+```
+
+Optional local-only batch manifests are also supported. Keep real manifests in ignored `local-falcon-manifests/`:
+
+```json
+{
+  "profile": "aluma-seo-geo",
+  "business_name": "Aluma Aesthetic Medicine",
+  "output": "exports/local-real/dashboard-lab/aluma-seo-geo/local-falcon-summary.json",
+  "featured_keyword_id": "sculptra-treatment",
+  "keywords": [
+    {
+      "keyword": "sculptra treatment",
+      "scan_report": "local-falcon-exports/aluma-seo-geo/sculptra-treatment/scan-report.csv",
+      "data_points": "local-falcon-exports/aluma-seo-geo/sculptra-treatment/data-points.csv",
+      "ai_analysis": "local-falcon-exports/aluma-seo-geo/sculptra-treatment/ai-analysis.txt"
+    },
+    {
+      "keyword": "dermal fillers",
+      "scan_report": "local-falcon-exports/aluma-seo-geo/dermal-fillers/scan-report.csv",
+      "data_points": "local-falcon-exports/aluma-seo-geo/dermal-fillers/data-points.csv"
+    }
+  ]
+}
+```
+
+Run the batch import with:
+
+```powershell
+python scripts/import_local_falcon_batch.py --manifest "local-falcon-manifests\aluma-seo-geo.json"
+```
+
+Validate the combined output with:
+
+```powershell
+python scripts/validate_local_falcon_summary.py --file "exports\local-real\dashboard-lab\aluma-seo-geo\local-falcon-summary.json"
+```
+
+The validator prints profile, output path, keyword scan count, featured/strongest/weakest ids, and each keyword's total/found/top-3/top-10/weak counts, rendered grid dimensions, grid point count, competitor count, AI availability, and action bridge count. Missing AI analysis is a warning only; missing counts, missing grid points, missing rendered grid dimensions, or missing competitors should be investigated before dashboard QA.
+
+The importer accepts defensively named CSV columns for scan/report metadata, grid or data point rows, competitor/business result rows, and optional local AI analysis text. If latitude/longitude are present but row/column are not, it derives a renderable grid from coordinate order. If the report says `21x21` but the CSV contains fewer points, `grid_size_label` preserves the report label while `rendered_grid` reflects actual available grid points.
+
+Ranks such as `20+`, `20 +`, blank, missing, and `not found` are normalized into consistent rank/status values. Data point coverage is emphasized for dashboard usefulness: total, found, top 3, top 10, top 20, and not-found-or-20-plus counts are derived from grid rows. Strongest keyword uses highest top-3 coverage, then top-10 coverage, then found coverage. Weakest keyword uses lowest top-10 coverage, then lowest found coverage, with weak/not-found points as the tie-breaker. ARP, ATRP, and SoLV are preserved as supporting Local Falcon metrics when present, but they are not treated as the primary story.
+
+Competitors are first-class in the normalized output. The importer creates a focused competitor list, caps it by default, and assigns simple relationships such as `market_leader`, `watch`, `vulnerable`, `client`, or `other`.
+
+If an AI analysis `.txt` file is supplied, the importer sets `ai_analysis.available` to `true` and conservatively parses simple sections such as summary, issues, improvements, recommendations, and vulnerable competitors. If no text file is supplied, `ai_analysis.available` is `false`; the importer does not invent AI analysis.
+
+The dashboard lab can consume the output after copying the ignored local file to:
+
+```text
+musimack-dashboard-lab/public/local-fixtures/{profile}/local-falcon-summary.json
+```
+
+Do not commit real Local Falcon CSV exports, real Local Falcon JSON output, real client names/addresses/coordinates/rankings, or client-specific input folders. Tracked tests and examples must use synthetic/demo data only.
+
+### Real Local Falcon Export Validation
+
+For real Local Falcon validation, keep source files in an ignored local folder such as:
+
+```text
+inputs/local-real/local-falcon/aluma-seo-geo/
+```
+
+The repo also ignores `local-inputs/`, `local-falcon-real/`, and `local-falcon-exports/` for operator-only source files. Do not copy real Local Falcon CSV, TXT, PDF, or generated JSON files into tracked folders.
+
+Validate the real local Aluma `sculptra treatment` export with:
+
+```powershell
+python scripts/validate_local_falcon_real_export.py `
+  --profile aluma-seo-geo `
+  --keyword "sculptra treatment" `
+  --business-name "Aluma Aesthetic Medicine" `
+  --scan-report "inputs\local-real\local-falcon\aluma-seo-geo\scan-report.csv" `
+  --data-points "inputs\local-real\local-falcon\aluma-seo-geo\data-points.csv" `
+  --ai-analysis "inputs\local-real\local-falcon\aluma-seo-geo\ai-analysis.txt"
+```
+
+The validation helper writes to:
+
+```text
+exports/local-real/dashboard-lab/aluma-seo-geo/local-falcon-summary.json
+```
+
+It then checks the generated `local_falcon_summary.v2` payload and prints profile, keyword, output path, data point totals, top 3/top 10 counts, weak-or-not-found points, competitor count, AI analysis availability, and rendered grid dimensions.
+
+For the Aluma `sculptra treatment` report, use the generated summary to confirm whether the real CSV supports the expected data point story: 81 total data points and 27 found data points. If the CSV shape does not expose that cleanly, do not manually fake the values; document what the importer derived from the available rows.
+
+To hand the real local fixture to the dashboard lab for visual QA, copy:
+
+```text
+exports/local-real/dashboard-lab/aluma-seo-geo/local-falcon-summary.json
+```
+
+into the dashboard repo at:
+
+```text
+musimack-dashboard-lab/public/local-fixtures/aluma-seo-geo/local-falcon-summary.json
+```
+
+Then run dashboard lab locally and check:
+
+```text
+/lab/aluma-seo-geo
+```
+
+That copied dashboard fixture is still real local client data and must remain ignored. This workflow is CSV/TXT local validation only; Local Falcon API integration is not implemented yet.
+
+### Local Falcon API Planning And Fake Writes
+
+The current real Local Falcon workflow remains local CSV/TXT import into `local_falcon_summary.v2`, with ignored real output under `exports/local-real/`. A live read-only Local Falcon pathway also exists for existing report ids, gated behind explicit `--transport live --execute`.
+
+See [docs/local_falcon_api_integration_plan.md](docs/local_falcon_api_integration_plan.md) for the future API integration plan, [docs/local_falcon_api_endpoint_inventory.md](docs/local_falcon_api_endpoint_inventory.md) for the docs-only endpoint inventory reviewed from Local Falcon's official OpenAPI spec, [docs/local_falcon_ai_visibility_response_mapping.md](docs/local_falcon_ai_visibility_response_mapping.md) for AI visibility brand observation mapping, [docs/local_falcon_read_only_api_prototype_design.md](docs/local_falcon_read_only_api_prototype_design.md) for the read-only Data Retrieval API prototype design, and [docs/local_falcon_live_read_only_approval_package.md](docs/local_falcon_live_read_only_approval_package.md) for the operator approval checklist for running the first live read-only test.
+
+The implemented live path is read-only Data Retrieval only. It uses the Local Falcon API key from local environment, retrieves existing scan reports by report id, optionally attempts the read-only competitor report detail, normalizes into the same dashboard-compatible v2 shape, validates before write, and writes only to ignored `exports/local-real/` output unless a `.test-tmp-*` path is used in tests. On-Demand scan creation, credit-consuming scan endpoints, campaign creation, provider sync, portal behavior, dashboard-lab changes, and client-dashboard changes remain out of scope.
+
+The API planning command can validate direct arguments or a local manifest and print the intended future fetch/output plan without requiring credentials, writing output, or making network requests:
+
+```powershell
+python scripts/fetch_local_falcon_api.py --profile aluma-seo-geo --report-id example-report-id --keyword "sculptra treatment" --dry-run
+```
+
+Manifest dry-run:
+
+```powershell
+python scripts/fetch_local_falcon_api.py --manifest local-falcon-manifests/aluma-api.json
+```
+
+Single-report manifest shape:
+
+```json
+{
+  "profile": "aluma-seo-geo",
+  "output": "exports/local-real/dashboard-lab/aluma-seo-geo/local-falcon-summary.json",
+  "featured_keyword_id": "botox-portland",
+  "reports": [
+    {
+      "keyword": "sculptra treatment",
+      "report_id": "example-report-id",
+      "relationship": "monthly-local-visibility"
+    }
+  ]
+}
+```
+
+Source-aware manifest shape for the approved multi-source Aluma workflow, shown with fake report ids only:
+
+```json
+{
+  "profile": "aluma-seo-geo",
+  "output": "exports/local-real/dashboard-lab/aluma-seo-geo/local-falcon-summary.json",
+  "featured_scan_id": "google-maps-sculptra-treatment",
+  "reports": [
+    {
+      "source_id": "google_maps",
+      "source_label": "Google Maps",
+      "query_type": "map_keyword",
+      "query": "sculptra treatment",
+      "report_id": "fake-google-maps-report-id",
+      "scan_kind": "map_visibility"
+    },
+    {
+      "source_id": "chatgpt",
+      "source_label": "ChatGPT",
+      "query_type": "ai_visibility_prompt",
+      "query": "can you recommend a good sculptra provider in portland?",
+      "report_id": "fake-chatgpt-report-id",
+      "scan_kind": "ai_visibility_map"
+    },
+    {
+      "source_id": "google_ai_overviews",
+      "source_label": "Google AI Overviews",
+      "query_type": "ai_visibility_prompt",
+      "query": "can you recommend a good sculptra provider in portland?",
+      "report_id": "fake-google-ai-overviews-report-id",
+      "scan_kind": "ai_visibility_map"
+    },
+    {
+      "source_id": "google_gemini",
+      "source_label": "Google Gemini",
+      "query_type": "ai_visibility_prompt",
+      "query": "can you recommend a good sculptra provider in portland?",
+      "report_id": "fake-google-gemini-report-id",
+      "scan_kind": "ai_visibility_map"
+    }
+  ]
+}
+```
+
+Real manifests must remain in ignored `local-falcon-manifests/` and should not contain committed real report ids. Live manifest execution is capped at four reports for the approved Aluma multi-source test and requires `--transport live --execute --write`.
+
+The fake write path is available only with `--transport fake --write`. It uses committed synthetic fixtures, validates before writing, writes atomically through a temp file, merges into existing output by replacing matching keyword ids, preserves other scans, and refuses committed dashboard fixture paths such as `exports/dashboard-lab/`.
+
+```powershell
+python scripts/fetch_local_falcon_api.py --manifest tests/fixtures/local_falcon_api/demo_manifest.json --transport fake --write
+```
+
+Allowed fake-write destinations are ignored real-output paths under `exports/local-real/` or temporary `.test-tmp-*` folders. This is still not a live API call and does not use credentials. The disabled live boundary raises a clear implementation error if used.
+
+Live read-only dry run:
+
+```powershell
+python scripts/fetch_local_falcon_api.py --profile aluma-seo-geo --report-id REAL_REPORT_ID --keyword "sculptra treatment" --transport live
+```
+
+First live read-only execution, only with a local ignored `LOCAL_FALCON_API_KEY` configured:
+
+```powershell
+python scripts/fetch_local_falcon_api.py --profile aluma-seo-geo --report-id REAL_REPORT_ID --keyword "sculptra treatment" --transport live --execute --write
+```
+
+Multi-source live read-only execution from an ignored real manifest:
+
+```powershell
+python scripts/fetch_local_falcon_api.py --manifest local-falcon-manifests/aluma-local-ai-visibility.json --transport live --execute --write
+```
+
+`--transport live` alone prints preflight and makes no network request. `--execute` is required for any live request. `--write` is required to write output for live manifest execution. Missing API key, missing report id, missing keyword/query, and unsafe output paths fail before any Local Falcon request is attempted.
+
+The approved source model treats all four Local Falcon reports as map-backed visibility scans in `keyword_scans[]`:
+
+- Google Maps uses the map keyword `sculptra treatment`.
+- ChatGPT uses the AI visibility prompt `can you recommend a good sculptra provider in portland?`.
+- Google AI Overviews uses the same AI visibility prompt.
+- Google Gemini uses the same AI visibility prompt.
+
+Each source-aware scan preserves backward-compatible `keyword` fields while adding `source_id`, `source_label`, `query_type`, `query`, `prompt` for AI prompt scans, and `scan_kind`. Source-aware summaries preserve `keyword_count`, `featured_keyword_id`, `strongest_keyword_id`, and `weakest_keyword_id` while also adding scan/source fields such as `scan_count`, `featured_scan_id`, `available_sources`, and `default_source_id`.
+
+Google Maps scans keep local SEO ranking language: map rankings, competitors, Top 3, Top 10, SoLV, ARP, and ATRP. AI visibility scans use AI-specific language: brands mentioned, brand observations, observation sequence, brand phrases, phrase counts, sentiment, and Share of AI Voice / SAIV where available. Observation sequence is not normalized as rank. Mentioned brands are not treated as competitor ranking rows for AI prompt scans.
+
+When Local Falcon responses expose AI visibility details, the importer can add:
+
+- `brand_observations[]`
+- `brand_phrases[]`
+- `ai_visibility_metrics`
+- `ai_visibility_points[]`
+
+If those fields are missing from the API response, the importer leaves them empty or omitted and the validator reports warnings for source-aware AI visibility scans. The importer does not invent brand mentions, phrases, sentiment, or SAIV.
+
+For AI prompt scans, `ai_visibility_points[]` preserves map point observation values such as `observed`, `observation_sequence`, `ai_visibility_value`, `brand_name`, `relationship`, and `sentiment` separately from Google Maps `rank`. `grid_points[]` remains present for `local_falcon_summary.v2` compatibility, but AI observation sequence is not treated as map rank.
+
+Current live read-only AI report diagnostics show that AI reports expose numbered marker candidates in nested `data_points[].results[].rank`, not in `data_points[].rank`. For AI reports, `data_points[].rank` is boolean and must not be used as the marker value. The importer maps nested numeric `results[].rank` into AI-specific `observation_sequence` and `ai_visibility_value`, maps `results[].name`/`results[].place_id` as brand/provider fields, and uses `data.places.*.saiv` as the SAIV/share-of-AI-voice candidate when place IDs match. The current endpoint shape did not expose structured sentiment or phrase paths, so brand phrases remain empty unless a clear phrase field is present.
+
+To diagnose whether a live read-only AI report exposes the numbered map marker values visible in Local Falcon's web UI, run the shape-only diagnostic against an ignored manifest:
+
+```powershell
+python scripts/diagnose_local_falcon_ai_report_shape.py --manifest local-falcon-manifests/aluma-local-ai-visibility.json
+```
+
+The diagnostic prints counts and candidate field paths only. It does not dump raw payloads, brand/provider values, prompts, client data, credentials, API keys, or full report ids. Optional shape-only snapshots must be written under ignored `.test-tmp-*` paths. Use the diagnostic output to decide whether importer normalization can safely map a real response field into `ai_visibility_points[]`; do not invent marker values when the read-only response does not expose them.
+
+The synthetic API response fixture contract lives in `tests/fixtures/local_falcon_api/` and `src/local_falcon_api_responses.py`. It accepts already-loaded fake Local Falcon API response dictionaries only, normalizes them into keyword scan objects compatible with `local_falcon_summary.v2`, and has no network behavior. These fixtures are demo-only and must not be replaced with real Local Falcon API responses. Fake write outputs are synthetic and may be committed only when intentionally placed under committed fixture paths by a future approved workflow. Real Local Falcon responses, report ids, credentials, tokens, Authorization headers, raw credential JSON, and credential paths must remain out of committed outputs. Future live API work still requires explicit approval.
+
+The live read-only approval package documents the one-report test scope, command shape, required operator approvals, future environment variables, rollback plan, success criteria, and risks.
+
+The fetcher skeleton in `src/local_falcon_api_fetcher.py` proves the future dependency-injected boundary using fake transports only:
+
+```text
+fake transport
+-> fetcher skeleton
+-> synthetic Local Falcon API envelopes
+-> local_falcon_api_responses.py
+-> in-memory local_falcon_summary.v2
+-> existing validator
+```
+
+Calling the fetcher without an injected transport still refuses execution. Tests use fake transports or fake HTTP sessions only; no tests use real Local Falcon credentials or network calls.
+
 ## Date Range Behavior
 
 Pass both `--start-date` and `--end-date` as `YYYY-MM-DD`.
@@ -209,7 +674,10 @@ Without `--write`, the combined command only exports JSON.
 
 ## Local Importer Console
 
-The local browser console is a Streamlit MVP for operating the importer without hand-running every script.
+The local browser console is a Streamlit MVP for operating the importer without hand-running every script. It now has two lanes:
+
+- Dashboard-lab profile operations: read-only status, provider readiness, output file status, command guidance, and copy guidance for ignored local fixtures.
+- GA4 snapshot workflow: the older local GA4 export, validation, internal/draft import, and read-only portal workflow helper.
 
 Install dependencies:
 
@@ -217,6 +685,113 @@ Install dependencies:
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+```
+
+## Experimental React/FastAPI Console
+
+Milestone 65B adds a second local console foundation using FastAPI and React/Vite. This is local-only importer admin tooling for viewing committed profile metadata, safe provider readiness booleans, and local output file status. It is not dashboard-lab, it is not the client portal, and it does not run provider imports or mutate portal data.
+
+The backend serves read-only API endpoints:
+
+- `GET /api/health`
+- `GET /api/action-runs`
+- `GET /api/profiles`
+- `GET /api/profiles/{profile_slug}`
+- `GET /api/profiles/{profile_slug}/action-runs`
+- `GET /api/profiles/{profile_slug}/outputs`
+- `GET /api/profiles/{profile_slug}/action-plan`
+- `POST /api/profiles/{profile_slug}/actions/validate-output`
+- `GET /api/profiles/{profile_slug}/actions/copy-to-dashboard-lab/preview`
+- `POST /api/profiles/{profile_slug}/actions/copy-to-dashboard-lab`
+- `POST /api/actions/run` with the strict `validate-output` and `copy-to-dashboard-lab` allowlist only
+
+Run the backend from the importer repo root:
+
+```powershell
+python -m uvicorn server.main:app --reload --port 8765
+```
+
+Run the frontend in a second PowerShell window:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5174
+```
+
+The frontend shows:
+
+- client/profile list for `aluma-seo-geo` and `inn-at-spanish-head`,
+- selected client detail metadata,
+- data-source readiness cards for GA4, GSC, and Local Falcon,
+- expected local-real output folder and dashboard-lab local fixture folder,
+- output file status for `client-profile.json`, `ga4-summary.json`, `gsc-summary.json`, `combined-dashboard-summary.json`, and `local-falcon-summary.json`,
+- a guarded validation panel for reading local-real output metadata only,
+- a guarded dashboard-lab copy panel with dry-run preview and confirmation,
+- a refresh control for selected profile status, copy preview, and recent run history,
+- a recent local actions panel sourced from ignored audit logs,
+- read-only action plan cards with preview commands, expected outputs, missing inputs, blocked reasons, and safety notes,
+- a visible local-only safety notice.
+
+Provider import action plans are previews only. The browser can copy provider command previews to the clipboard, but it cannot run GA4, GSC, or Local Falcon imports. GA4 remains snapshot/manual-first in the browser: operators run the local snapshot export and then the dashboard-lab `ga4-summary.json` writer from PowerShell.
+
+The guarded validation panel is the only browser-triggered local action currently available. It requires explicit confirmation, reads only metadata from `exports/local-real/dashboard-lab/{profile}/`, validates expected dashboard-lab files, reports missing files, malformed JSON, schema versions, file sizes, and last-modified times, and returns one of `ok`, `warning`, `missing_outputs`, `invalid_json`, or `folder_missing`. Missing files for disabled providers are warnings rather than fatal errors. The validation action does not run shell commands, does not use subprocesses, does not contact providers, does not copy files, and does not touch the portal or dashboard-lab repos.
+
+Validation action audit entries are written locally to:
+
+```text
+logs/local-action-runs.jsonl
+```
+
+That file is ignored by Git. Audit entries include timestamp, action id, profile slug, status, safe file counts, warnings, and duration. They must not include secrets, raw file contents, provider payloads, API keys, OAuth tokens, refresh tokens, credential paths, or real client payload data.
+
+Recent local action history is available through:
+
+```text
+GET /api/action-runs
+GET /api/action-runs?profile_slug={profile}&action_id={action}&limit=25
+GET /api/profiles/{profile_slug}/action-runs
+```
+
+If the ignored audit log is missing, the API returns an empty list. Malformed JSONL lines are skipped and counted safely. Returned entries include only whitelisted summary fields: timestamp, action id, profile slug, status, safe validation summaries, safe copy file counts, warning count/list, duration, and a local audit entry id. Profile detail also includes lightweight last-action summaries for the selected profile.
+
+The frontend `Refresh profile status` button refetches selected profile detail, output status, action plans, copy preview, and recent local action history. Validation and copy actions automatically refresh status and recent history after they complete. Refresh never runs providers, never copies files, and never validates unless the operator explicitly clicks the validation button.
+
+The guarded dashboard-lab copy panel first loads a dry-run preview from:
+
+```text
+GET /api/profiles/{profile_slug}/actions/copy-to-dashboard-lab/preview
+```
+
+The preview derives source and destination from the profile registry only:
+
+```text
+exports/local-real/dashboard-lab/{profile}/
+../musimack-dashboard-lab/public/local-fixtures/{profile}/
+```
+
+It reports, for each expected file, source existence, destination existence, planned action (`copy`, `overwrite`, or `skip_missing_source`), size, and last modified time. It does not read or return file contents. The confirmed copy action is enabled only after the operator checks the explicit safety confirmation. It creates the destination folder if needed, copies only `client-profile.json`, `ga4-summary.json`, `gsc-summary.json`, `combined-dashboard-summary.json`, and `local-falcon-summary.json`, skips missing source files, overwrites existing local fixture files only after confirmation, and writes a safe audit entry with copy/overwrite/skip/fail counts.
+
+The copy action refuses destinations outside `public/local-fixtures/{profile}` and refuses committed `public/fixtures/{profile}` paths. It does not copy unknown files, raw provider responses, CSV/TXT/PDF/API files, manifests, `.env.local`, logs, diagnostics, secrets, or local config.
+
+The API loads committed safe profile metadata from `config/dashboard_lab_profiles.json`. Optional ignored local config may live at:
+
+```text
+config/dashboard_lab_profiles.local.json
+```
+
+That ignored local file may contain real operational identifiers, but the API exposes only presence/absence style readiness booleans. It must not expose API keys, OAuth tokens, refresh tokens, client secret JSON, Authorization headers, credential paths, raw provider payloads, or real output file contents.
+
+The React/FastAPI console currently executes only guarded validation and guarded dashboard-lab local fixture copy actions. It does not implement live GA4 imports, live GSC imports, Local Falcon runs from the browser, profile CRUD, OAuth, uploads, auth/login, staging/production connections, or production database access. The existing Streamlit console remains available at `app/importer_console.py` and is still launched with:
+
+```powershell
+python -m streamlit run app/importer_console.py
 ```
 
 Create local operator config once:
@@ -242,7 +817,90 @@ python -m streamlit run app/importer_console.py
 
 The console loads `.env.local` on startup without overriding OS environment variables. It displays whether `.env.local` was found and parsed, but never displays config values.
 
-The console can:
+The dashboard-lab lane loads committed safe profile definitions from:
+
+```text
+config/dashboard_lab_profiles.json
+```
+
+That committed registry contains only safe metadata: profile slug, display name, domain, vertical, service model, dashboard-lab route, expected importer output folder, expected dashboard-lab local fixture folder, synthetic fallback folder, and enabled provider types. Current planning profiles are `aluma-seo-geo`, `inn-at-spanish-head`, `lucy-escobar`, `pinnacle-contractors`, `musimack-marketing`, `wc-land-renewal`, `steadfast-decks`, and `portland-tattoo-co`.
+
+The added multi-client entries are planning-only until an operator explicitly approves real provider pulls. They do not create fake real output, do not copy Aluma output, and do not imply that local-real files already exist. Missing `exports/local-real/dashboard-lab/{profile}/` folders are normal for new planning profiles and should be treated as `No local output yet`, not as a provider failure.
+
+Current `data_sources` values are limited to the provider rooms already supported by the importer console: GA4, GSC, and Local Falcon. Paid/lead-gen rooms such as Google Ads Search, Google LSA, and CallRail should not appear for a client unless a future profile capability model explicitly enables them for that profile.
+
+Data Importer Milestone 62 adds a multi-client profile capability model and readiness matrix foundation. The registry now distinguishes active importer providers, planned future providers, dashboard rooms/capabilities, and enabled vs planned status. The readiness matrix separates:
+
+- local output availability,
+- live fetch configuration,
+- validation readiness,
+- dashboard-lab local fixture copy readiness.
+
+Missing `exports/local-real/dashboard-lab/{profile}/` output for new profiles is normal and should show as `No local output yet`, not as a broken provider state. Planned future providers show as `Planned, not enabled` or `Not available yet` and do not create active fetch actions.
+
+The Milestone 62 foundation covers:
+
+- add client domains and expected dashboard-lab output paths for each profile,
+- define expected provider files per client,
+- show clear readiness states such as `No local output yet`, `Output exists`, `Live fetch needs config`, `Ready to validate`, and `Ready to copy to dashboard lab`,
+- keep missing local output from looking like an error,
+- keep real output ignored under `exports/local-real/`,
+- add capability-driven planning rows for Local Visibility, Local Falcon AI Visibility, Google Ads Search, Google LSA, CallRail, leads, content, strategy, reports, support, and profile/operator readiness,
+- avoid provider sync, OAuth, uploads, database changes, staging/production connections, and secrets.
+
+Only GA4, GSC, and Local Falcon are currently supported importer providers. Google Ads Search, Google LSA, CallRail, and Leads are planning capabilities only until a future milestone explicitly adds safe local fetch/import support.
+
+Data Importer Milestone 63 adds a per-profile provider setup checklist for one-client-at-a-time onboarding. The readiness matrix answers what state each provider/capability is in. The setup checklist translates that state into operator guidance:
+
+- expected provider output file,
+- local output state,
+- required config items,
+- safe yes/no config state,
+- safe next action,
+- blocked reason,
+- redacted command shape when a supported local workflow exists.
+
+The setup checklist supports GA4, GSC, and Local Falcon config checks only. GA4 reports property/auth configured yes/no. GSC reports site URL/OAuth configured yes/no. Local Falcon reports manifest/API key visibility yes/no and whether Local Falcon AI Visibility is present in the capability model. It does not read credential contents, print API keys, print OAuth tokens, print refresh tokens, print full credential paths, print Local Falcon report IDs, or print raw provider payloads.
+
+Planned providers such as Google Ads Search, Google LSA, CallRail, and Leads appear only as planned capabilities. They do not create fetch commands, config checks, fake output, or broken warnings. Real output still belongs only under ignored `exports/local-real/`, and real Local Falcon manifests still belong only under ignored `local-falcon-manifests/`.
+
+Spanish Head Alpha Sprint Milestone 64 marks `inn-at-spanish-head` as the alpha-priority hospitality profile. Its importer registry keeps GA4, GSC, and Local Falcon as enabled local provider expectations, with Content, Strategy, Reports, Support, and Operator Profile enabled as dashboard capabilities. Local Falcon AI Visibility and Google Ads Search are planned/capability-gated only. Spanish Head real local provider output is still pending; no real provider data, fake real output, or copied Aluma output was created.
+
+Ignored local config is still where real operational identifiers belong:
+
+- GA4 property IDs
+- GSC site URLs if sensitive
+- Local Falcon report IDs and manifests
+- API keys
+- OAuth token paths
+- service account paths
+
+Future local JSON config files matching `config/*.local.json` are ignored by Git. Do not place real IDs or secrets in `config/dashboard_lab_profiles.json`.
+
+The dashboard-lab lane can:
+
+- select a dashboard-lab profile,
+- show provider readiness for GA4, GSC, and Local Falcon without printing values,
+- show whether `exports/local-real/dashboard-lab/{profile}/` exists,
+- show whether `../musimack-dashboard-lab/public/local-fixtures/{profile}/` exists,
+- show expected output files, modified time, size, and schema version without printing real file contents,
+- validate the selected local-real output folder and report missing or malformed JSON files,
+- show exact script-guided commands for providers,
+- preview and copy expected dashboard-lab files from ignored importer output to ignored dashboard-lab local fixtures.
+
+The validation action checks only the selected profile folder under `exports/local-real/dashboard-lab/{profile}/`. It reports whether the folder exists, whether each expected dashboard-lab file exists, last modified time, file size, schema version, and JSON parse status. It does not print real file contents.
+
+The guarded copy action copies only these expected dashboard-lab files:
+
+- `client-profile.json`
+- `ga4-summary.json`
+- `gsc-summary.json`
+- `combined-dashboard-summary.json`
+- `local-falcon-summary.json`
+
+The copy preview shows source existence, destination path, destination existence, and planned action (`copy`, `overwrite`, or `skip missing`). The copy button is disabled until the operator checks the confirmation box. The copy helper refuses destinations outside `public/local-fixtures/{profile}` and refuses committed `public/fixtures/{profile}` paths. Unknown files, raw responses, CSV/TXT/PDF files, manifests, `.env.local`, and secrets are not copied.
+
+The GA4 snapshot lane can:
 
 - load the real-client roster from `examples/ga4_clients.local.example.json`,
 - show safe client fields such as label, domain, GA4 property id, portal project id, report id, assigned email, export slug, and suggested YTD dates,
@@ -258,6 +916,8 @@ The console can:
 The console intentionally cannot:
 
 - run the 13-client batch automatically,
+- mutate dashboard-lab or client-dashboard,
+- copy real data into committed dashboard-lab `public/fixtures/`,
 - publish snapshots,
 - link snapshots to reports,
 - set active snapshots,
@@ -551,7 +1211,7 @@ Clients attempted:
 - Universal Crystal Cleaning
 - Tualatin Chamber
 - West Coast Land Renewal
-- Inn At Spanish Head
+- Spanish Head
 - The Word Salon
 - Portland Tattoo Company
 
@@ -606,7 +1266,7 @@ YTD export and validation results:
 | Universal Crystal Cleaning | succeeded | passed | 6 | 47 | 6 | 10 | 0 |
 | Tualatin Chamber | succeeded | passed | 6 | 139 | 5 | 10 | 0 |
 | West Coast Land Renewal | succeeded | passed | 6 | 131 | 7 | 10 | 0 |
-| Inn At Spanish Head | succeeded | passed | 6 | 139 | 7 | 10 | 0 |
+| Spanish Head | succeeded | passed | 6 | 139 | 7 | 10 | 0 |
 | The Word Salon | succeeded | passed | 6 | 138 | 5 | 10 | 0 |
 | Portland Tattoo Company | succeeded | passed | 6 | 130 | 9 | 10 | 0 |
 
@@ -702,7 +1362,7 @@ Remaining import results:
 | Universal Crystal Cleaning | `77f24474-ff1c-4904-8294-f09c176e0073` | `8ccd04f6-debe-48d0-81f3-713b566f7d58` | 6 metrics, 47 trend, 6 channel, 10 pages |
 | Tualatin Chamber | `c4d6031c-6a83-42f9-91b0-bc47b2d3dfc4` | `5778f548-8548-43db-9179-f1452e2afaee` | 6 metrics, 139 trend, 5 channel, 10 pages |
 | West Coast Land Renewal | `74570452-1f35-4102-8509-ce15dcea19c7` | `88a4fafc-6d90-4e03-9b95-65cef95143eb` | 6 metrics, 131 trend, 7 channel, 10 pages |
-| Inn At Spanish Head | `cc2138f8-6776-4e3d-9e14-2763e5a71f7f` | `e778ad71-8019-45a2-9536-bb3f508bc542` | 6 metrics, 139 trend, 7 channel, 10 pages |
+| Spanish Head | `cc2138f8-6776-4e3d-9e14-2763e5a71f7f` | `e778ad71-8019-45a2-9536-bb3f508bc542` | 6 metrics, 139 trend, 7 channel, 10 pages |
 | The Word Salon | `c9147e09-d5ad-4071-af1c-b069b89a9285` | `50619479-4c2f-472c-bc98-770b04da5ec3` | 6 metrics, 138 trend, 5 channel, 10 pages |
 | Portland Tattoo Company | `6f8a1105-0472-4cca-b741-6ec102289134` | `334933cb-b3a5-43df-bef1-329b04f9db05` | 6 metrics, 130 trend, 9 channel, 10 pages |
 

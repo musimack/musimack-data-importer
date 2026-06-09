@@ -3,6 +3,15 @@
 .secrets/
 secrets/
 exports/local-real/
+inputs/local-real/
+local-inputs/
+local-falcon-real/
+local-falcon-exports/
+local-falcon-manifests/
+local-profile-configs/*.local.json
+local-falcon-api-config.json
+logs/local-action-runs.jsonl
+config/*.local.json
 *.pyc
 *.pyo
 *.token.json

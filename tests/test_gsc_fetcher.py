@@ -9,6 +9,7 @@ from src.providers.gsc.client import GSC_READONLY_SCOPE, GscFetchConfig, GscSear
 from src.providers.gsc.summary import (
     GscSummaryError,
     build_gsc_summary,
+    ensure_dashboard_profile_files,
     real_output_dir,
     validate_aluma_combined_summary,
     validate_gsc_output_dir,
@@ -174,6 +175,63 @@ def test_write_and_validate_aluma_gsc_outputs(tmp_path):
     assert (tmp_path / "ga4-summary.json").exists()
 
 
+def test_write_and_validate_inn_gsc_outputs_with_generated_support_files(tmp_path):
+    summary = build_gsc_summary(
+        "inn-at-spanish-head",
+        "https://spanishhead.com/",
+        "2026-01-01",
+        "2026-01-02",
+        {
+            "rows": [
+                {
+                    "keys": [
+                        "lincoln city oceanfront hotel",
+                        "https://spanishhead.com/rooms",
+                        "2026-01-01",
+                    ],
+                    "clicks": 14,
+                    "impressions": 240,
+                    "ctr": 0.0583,
+                    "position": 4.8,
+                }
+            ]
+        },
+    )
+
+    files = write_gsc_dashboard_outputs(tmp_path, summary)
+    validated = validate_gsc_output_dir(tmp_path, "inn-at-spanish-head")
+
+    assert [path.name for path in files] == [
+        "client-profile.json",
+        "ga4-summary.json",
+        "local-falcon-summary.json",
+        "gsc-summary.json",
+        "combined-dashboard-summary.json",
+    ]
+    assert [path.name for path in validated] == [path.name for path in files]
+    combined = json.loads((tmp_path / "combined-dashboard-summary.json").read_text(encoding="utf-8"))
+    assert combined["provider_summaries"] == {
+        "ga4": "ga4-summary.json",
+        "gsc": "gsc-summary.json",
+        "local_falcon": "local-falcon-summary.json",
+    }
+    assert "paid_search" not in combined["modules_enabled"]
+    assert "lsa_performance" not in combined["modules_enabled"]
+    assert "call_tracking" not in combined["modules_enabled"]
+
+
+def test_inn_support_files_can_be_generated_without_existing_synthetic_export(tmp_path):
+    synthetic_root = tmp_path / "missing-synthetic-root"
+
+    files = ensure_dashboard_profile_files(tmp_path / "out", "inn-at-spanish-head", synthetic_root=synthetic_root)
+
+    assert [path.name for path in files] == [
+        "client-profile.json",
+        "ga4-summary.json",
+        "local-falcon-summary.json",
+    ]
+
+
 def test_gsc_validation_rejects_credential_paths(tmp_path):
     summary = build_gsc_summary(
         "aluma-seo-geo",
@@ -195,6 +253,7 @@ def test_real_output_path_resolution_and_explicit_out_override(tmp_path):
     explicit = tmp_path / "custom-output"
 
     assert resolve_output_dir("aluma-seo-geo", None, True) == real_output_dir("aluma-seo-geo")
+    assert resolve_output_dir("inn-at-spanish-head", None, True) == real_output_dir("inn-at-spanish-head")
     assert resolve_output_dir("aluma-seo-geo", str(explicit), True) == explicit
     assert resolve_output_dir("aluma-seo-geo", str(explicit), False) == explicit
 

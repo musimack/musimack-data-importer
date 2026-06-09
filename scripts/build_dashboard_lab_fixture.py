@@ -14,6 +14,7 @@ from src.dashboard_lab.fixture_builder import (
     build_profile_fixture,
     default_output_dir,
     list_profile_slugs,
+    validate_dashboard_lab_export_folder,
     validate_dashboard_lab_fixture,
 )
 
@@ -49,13 +50,22 @@ def main() -> int:
         action="store_true",
         help="Validate an existing fixture directory without regenerating files.",
     )
+    parser.add_argument(
+        "--export-folder",
+        action="store_true",
+        help="With --validate-only, use lightweight validation for synthetic or ignored local-real export folders.",
+    )
     args = parser.parse_args()
 
     try:
         if args.validate_only:
             output_dir = Path(args.out) if args.out else default_output_dir(args.profile)
-            files = validate_dashboard_lab_fixture(output_dir)
-            print(f"Validated dashboard-lab fixture directory: {output_dir}")
+            if args.export_folder:
+                files = validate_dashboard_lab_export_folder(output_dir, args.profile)
+                print(f"Validated dashboard-lab export folder: {output_dir}")
+            else:
+                files = validate_dashboard_lab_fixture(output_dir)
+                print(f"Validated dashboard-lab fixture directory: {output_dir}")
         elif args.all:
             base_dir = Path(args.out) if args.out else DEFAULT_BASE_OUTPUT_DIR
             results = build_all_profiles(base_dir)
