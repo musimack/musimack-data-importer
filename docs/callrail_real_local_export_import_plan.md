@@ -1,6 +1,6 @@
 # CallRail Real Local Export Import Plan
 
-Documentation-only plan for a future `musimack-data-importer` workflow. This does not implement importer code, validators, provider API calls, OAuth flows, credentials, dashboard-lab UI changes, client-dashboard changes, portal database writes, or real client data fixtures.
+Plan for a future `musimack-data-importer` CallRail import workflow. The current supported implementation step is a local CSV shape diagnostic only; this does not implement importer code, output fixtures, provider API calls, OAuth flows, credentials, dashboard-lab UI changes, client-dashboard changes, portal database writes, or real client data fixtures.
 
 ## Purpose
 
@@ -53,6 +53,69 @@ The dashboard-lab ignored local destination for Spanish Head is:
 ```
 
 The generated output should remain compatible with dashboard-lab's local fixture loading order and should not require dashboard-lab source changes.
+
+## Local CSV Shape Diagnostic
+
+Before building the real local importer, use the local-only CSV shape diagnostic to confirm the exported CallRail column set and aggregate reporting readiness:
+
+```powershell
+python scripts/diagnose_callrail_export_shape.py `
+  --input inputs/local-real/callrail/inn-at-spanish-head/calls.csv `
+  --profile inn-at-spanish-head
+```
+
+The diagnostic parses the local CSV, reports detected headers, missing expected headers, sensitive headers detected, mapping readiness, safe aggregate counts, value diversity counts, and safe top examples for non-sensitive aggregate fields. It does not print raw rows, does not print sensitive field values, does not write `callrail-summary.json`, and does not copy anything to dashboard-lab.
+
+CallRail remains the system of record for individual call details, including caller details, phone numbers, email addresses, recordings, and notes when those are needed for operations and follow-up. The dashboard fixture workflow is separate and should produce aggregate-only reporting output.
+
+The diagnostic may detect that sensitive columns exist, such as caller names, phone numbers, tracking numbers, recording URLs, notes, call highlights, or referrers. It must not print values from those fields. It must also redact any safe-example value that looks like a phone number or email address, and landing page examples should have query strings stripped before display.
+
+## Real Local CSV Importer
+
+The local-only aggregate importer is:
+
+```text
+scripts/import_callrail_export.py
+```
+
+Example Spanish Head command:
+
+```powershell
+python scripts/import_callrail_export.py `
+  --profile inn-at-spanish-head `
+  --input inputs/local-real/callrail/inn-at-spanish-head/calls.csv `
+  --start-date 2026-01-01 `
+  --end-date 2026-05-31 `
+  --real-output
+```
+
+The importer writes only:
+
+```text
+exports/local-real/dashboard-lab/inn-at-spanish-head/callrail-summary.json
+```
+
+The generated file should be validated with:
+
+```powershell
+python scripts/validate_callrail_summary.py --input exports/local-real/dashboard-lab/inn-at-spanish-head/callrail-summary.json
+```
+
+After validation, the guarded copy command can place the aggregate-only file into dashboard-lab's ignored local fixture folder:
+
+```powershell
+python scripts/copy_dashboard_lab_fixtures.py --profile inn-at-spanish-head --mode local-real
+```
+
+The importer reads local CSV exports that may contain sensitive call-level fields, but it writes aggregate reporting output only. It does not output raw call rows, caller details, tracking phone numbers, emails, recordings, notes, transcripts, or individual call-management data. CallRail remains the system of record for operational call follow-up.
+
+Implementation refinement notes:
+
+- Keyword display values are normalized for dashboard readability by removing simple Google Ads match-type wrappers, such as `[keyword]` and `"keyword"`.
+- Landing page values are normalized to safe paths where possible, with query strings and fragments removed before output.
+- Tracking number rows use safe `Number Name` labels only; actual tracking numbers are never output.
+- Qualified field parsing is tolerant for common true/false and lead-quality values, but remains aggregate-only and conservative for ambiguous values.
+- Dashboard output remains aggregate-only. CallRail remains the system of record for caller details, call recordings, notes, and operational follow-up.
 
 ## Expected CallRail Source Data Options
 
