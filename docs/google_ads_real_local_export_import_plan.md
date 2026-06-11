@@ -1,12 +1,12 @@
 # Google Ads Real Local Export Import Plan
 
-Documentation-only plan for a future `musimack-data-importer` Google Ads export workflow. This does not implement importer code, validators, provider API calls, OAuth flows, credentials, dashboard-lab UI changes, client-dashboard changes, portal database writes, or real Google Ads data fixtures.
+Documentation-only plan for a future `musimack-data-importer` Google Ads workflow. This task does not implement API code, provider calls, credentials, OAuth flows, token handling, validators, dashboard-lab UI changes, client-dashboard changes, portal database writes, or real Google Ads data fixtures.
 
 ## Purpose
 
-This plan defines a future local-only workflow for converting Google Ads export data into dashboard-lab-ready aggregate JSON.
+This plan defines a future local-only workflow for converting Google Ads reporting data into dashboard-lab-ready aggregate JSON.
 
-The workflow is for local and internal testing only. Its target output is `google-ads-summary.json` conforming to the existing `google_ads_summary.v1` fixture contract. Real local output should be written under:
+The preferred next implementation path is a controlled read-only Google Ads API exporter, not a CSV-first importer. The exporter should produce `google-ads-summary.json` conforming to the existing `google_ads_summary.v1` fixture contract and write real local output under:
 
 ```text
 exports/local-real/dashboard-lab/{profile}/
@@ -18,7 +18,20 @@ For Spanish Head, the target output path is:
 exports/local-real/dashboard-lab/inn-at-spanish-head/google-ads-summary.json
 ```
 
-Real Google Ads data must never be written into committed fixture folders unless explicitly reviewed and approved. The workflow should not modify `client-dashboard` or `musimack-dashboard-lab` source code. It should pair with the existing real local CallRail aggregate workflow so paid search and call attribution can be tested together in dashboard-lab without live provider integrations.
+Real Google Ads data must never be written into committed fixture folders unless explicitly reviewed and approved. The workflow should not modify `client-dashboard` or `musimack-dashboard-lab` source code. It should pair with the existing real local CallRail aggregate workflow so paid search and call attribution can be tested together in dashboard-lab without portal integration.
+
+## CSV-To-API Pivot
+
+CSV imports are no longer the preferred first path for Google Ads because Google Ads exports vary heavily by selected dimensions and report views.
+
+Known CSV complications:
+
+- Campaign, keyword, search term, landing page, day, conversion action, and budget views can all produce different metric shapes.
+- Combining several exported CSVs creates unnecessary mapping and reconciliation complexity.
+- Metrics such as cost, conversions, CTR, average CPC, budget, and call conversions can appear differently depending on the exported view and selected columns.
+- A CSV workflow makes it easier to accidentally mix incompatible dimensions or duplicate totals.
+
+A controlled read-only API pull can request only the dimensions needed for the dashboard-lab contract and normalize them consistently. CSV export support may remain a future fallback or manual recovery path, but it is not the immediate next phase.
 
 ## Current Safe Target Contract
 
@@ -34,7 +47,7 @@ The output validator is:
 scripts/validate_google_ads_summary.py
 ```
 
-Future real local Google Ads import output should validate with:
+Future real local Google Ads output should validate with:
 
 ```powershell
 python scripts/validate_google_ads_summary.py --input exports/local-real/dashboard-lab/{profile}/google-ads-summary.json
@@ -54,388 +67,436 @@ The dashboard-lab ignored local destination for Spanish Head is:
 
 The generated output should remain compatible with dashboard-lab's local fixture loading order and should not require dashboard-lab source changes.
 
-## Expected Google Ads Source Data Options
+## Read-Only API Scope
 
-### Option A: Google Ads UI CSV Exports
+The future API implementation must only read reporting data through a local CLI script. It must not run from dashboard-lab, the real portal, a hosted backend, or browser/provider execution inside dashboard-lab.
 
-This is the likely first implementation path. The operator exports CSV files from the Google Ads UI and places them in an ignored local input folder.
+Explicitly prohibited:
 
-Potential source files:
+- Campaign mutations
+- Bid changes
+- Budget changes
+- Keyword edits
+- Ad edits
+- Asset edits
+- Conversion setting changes
+- Account setting changes
+- Uploads
+- Browser/provider execution from dashboard-lab
+- Real portal integration
+- Production, staging, or portal database writes
 
-- Campaign performance CSV
-- Keyword performance CSV
-- Search terms CSV
-- Landing page performance CSV
-- Budget or campaign budget CSV, if available
-- Conversion actions CSV, if needed
+The future exporter should fail safely if it cannot prove it is operating in local read-only mode.
 
-The importer should tolerate reasonable Google Ads export variation, but it should fail safely when required fields are missing or ambiguous.
+## Proposed Script And Module Names
 
-### Option B: Manual Normalized CSV
-
-This is a safer intermediate path if Google Ads UI exports vary by view, date range, account settings, or column configuration. The operator prepares a normalized CSV using a documented set of columns. The future importer reads this normalized file and produces the same aggregate `google-ads-summary.json` output.
-
-### Option C: Future Read-Only Google Ads API
-
-A read-only Google Ads API workflow is out of scope for implementation now. It would require explicit approval before any API calls, OAuth, API tokens, credentials, scheduled jobs, hosted behavior, or production integration work.
-
-## Privacy And Safety Rules
-
-Google Ads exports are less personally sensitive than CallRail exports, but they are still client-sensitive.
-
-Do not commit:
-
-- Real Google Ads exports
-- Real spend or cost data unless explicitly approved
-- Raw CSV exports
-- Customer IDs
-- Account IDs if present
-- API credentials
-- OAuth tokens
-- Reports downloaded from live accounts
-
-Raw local exports must live only in ignored local-only locations, such as:
+Suggested future script:
 
 ```text
-inputs/local-real/google-ads/
-exports/local-real/
-local/
+scripts/fetch_google_ads_api.py
 ```
 
-Another ignored local-only folder may be used if it is documented and covered by `.gitignore`. Real local output must remain ignored under:
+Suggested future module package:
 
 ```text
-exports/local-real/
+src/providers/google_ads/
 ```
 
-Every future real local output should validate before dashboard-lab copy:
+Possible files:
 
-```powershell
-python scripts/validate_google_ads_summary.py --input exports/local-real/dashboard-lab/{profile}/google-ads-summary.json
+```text
+src/providers/google_ads/__init__.py
+src/providers/google_ads/client.py
+src/providers/google_ads/summary.py
+src/providers/google_ads/queries.py
+src/providers/google_ads/normalize.py
 ```
 
-## Proposed Raw Input Field Mapping
+These files are not created by this planning task.
 
-The future importer should map raw Google Ads export fields into aggregate dashboard-lab output. Exact column names may vary by export type, so implementation should support documented aliases.
+Phase B status:
 
-Possible campaign, keyword, and search term fields:
+- `src/providers/google_ads/queries.py` contains mocked/tested read-only GAQL query builders.
+- `src/providers/google_ads/normalize.py` contains mocked/tested response normalizers for dashboard-lab aggregate rows.
+- `src/providers/google_ads/config.py` contains sanitized local credential/readiness checks.
+- `scripts/fetch_google_ads_api.py` currently supports dry-run/readiness behavior only.
+- `src/providers/google_ads/client.py` contains a read-only client wrapper that exposes reporting queries only and imports the optional Google Ads SDK only during explicit CLI execution.
+- `src/providers/google_ads/summary.py` builds and validates `google_ads_summary.v1` payloads.
+- `scripts/generate_google_ads_oauth_token.py` provides a local-only OAuth token helper for generating the ignored token JSON file.
+- The `google-ads` package is not added to tracked requirements in this phase; if it is missing locally, the CLI fails safely with a dependency message before any API call.
+- No credentials are required by tests; mocked env values are used for readiness checks.
+- Credentials are checked only for presence and are never printed.
+- `--dry-run` remains safe and writes no files.
+- Non-dry-run requires `--real-output`, local credential readiness, and the optional SDK.
+- Real output writes only to `exports/local-real/dashboard-lab/{profile}/google-ads-summary.json`.
+- Dashboard-lab copy remains a separate guarded operator step.
+- CallRail aggregate joining remains a future optional phase.
 
-- `Campaign`
-- `Campaign name`
-- `Campaign status`
-- `Keyword`
-- `Search term`
-- `Match type`
-- `Ad group`
-- `Landing page`
-- `Final URL`
-- `Impressions`
-- `Clicks`
-- `CTR`
-- `Avg. CPC`
-- `Cost`
-- `Conversions`
-- `Cost / conv.`
-- `Conv. rate`
-- `Phone calls`
-- `Calls`
-- `Call conversions`
-- `Conversion action`
-- `Date`
-- `Day`
-- `Budget`
-- `Campaign budget`
-- `Search impr. share`
-- `Top IS`
-- `Abs. top IS`
+OAuth token helper notes:
 
-The dashboard intentionally does not include an Ad Group Performance table. `Ad group` may be read as an input field for mapping or reconciliation if needed, but the future importer should not create ad group output rows for the dashboard-lab contract.
-
-## Aggregation Model
-
-The future importer should produce each `google-ads-summary.json` section from aggregate rows only.
-
-### `summary`
-
-Recommended metrics:
-
-- `spend`
-- `clicks`
-- `impressions`
-- `ctr`
-- `avg_cpc`
-- `conversions`
-- `cost_per_conversion`
-- `calls`, optional if available from Google Ads export or CallRail join
-- `cost_per_call`, optional if call count is available
-
-### `keyword_rows`
-
-Group by keyword and campaign.
-
-Recommended fields:
-
-- `keyword`
-- `campaign`
-- `match_type`
-- `impressions`
-- `clicks`
-- `ctr`
-- `avg_cpc`
-- `cost`
-- `conversions`
-- `calls`, optional
-- `cost_per_call`, optional
-- `landing_page`, optional
-
-### `search_term_rows`
-
-Group by search term, matched keyword, and campaign when available.
-
-Recommended fields:
-
-- `search_term`
-- `matched_keyword`
-- `campaign`
-- `impressions`
-- `clicks`
-- `ctr`
-- `cost`
-- `conversions`
-- `calls`, optional
-
-### `campaign_rows`
-
-Group by campaign.
-
-Recommended fields:
-
-- `campaign`
-- `spend`
-- `impressions`
-- `clicks`
-- `ctr`
-- `avg_cpc`
-- `conversions`
-- `calls`, optional
-- `cost_per_call`, optional
-
-### `landing_page_rows`
-
-Group by landing page or final URL.
-
-Recommended fields:
-
-- `landing_page`
-- `campaign`
-- `impressions`
-- `clicks`
-- `ctr`
-- `cost`
-- `conversions`
-- `calls`, optional
-- `cost_per_call`, optional
-
-Landing page values should be normalized for dashboard readability, preferably to safe paths when the URL is on the client domain, with query strings and fragments removed.
-
-### `paid_search_call_signal`
-
-This can be populated later from CallRail aggregate output.
-
-Recommended fields:
-
-- `google_ads_calls`
-- `calls_with_keyword_attribution`
-- `top_call_keyword`
-- `top_call_campaign`
-- `missed_paid_search_calls`
-- `cost_per_call`
-- `attribution_notes`
-
-### `budget_pacing`
-
-If budget fields are available:
-
-- `spend`
-- `budget`
-- `percent_used`
-- `days_elapsed`
-- `days_remaining`
-- `pacing_status`
-- `notes`
-
-### `time_series`
-
-Group by date, week, or month.
-
-Suggested fields:
-
-- `date`
-- `spend`
-- `clicks`
-- `impressions`
-- `conversions`
-- `calls`, optional
-
-## Google Ads Plus CallRail Join Notes
-
-Future importer work may combine Google Ads and CallRail at the aggregate level.
-
-Potential join keys:
-
-- `keyword`
-- `campaign`
-- `landing_page`
-- Date range
-- `gclid`, only if aggregated safely and not output as raw identifiers
-- UTM fields if available
-
-Do not output `gclid` values. Do not output click IDs. Do not output individual click/call joins. Only aggregate joined fields are allowed.
-
-Possible joined outputs:
-
-- Calls on Google Ads keyword rows
-- `cost_per_call` on keyword, campaign, and landing page rows
-- `paid_search_call_signal` in `google-ads-summary.json`
-- Aligned campaign call metrics
-- Aligned landing page call metrics
-
-Current Spanish Head CallRail reality:
-
-- Most rows have `gclid`
-- Most rows have keywords
-- Most rows have campaigns
-- Most rows have landing pages
-
-That makes an aggregate Google Ads plus CallRail join plausible, but it should remain a separate approved implementation phase.
-
-## Data Quality Notes
-
-The future importer should include useful, client-safe data quality notes.
-
-Recommended notes:
-
-- Raw rows read
-- Date range used
-- Rows excluded for invalid dates
-- Rows missing keyword
-- Rows missing campaign
-- Rows missing landing page
-- Whether costs were available
-- Whether conversions were available
-- Whether calls came from Google Ads export or CallRail join
-- Whether budget pacing data was available
-- Whether final URL or landing page values were normalized
-
-These notes should help the operator understand import reliability without exposing raw exports, account identifiers, or click-level details.
+- The helper reads OAuth client secrets from `secrets/google-ads/client_secrets.local.json` by default.
+- It requests only the Google Ads OAuth scope: `https://www.googleapis.com/auth/adwords`.
+- It writes token data only to `secrets/google-ads/oauth_token.local.json` by default.
+- It refuses to overwrite an existing token file unless `--overwrite` is provided.
+- It never prints token values, client secrets, or credential file contents.
+- The real Google Ads pull still requires an explicit operator command after dry-run readiness succeeds.
 
 ## Proposed CLI Design
 
-Future script name:
-
-```text
-scripts/import_google_ads_export.py
-```
-
-Possible usage for a normalized single CSV:
+Future command:
 
 ```powershell
-python scripts/import_google_ads_export.py `
+python scripts/fetch_google_ads_api.py `
   --profile inn-at-spanish-head `
-  --input inputs/local-real/google-ads/inn-at-spanish-head/google-ads.csv `
+  --customer-id <GOOGLE_ADS_CUSTOMER_ID> `
   --start-date 2026-01-01 `
   --end-date 2026-05-31 `
   --real-output
 ```
 
-Possible usage for multiple CSV exports:
+Operator PowerShell command using an ignored/local env value:
 
 ```powershell
-python scripts/import_google_ads_export.py `
+python scripts/fetch_google_ads_api.py `
   --profile inn-at-spanish-head `
-  --campaigns inputs/local-real/google-ads/inn-at-spanish-head/campaigns.csv `
-  --keywords inputs/local-real/google-ads/inn-at-spanish-head/keywords.csv `
-  --search-terms inputs/local-real/google-ads/inn-at-spanish-head/search-terms.csv `
-  --landing-pages inputs/local-real/google-ads/inn-at-spanish-head/landing-pages.csv `
+  --customer-id $env:SPANISH_HEAD_GOOGLE_ADS_CUSTOMER_ID `
   --start-date 2026-01-01 `
   --end-date 2026-05-31 `
   --real-output
+```
+
+Safe dry-run:
+
+```powershell
+python scripts/fetch_google_ads_api.py `
+  --profile inn-at-spanish-head `
+  --customer-id $env:SPANISH_HEAD_GOOGLE_ADS_CUSTOMER_ID `
+  --start-date 2026-01-01 `
+  --end-date 2026-05-31 `
+  --real-output `
+  --dry-run
 ```
 
 Optional arguments:
 
+- `--login-customer-id`
+- `--developer-token-env GOOGLE_ADS_DEVELOPER_TOKEN`
+- `--oauth-client-secrets-env GOOGLE_ADS_OAUTH_CLIENT_SECRETS`
+- `--oauth-token-file-env GOOGLE_ADS_OAUTH_TOKEN_FILE`
 - `--output-root exports/local-real/dashboard-lab`
 - `--callrail-summary exports/local-real/dashboard-lab/inn-at-spanish-head/callrail-summary.json`
 - `--granularity daily|weekly|monthly`
-- `--validate-only`
 - `--dry-run`
+- `--validate-only`
 
-`--real-output` should be required for writing real local data. Without it, the future script should refuse to write real Google Ads-derived output to committed fixture locations.
+The script should fail safely if required environment variables or files are missing. It must not print secrets. It must not write token files into the repo. It must not commit `.env.local`, token files, credential files, or real Google Ads output.
+
+`--real-output` should be required before writing real local data. The script should refuse to write real Google Ads-derived output to committed fixture locations such as `exports/dashboard-lab/`.
+
+## Local Credential Handling Plan
+
+Google Ads credentials must remain local and ignored.
+
+Possible local-only environment variables:
+
+- `GOOGLE_ADS_DEVELOPER_TOKEN`
+- `GOOGLE_ADS_CLIENT_ID` or `GOOGLE_ADS_OAUTH_CLIENT_SECRETS`
+- `GOOGLE_ADS_CLIENT_SECRET`, if needed
+- `GOOGLE_ADS_REFRESH_TOKEN` or `GOOGLE_ADS_OAUTH_TOKEN_FILE`
+- `GOOGLE_ADS_LOGIN_CUSTOMER_ID`, if a manager account is used
+- `SPANISH_HEAD_GOOGLE_ADS_CUSTOMER_ID`, if profile-specific configuration is useful
+
+Possible ignored local storage locations:
+
+- `.env.local`
+- `local-profile-configs/`
+- `secrets/`
+- `local/`
+
+All real values must remain ignored. Do not add real values to `.env.example`; documentation and examples should use placeholder names only.
+
+## Proposed GAQL And Reporting Queries
+
+The first API milestone should be narrow and dashboard-focused.
+
+Required output sections:
+
+- `summary`
+- `keyword_rows`
+- `search_term_rows`
+- `campaign_rows`
+- `landing_page_rows`
+- `time_series`
+- `budget_pacing`, if straightforward
+- `paid_search_call_signal`, optional from CallRail aggregate join
+
+### Campaign Performance
+
+Dimensions:
+
+- `campaign.id`
+- `campaign.name`
+- `campaign.status`
+
+Metrics:
+
+- `metrics.impressions`
+- `metrics.clicks`
+- `metrics.cost_micros`
+- `metrics.conversions`
+- `metrics.average_cpc`
+- `metrics.ctr`
+- `metrics.cost_per_conversion`, if available
+
+### Keyword Performance
+
+Dimensions:
+
+- `campaign.name`
+- `ad_group_criterion.keyword.text`
+- `ad_group_criterion.keyword.match_type`
+
+Metrics:
+
+- `metrics.impressions`
+- `metrics.clicks`
+- `metrics.cost_micros`
+- `metrics.conversions`
+- `metrics.average_cpc`
+- `metrics.ctr`
+
+Ad group may be needed internally by the API query or response shape, but the exporter should not output Ad Group Performance rows and should not add an Ad Group Performance table.
+
+### Search Term Performance
+
+Dimensions:
+
+- `search_term_view.search_term`
+- `campaign.name`
+- `ad_group_criterion.keyword.text`, if available or practical
+
+Metrics:
+
+- `metrics.impressions`
+- `metrics.clicks`
+- `metrics.cost_micros`
+- `metrics.conversions`
+- `metrics.ctr`
+
+### Landing Page Or Final URL Performance
+
+If practical, use `landing_page_view` or `expanded_landing_page_view`.
+
+Dimensions:
+
+- `expanded_landing_page_view.expanded_final_url` or equivalent
+- `campaign.name`, if available
+
+Metrics:
+
+- `metrics.impressions`
+- `metrics.clicks`
+- `metrics.cost_micros`
+- `metrics.conversions`
+- `metrics.ctr`
+
+Landing pages should be normalized to safe paths when possible, with query strings and fragments removed.
+
+### Time Series
+
+Dimensions:
+
+- `segments.date`
+
+Metrics:
+
+- `metrics.impressions`
+- `metrics.clicks`
+- `metrics.cost_micros`
+- `metrics.conversions`
+
+Granularity can be `daily`, `weekly`, or `monthly` based on CLI option. A practical first implementation can pull daily and aggregate locally.
+
+### Budget Pacing
+
+If practical, read:
+
+- `campaign_budget.amount_micros`
+- Campaign budget fields
+- Campaign name/status
+
+If budget reporting adds too much complexity to the first implementation, document budget pacing as optional and emit a data quality note that budget pacing was unavailable.
+
+## Conversion And Call Handling
+
+Google Ads conversions and CallRail calls are separate signals.
+
+Google Ads output may include:
+
+- Conversions from Google Ads reporting
+- Call conversions if available in Google Ads metrics
+
+CallRail output includes:
+
+- Tracked calls
+- Keyword attribution
+- Campaign attribution
+- Missed calls
+- Qualified or scored calls if available
+
+An optional aggregate join with CallRail should:
+
+- Read local aggregate CallRail summary only
+- Never read raw CallRail rows
+- Join by normalized keyword, campaign, landing page, and date range when possible
+- Populate `calls` and `cost_per_call` fields on Google Ads rows only at aggregate level
+- Populate `paid_search_call_signal`
+- Never output `gclid`
+- Never output individual click/call joins
+
+## Output Normalization
+
+Formatting rules:
+
+- `cost_micros` should become numeric currency dollars.
+- CTR should be a decimal, not a formatted string.
+- Percentages should be decimals.
+- Average CPC should be numeric currency.
+- Conversion values should be numeric.
+- Landing pages should strip query strings and fragments.
+- Same-domain landing pages may become paths.
+- Missing optional values should be `null` or omitted consistently.
+- Output must pass `scripts/validate_google_ads_summary.py`.
+
+## Target Output Shape
+
+Future output should use:
+
+```json
+{
+  "schema_version": "google_ads_summary.v1",
+  "provider": "google_ads",
+  "profile": "inn-at-spanish-head",
+  "client_label": "Spanish Head",
+  "source": "google_ads_api",
+  "is_real_data": true,
+  "generated_at": "...",
+  "date_range": {
+    "start_date": "...",
+    "end_date": "..."
+  },
+  "currency": "USD",
+  "summary": {},
+  "keyword_rows": [],
+  "search_term_rows": [],
+  "campaign_rows": [],
+  "landing_page_rows": [],
+  "paid_search_call_signal": {},
+  "budget_pacing": {},
+  "time_series": [],
+  "data_quality_notes": []
+}
+```
+
+## Data Quality Notes
+
+The future exporter should include useful, client-safe data quality notes.
+
+Recommended notes:
+
+- Raw API rows read per query area
+- Date range used
+- Rows excluded for invalid dates or missing required fields
+- Rows missing keyword
+- Rows missing campaign
+- Rows missing landing page or final URL
+- Whether costs were available
+- Whether conversions were available
+- Whether calls came from Google Ads reporting or CallRail aggregate join
+- Whether budget pacing data was available
+- Whether final URL or landing page values were normalized
+- Whether API query areas were skipped or unavailable
+
+These notes should help the operator understand import reliability without exposing credentials, account identifiers, click IDs, or raw provider payloads.
 
 ## Validation And Copy Workflow
 
 Expected future workflow:
 
-1. Place raw Google Ads export under an ignored local input folder, such as `inputs/local-real/google-ads/inn-at-spanish-head/`.
-2. Run the future import script with `--real-output`.
+1. Configure local ignored credentials.
+2. Run the read-only Google Ads API exporter with `--real-output`.
 3. Validate output:
 
 ```powershell
 python scripts/validate_google_ads_summary.py --input exports/local-real/dashboard-lab/inn-at-spanish-head/google-ads-summary.json
 ```
 
-4. Optionally join with the CallRail aggregate summary if implemented.
-5. Copy to dashboard-lab local ignored fixtures:
+4. Optionally join with the existing aggregate CallRail summary.
+5. Copy to dashboard-lab ignored local fixtures:
 
 ```powershell
 python scripts/copy_dashboard_lab_fixtures.py --profile inn-at-spanish-head --mode local-real
 ```
 
-6. Confirm dashboard-lab reads `/public/local-fixtures/` before `/public/fixtures/`.
+6. Confirm dashboard-lab reads `public/local-fixtures` before `public/fixtures`.
 7. Do not commit real local output.
 
 ## Testing Plan For Future Implementation
 
+Use mocked API responses only. Do not use real Google Ads API calls in tests.
+
 Proposed tests:
 
-- Valid normalized Google Ads CSV imports to `google_ads_summary.v1`.
-- Formatted currency is parsed to numeric output.
-- Formatted percentages are parsed to decimal output.
-- Keyword rows aggregate correctly.
-- Campaign rows aggregate correctly.
-- Search term rows aggregate correctly.
-- Landing page rows aggregate correctly.
-- CTR is computed correctly when missing.
-- Avg CPC is computed correctly when missing.
-- Cost per conversion is computed correctly when missing.
-- Landing page URLs normalize to safe paths.
+- API query builders produce expected GAQL strings.
+- `cost_micros` converts to currency numbers.
+- CTR remains decimal.
+- Keyword rows normalize correctly.
+- Campaign rows normalize correctly.
+- Search term rows normalize correctly.
+- Landing page rows normalize to safe paths.
+- Summary totals aggregate correctly.
 - Output passes `validate_google_ads_summary`.
-- Importer refuses `exports/dashboard-lab` when `--real-output` is required.
-- Dry-run does not write output.
-- Optional CallRail join populates aggregate calls and `cost_per_call` without exposing call-level details.
+- Missing credentials fail safely.
+- `--real-output` is required for local-real writes.
+- Dry-run does not write.
+- Optional CallRail aggregate join populates calls without exposing call-level details.
 
-Do not add real Google Ads rows to tests.
+## CSV Fallback
+
+CSV export support can remain a possible future fallback, but it should not be the immediate next implementation phase.
+
+If revisited later, CSV support should still:
+
+- Read only ignored local exports.
+- Normalize dimensions carefully.
+- Avoid ad group dashboard output.
+- Validate `google_ads_summary.v1`.
+- Refuse committed fixture output for real data.
+- Use synthetic test CSV rows only in tests.
 
 ## Explicit Non-Goals
 
 This plan does not include:
 
-- Live Google Ads API calls
-- OAuth or API credential setup
+- Live API implementation in this task
+- Google Ads account mutation
+- Bid or budget management
+- Ad group performance table
 - Dashboard-lab UI changes
 - Client-dashboard changes
 - Portal database import
-- Raw query or click detail reporting beyond aggregate exported rows
-- Ad group performance table
 - Real Google Ads data committed to Git
+- Raw click-level or `gclid`-level reporting
+- Storing credentials in the repo
 
 ## Future Phases
 
 Suggested future sequence:
 
-- Phase A: Documentation plan, this task
-- Phase B: Google Ads CSV shape diagnostic
-- Phase C: Normalized CSV importer using synthetic test CSV
-- Phase D: Real local CSV import from ignored input folder
-- Phase E: Optional Google Ads plus CallRail aggregate join
-- Phase F: Future read-only Google Ads API plan, only with explicit approval
+- Phase A: API-first planning, this task
+- Phase B: Read-only query builder and mocked response normalizer
+- Phase C: Local credential and environment checks
+- Phase D: First guarded read-only API pull into `exports/local-real/`
+- Phase E: Validator and guarded copy to dashboard-lab local fixtures
+- Phase F: Optional aggregate CallRail join
+- Phase G: Future portal promotion planning only after explicit approval
