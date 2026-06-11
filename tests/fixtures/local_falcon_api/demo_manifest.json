@@ -1,0 +1,17 @@
+{
+  "profile": "all-services-client",
+  "output": ".test-tmp-local-falcon-api/local-falcon-summary.json",
+  "featured_keyword_id": "demo-weak-service",
+  "reports": [
+    {
+      "keyword": "demo cosmetic service",
+      "report_id": "demo-report-a",
+      "relationship": "stronger demo scan"
+    },
+    {
+      "keyword": "demo weak service",
+      "report_id": "demo-report-b",
+      "relationship": "weaker demo scan"
+    }
+  ]
+}

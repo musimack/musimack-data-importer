@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "success": true,
+  "message": "Synthetic AI analysis fixture.",
+  "data": {
+    "ai_analysis": {
+      "summary": "Synthetic scan shows stronger visibility near the center and weaker coverage on the east edge.",
+      "issues": [
+        "East edge points are weak or missing."
+      ],
+      "improvements": [
+        "Strengthen local proof for nearby service-area language."
+      ],
+      "recommendations": [
+        "Refresh the tracked service page with clearer local relevance."
+      ],
+      "vulnerable_competitors": [
+        "Watch Demo Aesthetics"
+      ]
+    }
+  }
+}

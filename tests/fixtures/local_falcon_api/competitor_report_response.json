@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "success": true,
+  "message": "Synthetic competitor report fixture.",
+  "data": {
+    "competitors": [
+      {
+        "name": "Strong Demo Spa",
+        "rank": 1,
+        "found_points": 8,
+        "top_3_points": 6,
+        "top_10_points": 8,
+        "solv": 31.2,
+        "arp": 3.1,
+        "atrp": 5.4,
+        "rating": 4.9,
+        "reviews": 240,
+        "category": "Demo Spa",
+        "address": "1 Example Way"
+      },
+      {
+        "name": "Demo Visibility Clinic",
+        "rank": 2,
+        "found_points": 6,
+        "top_3_points": 3,
+        "top_10_points": 5,
+        "solv": 22.5,
+        "arp": 6.4,
+        "atrp": 9.8,
+        "rating": 4.8,
+        "reviews": 128,
+        "category": "Demo Clinic",
+        "address": "100 Demo Plaza"
+      },
+      {
+        "name": "Watch Demo Aesthetics",
+        "rank": 7,
+        "found_points": 4,
+        "top_3_points": 0,
+        "top_10_points": 3,
+        "solv": 8.1,
+        "arp": 12.8,
+        "atrp": 16.2,
+        "rating": 4.4,
+        "reviews": 48,
+        "category": "Demo Service",
+        "address": "2 Example Way"
+      }
+    ]
+  }
+}

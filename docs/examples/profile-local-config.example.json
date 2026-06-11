@@ -1,0 +1,20 @@
+{
+  "profile": "example-profile",
+  "ga4": {
+    "property_id_env": "EXAMPLE_GA4_PROPERTY_ID",
+    "oauth_client_secrets_env": "EXAMPLE_GA4_OAUTH_CLIENT_SECRETS",
+    "oauth_token_file_env": "EXAMPLE_GA4_OAUTH_TOKEN_FILE"
+  },
+  "gsc": {
+    "site_url": "https://www.example.com/",
+    "oauth_client_secrets_env": "EXAMPLE_GSC_OAUTH_CLIENT_SECRETS",
+    "oauth_token_file_env": "EXAMPLE_GSC_OAUTH_TOKEN_FILE"
+  },
+  "local_falcon": {
+    "manifest_path": "local-falcon-manifests/example-profile.json",
+    "api_key_env": "LOCAL_FALCON_API_KEY"
+  },
+  "google_ads_search": {
+    "status": "planned"
+  }
+}

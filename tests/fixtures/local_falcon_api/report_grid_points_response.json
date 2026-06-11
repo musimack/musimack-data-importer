@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "success": true,
+  "message": "Synthetic grid points fixture.",
+  "data": {
+    "grid_points": [
+      { "row": 0, "col": 0, "lat": 35.11, "lng": -101.21, "rank": 1, "label": "NW" },
+      { "row": 0, "col": 1, "lat": 35.11, "lng": -101.20, "rank": 4, "label": "N" },
+      { "row": 0, "col": 2, "lat": 35.11, "lng": -101.19, "rank": "20+", "label": "NE" },
+      { "row": 1, "col": 0, "lat": 35.10, "lng": -101.21, "rank": null, "label": "W" },
+      { "row": 1, "col": 1, "lat": 35.10, "lng": -101.20, "rank": 2, "label": "Center" },
+      { "row": 1, "col": 2, "lat": 35.10, "lng": -101.19, "rank": 11, "label": "E" },
+      { "row": 2, "col": 0, "lat": 35.09, "lng": -101.21, "rank": 8, "label": "SW" },
+      { "row": 2, "col": 1, "lat": 35.09, "lng": -101.20, "rank": "not found", "label": "S" },
+      { "row": 2, "col": 2, "lat": 35.09, "lng": -101.19, "rank": 3, "label": "SE" }
+    ]
+  }
+}

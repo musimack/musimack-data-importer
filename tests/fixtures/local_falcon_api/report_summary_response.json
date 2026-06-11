@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "code_desc": "OK",
+  "success": true,
+  "message": "Synthetic report summary fixture.",
+  "parameters": {
+    "report_key": "demo-report-key"
+  },
+  "data": {
+    "report": {
+      "report_key": "demo-report-key",
+      "keyword": "demo cosmetic service",
+      "scan_date": "2026-05-12T13:52:00",
+      "grid_size": "3",
+      "radius": 5,
+      "center_latitude": 35.1,
+      "center_longitude": -101.2,
+      "business": {
+        "name": "Demo Visibility Clinic",
+        "address": "100 Demo Plaza",
+        "rating": 4.8,
+        "reviews": 128
+      },
+      "arp": 6.4,
+      "atrp": 9.8,
+      "solv": 22.5
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "profile": "all-services-client",
+  "output": ".test-tmp-local-falcon-api/source-aware-local-falcon-summary.json",
+  "featured_scan_id": "google-maps-demo-cosmetic-service",
+  "reports": [
+    {
+      "source_id": "google_maps",
+      "source_label": "Google Maps",
+      "query_type": "map_keyword",
+      "query": "demo cosmetic service",
+      "report_id": "fake-report-a",
+      "scan_kind": "map_visibility"
+    },
+    {
+      "source_id": "chatgpt",
+      "source_label": "ChatGPT",
+      "query_type": "ai_visibility_prompt",
+      "query": "can you recommend a good demo provider?",
+      "report_id": "fake-report-b",
+      "scan_kind": "ai_visibility_map"
+    }
+  ]
+}

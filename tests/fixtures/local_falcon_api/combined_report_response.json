@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "success": true,
+  "message": "Synthetic combined report fixture.",
+  "data": {
+    "report": {
+      "report_key": "demo-report-key",
+      "keyword": "demo cosmetic service",
+      "scan_date": "2026-05-12T13:52:00",
+      "grid_size": "3",
+      "radius": 5,
+      "center_latitude": 35.1,
+      "center_longitude": -101.2,
+      "business": {
+        "name": "Demo Visibility Clinic",
+        "address": "100 Demo Plaza",
+        "rating": 4.8,
+        "reviews": 128
+      },
+      "arp": 6.4,
+      "atrp": 9.8,
+      "solv": 22.5
+    },
+    "grid_points": [
+      { "row": 0, "col": 0, "lat": 35.11, "lng": -101.21, "rank": 1 },
+      { "row": 0, "col": 1, "lat": 35.11, "lng": -101.20, "rank": 4 },
+      { "row": 0, "col": 2, "lat": 35.11, "lng": -101.19, "rank": "20+" },
+      { "row": 1, "col": 0, "lat": 35.10, "lng": -101.21, "rank": null },
+      { "row": 1, "col": 1, "lat": 35.10, "lng": -101.20, "rank": 2 },
+      { "row": 1, "col": 2, "lat": 35.10, "lng": -101.19, "rank": 11 },
+      { "row": 2, "col": 0, "lat": 35.09, "lng": -101.21, "rank": 8 },
+      { "row": 2, "col": 1, "lat": 35.09, "lng": -101.20, "rank": "not found" },
+      { "row": 2, "col": 2, "lat": 35.09, "lng": -101.19, "rank": 3 }
+    ],
+    "competitors": [
+      { "name": "Strong Demo Spa", "rank": 1, "found_points": 8, "top_3_points": 6, "top_10_points": 8, "solv": 31.2 },
+      { "name": "Demo Visibility Clinic", "rank": 2, "found_points": 6, "top_3_points": 3, "top_10_points": 5, "solv": 22.5 },
+      { "name": "Watch Demo Aesthetics", "rank": 7, "found_points": 4, "top_3_points": 0, "top_10_points": 3, "solv": 8.1 }
+    ],
+    "ai_analysis": {
+      "summary": "Synthetic scan shows stronger visibility near the center.",
+      "issues": ["East edge points are weak or missing."],
+      "improvements": ["Strengthen local proof."],
+      "recommendations": ["Refresh tracked service page."],
+      "vulnerable_competitors": ["Watch Demo Aesthetics"]
+    }
+  }
+}

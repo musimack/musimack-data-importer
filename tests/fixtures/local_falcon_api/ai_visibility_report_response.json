@@ -1,0 +1,81 @@
+{
+  "code": 200,
+  "success": true,
+  "message": "Synthetic AI visibility report fixture.",
+  "data": {
+    "report_key": "fake-ai-report",
+    "keyword": "can you recommend a good demo provider?",
+    "scan_date": "2026-06-01T10:00:00",
+    "grid_size": "3",
+    "radius": 5,
+    "lat": 35.1,
+    "lng": -101.2,
+    "ai_place_id": "place-client",
+    "places": {
+      "place-client": {
+        "name": "Demo Visibility Clinic",
+        "saiv": 12.5
+      },
+      "place-other": {
+        "name": "Example Wellness Studio",
+        "saiv": 6.25
+      }
+    },
+    "location": {
+      "name": "Demo Visibility Clinic",
+      "address": "100 Demo Plaza"
+    },
+    "data_points": [
+      { "row": 0, "col": 0, "lat": 35.11, "lng": -101.21, "rank": true, "found": true, "observed": true, "observation_sequence": 1, "ai_visibility_value": 1, "brand_name": "Demo Visibility Clinic", "relationship": "client", "sentiment": "positive", "count": 2, "results": [{ "name": "Example Wellness Studio", "place_id": "place-other", "rank": 5 }, { "name": "Demo Visibility Clinic", "place_id": "place-client", "rank": 2 }] },
+      { "row": 0, "col": 1, "lat": 35.11, "lng": -101.20, "rank": null, "mentioned": true, "sequence": 2, "visibility_value": 1, "brand": "Demo Visibility Clinic", "relationship": "client", "sentiment": "positive" },
+      { "row": 0, "col": 2, "lat": 35.11, "lng": -101.19, "rank": null, "observed": false },
+      { "row": 1, "col": 0, "lat": 35.10, "lng": -101.21, "rank": null, "results": [{ "name": "Example Wellness Studio", "place_id": "place-other", "rank": 3, "position": 3, "value": 1, "relationship": "mentioned_brand", "sentiment": "neutral" }] },
+      { "row": 1, "col": 1, "lat": 35.10, "lng": -101.20, "rank": null, "found": false },
+      { "row": 1, "col": 2, "lat": 35.10, "lng": -101.19, "rank": false, "results": [{ "name": "Demo Visibility Clinic", "place_id": "place-client", "rank": 1 }] },
+      { "row": 2, "col": 0, "lat": 35.09, "lng": -101.21, "rank": null },
+      { "row": 2, "col": 1, "lat": 35.09, "lng": -101.20, "rank": null },
+      { "row": 2, "col": 2, "lat": 35.09, "lng": -101.19, "rank": null }
+    ],
+    "ai_visibility": {
+      "brand_observations": [
+        {
+          "brand_name": "Demo Visibility Clinic",
+          "relationship": "client",
+          "observation_count": 4,
+          "map_points_observed": 4,
+          "observation_sequence": 1,
+          "sentiment": "positive",
+          "share_of_ai_voice": 12.5
+        },
+        {
+          "brand_name": "Example Wellness Studio",
+          "observation_count": 2,
+          "map_points_observed": 2,
+          "observation_sequence": 2,
+          "sentiment": "neutral",
+          "share_of_ai_voice": 6.25
+        }
+      ],
+      "brand_phrases": [
+        {
+          "phrase": "trusted demo provider",
+          "count": 4,
+          "sentiment": "positive",
+          "brand_name": "Demo Visibility Clinic"
+        },
+        {
+          "phrase": "nearby option",
+          "count": 2,
+          "sentiment": "neutral",
+          "brand_name": "Example Wellness Studio"
+        }
+      ],
+      "ai_visibility_metrics": {
+        "share_of_ai_voice": 12.5
+      }
+    },
+    "ai_analysis": {
+      "summary": "Synthetic AI prompt mentions the client brand with positive phrasing."
+    }
+  }
+}
