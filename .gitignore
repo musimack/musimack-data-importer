@@ -5,6 +5,7 @@ secrets/
 exports/local-real/
 inputs/local-real/
 local-inputs/
+local/
 local-falcon-real/
 local-falcon-exports/
 local-falcon-manifests/

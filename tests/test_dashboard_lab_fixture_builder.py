@@ -79,7 +79,7 @@ def test_build_inn_at_spanish_head_fixture_is_organic_local_profile(tmp_path):
 
     combined = _read_json(tmp_path / "combined-dashboard-summary.json")
     assert combined["fixture_profile"] == "inn-at-spanish-head"
-    assert combined["client_name"] == "Inn At Spanish Head"
+    assert combined["client_name"] == "Spanish Head"
     assert combined["domain"] == "spanishhead.com"
     assert combined["provider_summaries"] == {
         "ga4": "ga4-summary.json",

@@ -1,0 +1,480 @@
+{
+  "budget_pacing": {
+    "budget": 10000.0,
+    "days_elapsed": 151,
+    "days_remaining": 0,
+    "notes": "Synthetic budget pacing, not actual Spanish Head spend.",
+    "pacing_status": "synthetic_on_track",
+    "percent_used": 0.9223,
+    "spend": 9222.68
+  },
+  "campaign_rows": [
+    {
+      "avg_cpc": 1.51,
+      "calls": 42,
+      "campaign": "Spanish Head | Brand",
+      "clicks": 410,
+      "conversions": 59.0,
+      "cost_per_call": 14.76,
+      "ctr": 0.0672,
+      "impressions": 6100,
+      "spend": 620.0
+    },
+    {
+      "avg_cpc": 2.56,
+      "calls": 199,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 1856,
+      "conversions": 220.0,
+      "cost_per_call": 23.87,
+      "ctr": 0.04,
+      "impressions": 46400,
+      "spend": 4750.25
+    },
+    {
+      "avg_cpc": 4.05,
+      "calls": 65,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 520,
+      "conversions": 65.0,
+      "cost_per_call": 32.43,
+      "ctr": 0.0406,
+      "impressions": 12800,
+      "spend": 2107.68
+    },
+    {
+      "avg_cpc": 3.04,
+      "calls": 61,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 544,
+      "conversions": 72.0,
+      "cost_per_call": 27.13,
+      "ctr": 0.0481,
+      "impressions": 11300,
+      "spend": 1655.04
+    },
+    {
+      "avg_cpc": 2.58,
+      "calls": 16,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "clicks": 128,
+      "conversions": 8.0,
+      "cost_per_call": 20.64,
+      "ctr": 0.04,
+      "impressions": 3200,
+      "spend": 330.24
+    }
+  ],
+  "client_label": "Spanish Head",
+  "currency": "USD",
+  "data_quality_notes": [
+    "Synthetic fixture data for dashboard-lab UI testing only.",
+    "No real Spanish Head Google Ads data, exports, credentials, or API pulls are included.",
+    "Canonical numeric values are stored as numbers; dashboard-lab is responsible for display formatting."
+  ],
+  "date_range": {
+    "end_date": "2026-05-31",
+    "start_date": "2026-01-01"
+  },
+  "generated_at": "2026-06-10T00:00:00Z",
+  "is_real_data": false,
+  "keyword_rows": [
+    {
+      "avg_cpc": 3.15,
+      "calls": 62,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 540,
+      "conversions": 0.112,
+      "cost": 1701.0,
+      "cost_per_call": 27.44,
+      "ctr": 0.0432,
+      "impressions": 12500,
+      "keyword": "lincoln city hotel",
+      "landing_page": "/lp-main/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 3.42,
+      "calls": 68,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 488,
+      "conversions": 0.126,
+      "cost": 1668.96,
+      "cost_per_call": 24.54,
+      "ctr": 0.0498,
+      "impressions": 9800,
+      "keyword": "oceanfront hotel lincoln city",
+      "landing_page": "/lp-oceanfront/",
+      "match_type": "exact"
+    },
+    {
+      "avg_cpc": 2.95,
+      "calls": 31,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 252,
+      "conversions": 0.095,
+      "cost": 743.4,
+      "cost_per_call": 23.98,
+      "ctr": 0.0394,
+      "impressions": 6400,
+      "keyword": "lincoln city ocean view rooms",
+      "landing_page": "/lp-accommodations/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 3.08,
+      "calls": 25,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 218,
+      "conversions": 0.087,
+      "cost": 671.44,
+      "cost_per_call": 26.86,
+      "ctr": 0.0369,
+      "impressions": 5900,
+      "keyword": "lincoln city beachfront lodging",
+      "landing_page": "/lp-oceanfront/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 2.74,
+      "calls": 44,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 610,
+      "conversions": 0.071,
+      "cost": 1671.4,
+      "cost_per_call": 37.99,
+      "ctr": 0.0335,
+      "impressions": 18200,
+      "keyword": "oregon coast hotel",
+      "landing_page": "/lp-main/",
+      "match_type": "broad"
+    },
+    {
+      "avg_cpc": 2.58,
+      "calls": 16,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "clicks": 128,
+      "conversions": 0.062,
+      "cost": 330.24,
+      "cost_per_call": 20.64,
+      "ctr": 0.04,
+      "impressions": 3200,
+      "keyword": "hotel with restaurant lincoln city",
+      "landing_page": "/lp-amenities/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 2.88,
+      "calls": 42,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 360,
+      "conversions": 0.082,
+      "cost": 1036.8,
+      "cost_per_call": 24.69,
+      "ctr": 0.05,
+      "impressions": 7200,
+      "keyword": "lincoln city hotel deals",
+      "landing_page": "/lp-deals/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 3.36,
+      "calls": 19,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 184,
+      "conversions": 0.071,
+      "cost": 618.24,
+      "cost_per_call": 32.54,
+      "ctr": 0.0449,
+      "impressions": 4100,
+      "keyword": "romantic hotel lincoln city",
+      "landing_page": "/lp-romantic/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 2.44,
+      "calls": 11,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 96,
+      "conversions": 0.044,
+      "cost": 234.24,
+      "cost_per_call": 21.29,
+      "ctr": 0.0343,
+      "impressions": 2800,
+      "keyword": "lincoln city hotel with pool",
+      "landing_page": "/lp-amenities/",
+      "match_type": "phrase"
+    },
+    {
+      "avg_cpc": 3.18,
+      "calls": 23,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 172,
+      "conversions": 0.093,
+      "cost": 546.96,
+      "cost_per_call": 23.78,
+      "ctr": 0.0478,
+      "impressions": 3600,
+      "keyword": "oceanfront suites lincoln city",
+      "landing_page": "/lp-accommodations/",
+      "match_type": "exact"
+    }
+  ],
+  "landing_page_rows": [
+    {
+      "calls": 106,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 1150,
+      "conversions": 106.0,
+      "cost": 2395.0,
+      "cost_per_call": 22.59,
+      "ctr": 0.0375,
+      "impressions": 30700,
+      "landing_page": "/lp-main/"
+    },
+    {
+      "calls": 42,
+      "campaign": "Spanish Head | Brand",
+      "clicks": 410,
+      "conversions": 59.0,
+      "cost": 620.0,
+      "cost_per_call": 14.76,
+      "ctr": 0.0672,
+      "impressions": 6100,
+      "landing_page": "/lp-booking/"
+    },
+    {
+      "calls": 42,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 360,
+      "conversions": 42.0,
+      "cost": 1036.8,
+      "cost_per_call": 24.69,
+      "ctr": 0.05,
+      "impressions": 7200,
+      "landing_page": "/lp-deals/"
+    },
+    {
+      "calls": 54,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 424,
+      "conversions": 54.0,
+      "cost": 1289.4,
+      "cost_per_call": 23.88,
+      "ctr": 0.0424,
+      "impressions": 10000,
+      "landing_page": "/lp-accommodations/"
+    },
+    {
+      "calls": 86,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 706,
+      "conversions": 87.0,
+      "cost": 2274.93,
+      "cost_per_call": 26.45,
+      "ctr": 0.045,
+      "impressions": 15700,
+      "landing_page": "/lp-oceanfront/"
+    },
+    {
+      "calls": 27,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "clicks": 224,
+      "conversions": 27.0,
+      "cost": 564.48,
+      "cost_per_call": 20.91,
+      "ctr": 0.0373,
+      "impressions": 6000,
+      "landing_page": "/lp-amenities/"
+    },
+    {
+      "calls": 19,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 184,
+      "conversions": 19.0,
+      "cost": 618.24,
+      "cost_per_call": 32.54,
+      "ctr": 0.0449,
+      "impressions": 4100,
+      "landing_page": "/lp-romantic/"
+    }
+  ],
+  "paid_search_call_signal": {
+    "attribution_notes": "Synthetic aggregate call signal for dashboard-lab UI testing only.",
+    "calls_with_keyword_attribution": 344,
+    "cost_per_call": 27.05,
+    "google_ads_calls": 341,
+    "missed_paid_search_calls": 39,
+    "top_call_campaign": "Spanish Head | Oceanfront Hotel",
+    "top_call_keyword": "oceanfront hotel lincoln city"
+  },
+  "profile": "inn-at-spanish-head",
+  "provider": "google_ads",
+  "schema_version": "google_ads_summary.v1",
+  "search_term_rows": [
+    {
+      "calls": 17,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 106,
+      "conversions": 0.132,
+      "cost": 364.64,
+      "ctr": 0.0589,
+      "impressions": 1800,
+      "matched_keyword": "oceanfront hotel lincoln city",
+      "search_term": "best lincoln city hotel oceanfront"
+    },
+    {
+      "calls": 8,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 64,
+      "conversions": 0.094,
+      "cost": 193.28,
+      "ctr": 0.0485,
+      "impressions": 1320,
+      "matched_keyword": "lincoln city ocean view rooms",
+      "search_term": "lincoln city hotel rooms with ocean view"
+    },
+    {
+      "calls": 7,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 88,
+      "conversions": 0.067,
+      "cost": 248.16,
+      "ctr": 0.0367,
+      "impressions": 2400,
+      "matched_keyword": "oregon coast hotel",
+      "search_term": "oregon coast hotel on beach"
+    },
+    {
+      "calls": 10,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 72,
+      "conversions": 0.089,
+      "cost": 198.72,
+      "ctr": 0.061,
+      "impressions": 1180,
+      "matched_keyword": "lincoln city hotel deals",
+      "search_term": "lincoln city hotel packages"
+    },
+    {
+      "calls": 4,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "clicks": 31,
+      "conversions": 0.052,
+      "cost": 76.88,
+      "ctr": 0.05,
+      "impressions": 620,
+      "matched_keyword": "hotel with restaurant lincoln city",
+      "search_term": "hotel near fathoms restaurant"
+    },
+    {
+      "calls": 5,
+      "campaign": "Spanish Head | Deals & Packages",
+      "clicks": 45,
+      "conversions": 0.082,
+      "cost": 161.1,
+      "ctr": 0.0536,
+      "impressions": 840,
+      "matched_keyword": "romantic hotel lincoln city",
+      "search_term": "romantic oceanfront hotel lincoln city"
+    },
+    {
+      "calls": 6,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "clicks": 42,
+      "conversions": 0.071,
+      "cost": 131.04,
+      "ctr": 0.0429,
+      "impressions": 980,
+      "matched_keyword": "lincoln city beachfront lodging",
+      "search_term": "lincoln city beachfront lodging deals"
+    },
+    {
+      "calls": 4,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 34,
+      "conversions": 0.077,
+      "cost": 110.16,
+      "ctr": 0.0472,
+      "impressions": 720,
+      "matched_keyword": "oceanfront suites lincoln city",
+      "search_term": "oceanfront suites oregon coast"
+    },
+    {
+      "calls": 2,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "clicks": 18,
+      "conversions": 0.036,
+      "cost": 45.18,
+      "ctr": 0.0321,
+      "impressions": 560,
+      "matched_keyword": "lincoln city hotel with pool",
+      "search_term": "lincoln city lodging with pool"
+    },
+    {
+      "calls": 15,
+      "campaign": "Spanish Head | Brand",
+      "clicks": 92,
+      "conversions": 0.151,
+      "cost": 244.72,
+      "ctr": 0.0876,
+      "impressions": 1050,
+      "matched_keyword": "lincoln city hotel",
+      "search_term": "book lincoln city oceanfront hotel"
+    }
+  ],
+  "source": "synthetic_fixture",
+  "summary": {
+    "avg_cpc": 3.03,
+    "calls": 341,
+    "clicks": 3048,
+    "conversions": 0.843,
+    "cost_per_call": 27.05,
+    "cost_per_conversion": 10940.31,
+    "ctr": 0.0414,
+    "impressions": 73700,
+    "spend": 9222.68
+  },
+  "time_series": [
+    {
+      "calls": 49,
+      "clicks": 512,
+      "conversions": 58.0,
+      "date": "2026-01-31",
+      "impressions": 12400,
+      "spend": 1432.18
+    },
+    {
+      "calls": 58,
+      "clicks": 604,
+      "conversions": 69.0,
+      "date": "2026-02-28",
+      "impressions": 14800,
+      "spend": 1668.75
+    },
+    {
+      "calls": 73,
+      "clicks": 698,
+      "conversions": 83.0,
+      "date": "2026-03-31",
+      "impressions": 16900,
+      "spend": 1915.42
+    },
+    {
+      "calls": 87,
+      "clicks": 790,
+      "conversions": 98.0,
+      "date": "2026-04-30",
+      "impressions": 18500,
+      "spend": 2228.36
+    },
+    {
+      "calls": 116,
+      "clicks": 854,
+      "conversions": 117.0,
+      "date": "2026-05-31",
+      "impressions": 21200,
+      "spend": 2218.5
+    }
+  ]
+}

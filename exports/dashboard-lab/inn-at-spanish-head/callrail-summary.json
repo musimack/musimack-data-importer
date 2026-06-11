@@ -1,0 +1,443 @@
+{
+  "campaign_rows": [
+    {
+      "answered_calls": 37,
+      "avg_duration_seconds": 210,
+      "calls": 42,
+      "campaign": "Spanish Head | Brand",
+      "cost": 620.0,
+      "cost_per_call": 14.76,
+      "first_time_callers": 30,
+      "missed_calls": 5,
+      "qualified_calls": 30
+    },
+    {
+      "answered_calls": 173,
+      "avg_duration_seconds": 206,
+      "calls": 199,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "cost": 4750.25,
+      "cost_per_call": 23.87,
+      "first_time_callers": 140,
+      "missed_calls": 26,
+      "qualified_calls": 127
+    },
+    {
+      "answered_calls": 56,
+      "avg_duration_seconds": 190,
+      "calls": 65,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "cost": 2107.68,
+      "cost_per_call": 32.43,
+      "first_time_callers": 46,
+      "missed_calls": 9,
+      "qualified_calls": 38
+    },
+    {
+      "answered_calls": 51,
+      "avg_duration_seconds": 213,
+      "calls": 61,
+      "campaign": "Spanish Head | Deals & Packages",
+      "cost": 1655.04,
+      "cost_per_call": 27.13,
+      "first_time_callers": 44,
+      "missed_calls": 10,
+      "qualified_calls": 36
+    },
+    {
+      "answered_calls": 13,
+      "avg_duration_seconds": 163,
+      "calls": 16,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "cost": 330.24,
+      "cost_per_call": 20.64,
+      "first_time_callers": 11,
+      "missed_calls": 3,
+      "qualified_calls": 8
+    }
+  ],
+  "client_label": "Spanish Head",
+  "data_quality_notes": [
+    "Synthetic fixture data for dashboard-lab UI testing only.",
+    "No real Spanish Head CallRail export, API data, audio files, text call notes, or call-detail rows are included.",
+    "CallRail rows are aggregate-only and contain no caller-level details or tracking phone numbers."
+  ],
+  "date_range": {
+    "end_date": "2026-05-31",
+    "start_date": "2026-01-01"
+  },
+  "generated_at": "2026-06-10T00:00:00Z",
+  "is_real_data": false,
+  "keyword_rows": [
+    {
+      "answered_calls": 55,
+      "avg_duration_seconds": 214,
+      "calls": 62,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "cost": 1701.0,
+      "cost_per_call": 27.44,
+      "first_time_callers": 44,
+      "keyword": "lincoln city hotel",
+      "landing_page": "/lp-main/",
+      "missed_calls": 7,
+      "qualified_calls": 42,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 61,
+      "avg_duration_seconds": 232,
+      "calls": 68,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "cost": 1668.96,
+      "cost_per_call": 24.54,
+      "first_time_callers": 49,
+      "keyword": "oceanfront hotel lincoln city",
+      "landing_page": "/lp-oceanfront/",
+      "missed_calls": 7,
+      "qualified_calls": 48,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 27,
+      "avg_duration_seconds": 198,
+      "calls": 31,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "cost": 743.4,
+      "cost_per_call": 23.98,
+      "first_time_callers": 22,
+      "keyword": "lincoln city ocean view rooms",
+      "landing_page": "/lp-accommodations/",
+      "missed_calls": 4,
+      "qualified_calls": 19,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 21,
+      "avg_duration_seconds": 187,
+      "calls": 25,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "cost": 671.44,
+      "cost_per_call": 26.86,
+      "first_time_callers": 18,
+      "keyword": "lincoln city beachfront lodging",
+      "landing_page": "/lp-oceanfront/",
+      "missed_calls": 4,
+      "qualified_calls": 15,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 36,
+      "avg_duration_seconds": 176,
+      "calls": 44,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "cost": 1671.4,
+      "cost_per_call": 37.99,
+      "first_time_callers": 29,
+      "keyword": "oregon coast hotel",
+      "landing_page": "/lp-main/",
+      "missed_calls": 8,
+      "qualified_calls": 22,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 13,
+      "avg_duration_seconds": 163,
+      "calls": 16,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "cost": 330.24,
+      "cost_per_call": 20.64,
+      "first_time_callers": 11,
+      "keyword": "hotel with restaurant lincoln city",
+      "landing_page": "/lp-amenities/",
+      "missed_calls": 3,
+      "qualified_calls": 8,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 35,
+      "avg_duration_seconds": 205,
+      "calls": 42,
+      "campaign": "Spanish Head | Deals & Packages",
+      "cost": 1036.8,
+      "cost_per_call": 24.69,
+      "first_time_callers": 30,
+      "keyword": "lincoln city hotel deals",
+      "landing_page": "/lp-deals/",
+      "missed_calls": 7,
+      "qualified_calls": 24,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 16,
+      "avg_duration_seconds": 221,
+      "calls": 19,
+      "campaign": "Spanish Head | Deals & Packages",
+      "cost": 618.24,
+      "cost_per_call": 32.54,
+      "first_time_callers": 14,
+      "keyword": "romantic hotel lincoln city",
+      "landing_page": "/lp-romantic/",
+      "missed_calls": 3,
+      "qualified_calls": 12,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 9,
+      "avg_duration_seconds": 151,
+      "calls": 11,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "cost": 234.24,
+      "cost_per_call": 21.29,
+      "first_time_callers": 8,
+      "keyword": "lincoln city hotel with pool",
+      "landing_page": "/lp-amenities/",
+      "missed_calls": 2,
+      "qualified_calls": 5,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 20,
+      "avg_duration_seconds": 209,
+      "calls": 23,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "cost": 546.96,
+      "cost_per_call": 23.78,
+      "first_time_callers": 16,
+      "keyword": "oceanfront suites lincoln city",
+      "landing_page": "/lp-accommodations/",
+      "missed_calls": 3,
+      "qualified_calls": 14,
+      "source": "google_ads"
+    }
+  ],
+  "landing_page_rows": [
+    {
+      "answered_calls": 91,
+      "avg_duration_seconds": 198,
+      "calls": 106,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "first_time_callers": 73,
+      "keyword": "lincoln city hotel",
+      "landing_page": "/lp-main/",
+      "missed_calls": 15
+    },
+    {
+      "answered_calls": 37,
+      "avg_duration_seconds": 210,
+      "calls": 42,
+      "campaign": "Spanish Head | Brand",
+      "first_time_callers": 30,
+      "landing_page": "/lp-booking/",
+      "missed_calls": 5
+    },
+    {
+      "answered_calls": 35,
+      "avg_duration_seconds": 205,
+      "calls": 42,
+      "campaign": "Spanish Head | Deals & Packages",
+      "first_time_callers": 30,
+      "keyword": "lincoln city hotel deals",
+      "landing_page": "/lp-deals/",
+      "missed_calls": 7
+    },
+    {
+      "answered_calls": 47,
+      "avg_duration_seconds": 203,
+      "calls": 54,
+      "campaign": "Spanish Head | Rooms & Suites",
+      "first_time_callers": 38,
+      "keyword": "oceanfront suites lincoln city",
+      "landing_page": "/lp-accommodations/",
+      "missed_calls": 7
+    },
+    {
+      "answered_calls": 73,
+      "avg_duration_seconds": 226,
+      "calls": 86,
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "first_time_callers": 62,
+      "keyword": "oceanfront hotel lincoln city",
+      "landing_page": "/lp-oceanfront/",
+      "missed_calls": 13
+    },
+    {
+      "answered_calls": 22,
+      "avg_duration_seconds": 158,
+      "calls": 27,
+      "campaign": "Spanish Head | Dining & Fathoms",
+      "first_time_callers": 19,
+      "keyword": "hotel with restaurant lincoln city",
+      "landing_page": "/lp-amenities/",
+      "missed_calls": 5
+    },
+    {
+      "answered_calls": 16,
+      "avg_duration_seconds": 221,
+      "calls": 19,
+      "campaign": "Spanish Head | Deals & Packages",
+      "first_time_callers": 14,
+      "keyword": "romantic hotel lincoln city",
+      "landing_page": "/lp-romantic/",
+      "missed_calls": 3
+    }
+  ],
+  "missed_call_opportunities": [
+    {
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "keyword": "oceanfront hotel lincoln city",
+      "missed_calls": 7,
+      "priority": "high",
+      "recommended_action": "Review follow-up process for missed calls from paid search traffic.",
+      "total_calls": 68,
+      "why_it_matters": "High-intent oceanfront searches are generating call demand."
+    },
+    {
+      "campaign": "Spanish Head | Oceanfront Hotel",
+      "keyword": "oregon coast hotel",
+      "missed_calls": 8,
+      "priority": "medium",
+      "recommended_action": "Compare call volume against spend for this keyword group.",
+      "total_calls": 44,
+      "why_it_matters": "Broad Oregon Coast hotel traffic can still include booking-ready callers."
+    },
+    {
+      "campaign": "Spanish Head | Deals & Packages",
+      "keyword": "lincoln city hotel deals",
+      "missed_calls": 7,
+      "priority": "medium",
+      "recommended_action": "Check whether the landing page matches booking intent.",
+      "total_calls": 42,
+      "why_it_matters": "Deal-oriented callers may be close to booking when package copy is clear."
+    },
+    {
+      "campaign": "Spanish Head | Rooms & Suites",
+      "keyword": "lincoln city hotel with pool",
+      "missed_calls": 2,
+      "priority": "low",
+      "recommended_action": "Confirm high-call keywords are routed to the best landing page.",
+      "total_calls": 11,
+      "why_it_matters": "Amenity-specific searches can reveal page-to-call routing gaps."
+    }
+  ],
+  "paid_search_attribution": {
+    "attribution_unavailable_calls": -3,
+    "calls_with_keyword_attribution": 344,
+    "google_ads_calls": 341,
+    "missed_keyword_calls": 30,
+    "notes": [
+      "Synthetic paid-search call attribution for dashboard-lab UI testing only.",
+      "Keyword attribution is intentionally primary for this Spanish Head demo state."
+    ],
+    "top_campaign": "Spanish Head | Oceanfront Hotel",
+    "top_keyword": "oceanfront hotel lincoln city"
+  },
+  "profile": "inn-at-spanish-head",
+  "provider": "callrail",
+  "schema_version": "callrail_summary.v1",
+  "source": "synthetic_fixture",
+  "source_rows": [
+    {
+      "answered_calls": 293,
+      "avg_duration_seconds": 200.4,
+      "calls": 341,
+      "first_time_callers": 241,
+      "missed_calls": 48,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 21,
+      "avg_duration_seconds": 182.0,
+      "calls": 24,
+      "first_time_callers": 17,
+      "missed_calls": 3,
+      "source": "organic"
+    },
+    {
+      "answered_calls": 16,
+      "avg_duration_seconds": 174.0,
+      "calls": 18,
+      "first_time_callers": 10,
+      "missed_calls": 2,
+      "source": "direct"
+    }
+  ],
+  "summary": {
+    "answered_calls": 293,
+    "avg_duration_seconds": 200.4,
+    "calls_with_keyword_attribution": 344,
+    "calls_without_keyword_attribution": -3,
+    "first_time_callers": 241,
+    "google_ads_calls": 341,
+    "missed_calls": 48,
+    "qualified_calls": 209,
+    "total_calls": 341
+  },
+  "time_series": [
+    {
+      "answered_calls": 43,
+      "date": "2026-01-31",
+      "first_time_callers": 34,
+      "google_ads_calls": 49,
+      "missed_calls": 6,
+      "total_calls": 49
+    },
+    {
+      "answered_calls": 50,
+      "date": "2026-02-28",
+      "first_time_callers": 41,
+      "google_ads_calls": 58,
+      "missed_calls": 8,
+      "total_calls": 58
+    },
+    {
+      "answered_calls": 63,
+      "date": "2026-03-31",
+      "first_time_callers": 52,
+      "google_ads_calls": 73,
+      "missed_calls": 10,
+      "total_calls": 73
+    },
+    {
+      "answered_calls": 75,
+      "date": "2026-04-30",
+      "first_time_callers": 61,
+      "google_ads_calls": 87,
+      "missed_calls": 12,
+      "total_calls": 87
+    },
+    {
+      "answered_calls": 101,
+      "date": "2026-05-31",
+      "first_time_callers": 83,
+      "google_ads_calls": 116,
+      "missed_calls": 15,
+      "total_calls": 116
+    }
+  ],
+  "tracking_number_rows": [
+    {
+      "answered_calls": 143,
+      "calls": 165,
+      "first_time_callers": 118,
+      "label": "Booking line",
+      "missed_calls": 22,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 118,
+      "calls": 137,
+      "first_time_callers": 96,
+      "label": "Oceanfront campaign line",
+      "missed_calls": 19,
+      "source": "google_ads"
+    },
+    {
+      "answered_calls": 70,
+      "calls": 81,
+      "first_time_callers": 57,
+      "label": "Deals campaign line",
+      "missed_calls": 11,
+      "source": "google_ads"
+    }
+  ]
+}
