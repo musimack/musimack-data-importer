@@ -10,6 +10,7 @@ from .paid_callrail_validators import (
     validate_callrail_summary,
     validate_google_ads_summary,
 )
+from .form_fills import validate_form_fills_summary
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +23,7 @@ ALLOWED_FIXTURE_FILES = [
     "local-falcon-summary.json",
     "google-ads-summary.json",
     "callrail-summary.json",
+    "form-fills-summary.json",
 ]
 
 
@@ -147,6 +149,8 @@ def _validate_before_copy(source: Path) -> None:
             validate_google_ads_summary(load_json_object(source))
         if source.name == "callrail-summary.json":
             validate_callrail_summary(load_json_object(source))
+        if source.name == "form-fills-summary.json":
+            validate_form_fills_summary(load_json_object(source))
     except DashboardLabFixtureValidationError as exc:
         raise DashboardLabFixtureCopyError(f"{source.name} failed validation before copy: {exc}") from exc
 

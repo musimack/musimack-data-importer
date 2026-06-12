@@ -135,6 +135,76 @@ def test_callrail_fixture_is_validated_before_copy(tmp_path):
     assert not (dashboard_root / "public" / "fixtures" / PROFILE / "callrail-summary.json").exists()
 
 
+def test_form_fills_fixture_is_validated_before_copy(tmp_path):
+    importer_root = tmp_path / "musimack-data-importer"
+    dashboard_root = _dashboard_root(tmp_path)
+    source_root = importer_root / "exports" / "local-real" / "dashboard-lab"
+    build_paid_search_callrail_fixtures(profile=PROFILE, output_root=source_root)
+    source_dir = source_root / PROFILE
+    (source_dir / "form-fills-summary.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "form_fills_summary.v1",
+                "provider": "form_fills",
+                "source_type": "date_only_local_real",
+                "profile": PROFILE,
+                "client_label": "Spanish Head",
+                "is_real_data": True,
+                "date_range": {"start_date": "2026-04-11", "end_date": "2026-04-11"},
+                "summary": {"total_form_fills": 1},
+                "time_series": [{"date": "2026-04-11", "form_fills": 1}],
+                "monthly_totals": [{"month": "2026-04", "form_fills": 1}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = copy_dashboard_lab_fixtures(
+        profile=PROFILE,
+        mode="local-real",
+        dashboard_lab_root=dashboard_root,
+        importer_root=importer_root,
+    )
+
+    assert (result.destination_dir / "form-fills-summary.json").exists()
+
+
+def test_form_fills_fixture_with_pii_is_rejected_before_copy(tmp_path):
+    importer_root = tmp_path / "musimack-data-importer"
+    dashboard_root = _dashboard_root(tmp_path)
+    source_root = importer_root / "exports" / "local-real" / "dashboard-lab"
+    build_paid_search_callrail_fixtures(profile=PROFILE, output_root=source_root)
+    source_dir = source_root / PROFILE
+    (source_dir / "form-fills-summary.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "form_fills_summary.v1",
+                "provider": "form_fills",
+                "source_type": "date_only_local_real",
+                "profile": PROFILE,
+                "client_label": "Spanish Head",
+                "is_real_data": True,
+                "date_range": {"start_date": "2026-04-11", "end_date": "2026-04-11"},
+                "summary": {"total_form_fills": 1},
+                "time_series": [{"date": "2026-04-11", "form_fills": 1}],
+                "lead_email": "test@example.com",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DashboardLabFixtureCopyError) as exc_info:
+        copy_dashboard_lab_fixtures(
+            profile=PROFILE,
+            mode="local-real",
+            dashboard_lab_root=dashboard_root,
+            importer_root=importer_root,
+        )
+
+    assert "email-looking value" in str(exc_info.value)
+    assert not (dashboard_root / "public" / "local-fixtures" / PROFILE / "form-fills-summary.json").exists()
+
+
 def test_copy_refuses_dashboard_root_that_does_not_look_like_dashboard_lab(tmp_path):
     importer_root = tmp_path / "musimack-data-importer"
     bad_dashboard_root = tmp_path / "client-dashboard"
