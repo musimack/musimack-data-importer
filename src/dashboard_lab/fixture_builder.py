@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -21,7 +21,7 @@ PROVIDER_FILES = {
     "hosting": "hosting-summary.json",
 }
 
-ALL_KNOWN_FILES = [*BASE_FILES, *PROVIDER_FILES.values()]
+ALL_KNOWN_FILES = [*BASE_FILES, *PROVIDER_FILES.values(), "google-ads-summary.json"]
 EXPECTED_FILES = [
     "client-profile.json",
     "ga4-summary.json",
@@ -81,6 +81,7 @@ class FixtureProfile:
     recent_insights: list[str]
     latest_report_date: str = "2026-04-30"
     period_start: str = "2026-04-01"
+    provider_file_overrides: dict[str, str] = field(default_factory=dict)
 
     @property
     def period(self) -> dict[str, str]:
@@ -90,9 +91,12 @@ class FixtureProfile:
     def expected_files(self) -> list[str]:
         return [
             "client-profile.json",
-            *[PROVIDER_FILES[provider] for provider in self.providers],
+            *[self.provider_file(provider) for provider in self.providers],
             "combined-dashboard-summary.json",
         ]
+
+    def provider_file(self, provider: str) -> str:
+        return self.provider_file_overrides.get(provider, PROVIDER_FILES[provider])
 
 
 @dataclass(frozen=True)
@@ -241,6 +245,50 @@ PROFILES = {
             "Local visibility should focus on Lincoln City and Oregon Coast lodging intent.",
             "No Ads Search, LSA, CallRail, or contractor lead-gen modules are enabled for this fixture.",
         ],
+    ),
+    "wc-land-renewal": FixtureProfile(
+        slug="wc-land-renewal",
+        client_name="WC Land Renewal",
+        domain="wclandrenewal.example",
+        primary_market="Local service area",
+        active_services=[
+            "SEO/GEO",
+            "GA4 reporting",
+            "GSC reporting",
+            "Google Ads Search",
+            "Local SEO / Maps",
+            "Call Tracking",
+        ],
+        providers=["ga4", "gsc", "local_falcon", "google_ads_search", "callrail"],
+        primary_service_priority="full-funnel local service visibility",
+        modules_enabled=[
+            "executive_summary",
+            "website_performance",
+            "search_console",
+            "local_map_rankings",
+            "paid_search",
+            "call_tracking",
+            "tasks",
+            "insights",
+        ],
+        above_fold_module_order=["executive_summary", "website_performance", "paid_search", "call_tracking"],
+        below_fold_module_order=["search_console", "local_map_rankings", "tasks", "insights"],
+        top_strategy_focus=[
+            "Prepare organic search, local visibility, paid search, and call tracking views for safe local dashboard testing.",
+            "Use GA4 and GSC first, then layer Local Falcon, Google Ads, and CallRail once real local outputs are approved.",
+            "Keep all provider output local-only and fixture-backed for dashboard-lab readiness.",
+        ],
+        current_tasks=[
+            {"title": "Configure ignored GA4 and GSC local provider access", "service": "GA4/GSC reporting", "status": "planned"},
+            {"title": "Validate dashboard-lab support files before any fixture copy", "service": "dashboard readiness", "status": "planned"},
+            {"title": "Add paid and call tracking outputs only after separate approval", "service": "paid/lead providers", "status": "planned"},
+        ],
+        recent_insights=[
+            "WC Land Renewal is modeled as a multi-provider local service profile.",
+            "GA4 and GSC readiness can be validated without live provider calls.",
+            "Paid search and CallRail support files use synthetic placeholders until approved local real outputs exist.",
+        ],
+        provider_file_overrides={"google_ads_search": "google-ads-summary.json"},
     ),
     "priority-tree-lead-gen": FixtureProfile(
         slug="priority-tree-lead-gen",
@@ -419,7 +467,7 @@ def profile_payloads(profile_slug: str) -> dict[str, dict[str, Any]]:
         "combined-dashboard-summary.json": _combined_dashboard_summary(profile),
     }
     for provider in profile.providers:
-        payloads[PROVIDER_FILES[provider]] = _provider_payload(provider, profile)
+        payloads[profile.provider_file(provider)] = _provider_payload(provider, profile)
     return {filename: payloads[filename] for filename in profile.expected_files}
 
 
@@ -461,7 +509,7 @@ def validate_dashboard_lab_fixture(output_dir: Path) -> list[Path]:
         payloads[filename] = payload
 
     for provider in profile.providers:
-        filename = PROVIDER_FILES[provider]
+        filename = profile.provider_file(provider)
         _validate_provider_summary(payloads[filename], provider, filename)
         if provider == "callrail":
             _validate_callrail_privacy(payloads[filename])
@@ -490,7 +538,7 @@ def validate_dashboard_lab_export_folder(output_dir: Path, profile_slug: str) ->
     combined = payloads["combined-dashboard-summary.json"]
     if combined.get("fixture_profile") != profile.slug:
         raise FixtureValidationError("combined-dashboard-summary.json fixture_profile mismatch")
-    expected_summaries = {provider: PROVIDER_FILES[provider] for provider in profile.providers}
+    expected_summaries = {provider: profile.provider_file(provider) for provider in profile.providers}
     if combined.get("provider_summaries") != expected_summaries:
         raise FixtureValidationError("combined-dashboard-summary.json must reference enabled profile providers only")
 
@@ -1088,7 +1136,7 @@ def _combined_dashboard_summary(profile: FixtureProfile) -> dict[str, Any]:
         "above_fold_module_order": profile.above_fold_module_order,
         "below_fold_module_order": profile.below_fold_module_order,
         "provider_summaries": {
-            provider: PROVIDER_FILES[provider] for provider in profile.providers
+            provider: profile.provider_file(provider) for provider in profile.providers
         },
         "source_mode": "synthetic_mock",
         "local_only": True,
@@ -1171,7 +1219,7 @@ def _validate_combined_summary(payload: dict[str, Any], profile: FixtureProfile)
         ],
     )
     summaries = payload.get("provider_summaries")
-    expected = {provider: PROVIDER_FILES[provider] for provider in profile.providers}
+    expected = {provider: profile.provider_file(provider) for provider in profile.providers}
     if summaries != expected:
         raise FixtureValidationError(
             "combined-dashboard-summary.json must reference only enabled provider summary files"

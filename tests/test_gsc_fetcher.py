@@ -254,11 +254,39 @@ def test_real_output_path_resolution_and_explicit_out_override(tmp_path):
 
     assert resolve_output_dir("aluma-seo-geo", None, True) == real_output_dir("aluma-seo-geo")
     assert resolve_output_dir("inn-at-spanish-head", None, True) == real_output_dir("inn-at-spanish-head")
+    assert resolve_output_dir("wc-land-renewal", None, True) == real_output_dir("wc-land-renewal")
     assert resolve_output_dir("aluma-seo-geo", str(explicit), True) == explicit
     assert resolve_output_dir("aluma-seo-geo", str(explicit), False) == explicit
 
     with pytest.raises(ConfigError, match="--out is required"):
         resolve_output_dir("aluma-seo-geo", None, False)
+
+
+def test_wc_land_renewal_gsc_support_files_use_current_paid_search_filename(tmp_path):
+    summary = build_gsc_summary(
+        "wc-land-renewal",
+        "https://example.invalid/",
+        "2026-01-01",
+        "2026-01-02",
+        _sample_gsc_response(),
+    )
+
+    files = write_gsc_dashboard_outputs(tmp_path, summary)
+    validated = validate_gsc_output_dir(tmp_path, "wc-land-renewal")
+
+    assert [path.name for path in files] == [
+        "client-profile.json",
+        "ga4-summary.json",
+        "local-falcon-summary.json",
+        "google-ads-summary.json",
+        "callrail-summary.json",
+        "gsc-summary.json",
+        "combined-dashboard-summary.json",
+    ]
+    assert [path.name for path in validated] == [path.name for path in files]
+    assert not (tmp_path / "google-ads-search-summary.json").exists()
+    combined = json.loads((tmp_path / "combined-dashboard-summary.json").read_text(encoding="utf-8"))
+    assert combined["provider_summaries"]["google_ads_search"] == "google-ads-summary.json"
 
 
 def test_validate_real_output_folder_requires_complete_profile_files(tmp_path):

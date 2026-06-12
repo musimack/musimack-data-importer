@@ -97,6 +97,32 @@ def test_build_inn_at_spanish_head_fixture_is_organic_local_profile(tmp_path):
     assert "lincoln city oceanfront hotel" in local_falcon["grid_metadata"]["keywords_tracked"]
 
 
+def test_build_wc_land_renewal_fixture_uses_current_paid_search_filename(tmp_path):
+    result = build_profile_fixture("wc-land-renewal", tmp_path)
+
+    assert [path.name for path in result.files] == [
+        "client-profile.json",
+        "ga4-summary.json",
+        "gsc-summary.json",
+        "local-falcon-summary.json",
+        "google-ads-summary.json",
+        "callrail-summary.json",
+        "combined-dashboard-summary.json",
+    ]
+    assert not (tmp_path / "google-ads-search-summary.json").exists()
+
+    combined = _read_json(tmp_path / "combined-dashboard-summary.json")
+    assert combined["fixture_profile"] == "wc-land-renewal"
+    assert combined["client_name"] == "WC Land Renewal"
+    assert combined["provider_summaries"] == {
+        "ga4": "ga4-summary.json",
+        "gsc": "gsc-summary.json",
+        "local_falcon": "local-falcon-summary.json",
+        "google_ads_search": "google-ads-summary.json",
+        "callrail": "callrail-summary.json",
+    }
+
+
 def test_build_all_profiles_writes_each_profile_folder(tmp_path):
     results = build_all_profiles(tmp_path)
 

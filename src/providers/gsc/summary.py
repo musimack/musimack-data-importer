@@ -114,7 +114,7 @@ def build_combined_summary(profile_slug: str, source_mode: str = "local_gsc_api"
         "above_fold_module_order": profile.above_fold_module_order,
         "below_fold_module_order": profile.below_fold_module_order,
         "provider_summaries": {
-            provider: PROVIDER_FILES[provider] for provider in profile.providers
+            provider: profile.provider_file(provider) for provider in profile.providers
         },
         "source_mode": source_mode,
         "local_only": True,
@@ -240,7 +240,7 @@ def validate_aluma_combined_summary(payload: dict[str, Any], profile_slug: str) 
         if forbidden.intersection(modules):
             raise GscSummaryError("Aluma combined summary must not enable Ads, LSA, or CallRail")
     else:
-        expected = {provider: PROVIDER_FILES[provider] for provider in profile.providers}
+        expected = {provider: profile.provider_file(provider) for provider in profile.providers}
         if summaries != expected:
             raise GscSummaryError("combined-dashboard-summary.json must reference enabled profile providers only")
         modules = payload.get("modules_enabled")
@@ -267,7 +267,7 @@ def _expected_support_files(profile_slug: str) -> list[str]:
     return [
         "client-profile.json",
         *[
-            PROVIDER_FILES[provider]
+            profile.provider_file(provider)
             for provider in profile.providers
             if provider != "gsc"
         ],
