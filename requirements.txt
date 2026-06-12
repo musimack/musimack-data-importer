@@ -25,3 +25,4 @@ requests-oauthlib==2.0.0
 streamlit>=1.40,<2
 tzdata==2026.2
 urllib3==2.7.0
+uvicorn>=0.38,<1

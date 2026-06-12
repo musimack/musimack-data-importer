@@ -21,6 +21,7 @@ from src.local_config import load_local_operator_config
 from src.operator_console import (
     DashboardLabProfile,
     OperatorConsoleError,
+    expected_dashboard_files,
     guarded_import_sequence,
     load_dashboard_lab_profiles,
     local_falcon_manifest_path,
@@ -39,6 +40,9 @@ PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
     "local_falcon": "local-falcon-summary.json",
+    "google_ads_search": "google-ads-summary.json",
+    "callrail": "callrail-summary.json",
+    "form_fills": "form-fills-summary.json",
 }
 BASE_REQUIRED_DASHBOARD_FILES = [
     "client-profile.json",
@@ -63,6 +67,9 @@ PROVIDER_LABELS = {
     "ga4": "GA4",
     "gsc": "GSC",
     "local_falcon": "Local Falcon",
+    "google_ads_search": "Google Ads Search",
+    "callrail": "CallRail",
+    "form_fills": "Form Fills",
 }
 
 
@@ -323,15 +330,24 @@ def build_action_plan(
 ) -> dict[str, Any]:
     provider_config = {
         provider: _provider_config(local_config, provider)
-        for provider in ("ga4", "gsc", "local_falcon")
+        for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills")
     }
+    provider_actions = [
+        _ga4_action(profile, safe_env=safe_env, local_config=provider_config["ga4"]),
+        _gsc_action(profile, safe_env=safe_env, local_config=provider_config["gsc"]),
+        _local_falcon_action(profile, safe_env=safe_env, local_config=provider_config["local_falcon"]),
+        _google_ads_action(profile, safe_env=safe_env, local_config=provider_config["google_ads_search"]),
+        _callrail_action(profile, local_config=provider_config["callrail"]),
+        _form_fills_action(profile, local_config=provider_config["form_fills"]),
+    ]
     return {
         "profile_slug": profile.slug,
         "guarded_import_sequence": guarded_import_sequence(profile),
         "actions": [
-            _ga4_action(profile, safe_env=safe_env, local_config=provider_config["ga4"]),
-            _gsc_action(profile, safe_env=safe_env, local_config=provider_config["gsc"]),
-            _local_falcon_action(profile, safe_env=safe_env, local_config=provider_config["local_falcon"]),
+            action
+            for action in provider_actions
+            if action["readiness"].get("enabled")
+        ] + [
             _validate_output_action(profile),
             _copy_to_dashboard_lab_action(profile),
         ],
@@ -516,6 +532,178 @@ def _local_falcon_action(
     )
 
 
+def _google_ads_action(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    enabled = "google_ads_search" in profile.data_sources
+    customer_present = _present(safe_env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
+        local_config,
+        ("customer_id", "google_ads_customer_id", "customer_id_configured"),
+    )
+    auth_present = _any_present(
+        local_config,
+        ("oauth_client_secrets", "oauth_token_file", "credentials_configured"),
+    ) or (
+        _present(safe_env.get("GOOGLE_ADS_DEVELOPER_TOKEN"))
+        and _present(safe_env.get("GOOGLE_ADS_OAUTH_CLIENT_SECRETS"))
+        and _present(safe_env.get("GOOGLE_ADS_OAUTH_TOKEN_FILE"))
+    )
+    missing = []
+    if not enabled:
+        missing.append("Google Ads Search is not enabled for this profile")
+    if enabled and not customer_present:
+        missing.append("Google Ads customer id in ignored local config or shell")
+    if enabled and not auth_present:
+        missing.append("Google Ads developer token and local OAuth/client credentials")
+    status = "ready" if enabled and customer_present and auth_present else "blocked_missing_config"
+    blocked_reason = None if status == "ready" else "Google Ads Search needs local read-only API configuration before export."
+    if not enabled:
+        status = "blocked_not_enabled"
+        blocked_reason = "Google Ads Search is not enabled for this profile."
+    return _action(
+        action_id="google-ads-search-read-only-export",
+        label="Export Google Ads Search local-real output",
+        provider="google_ads_search",
+        status=status,
+        blocked_reason=blocked_reason,
+        command=(
+            "\n".join(
+                [
+                    f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output --dry-run",
+                    f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output",
+                    f'python scripts/validate_google_ads_summary.py --input "{profile.importer_output_folder / "google-ads-summary.json"}"',
+                ]
+            )
+            if enabled
+            else ""
+        ),
+        expected_output=str(profile.importer_output_folder / "google-ads-summary.json"),
+        missing_inputs=missing,
+        safety_notes=[
+            "Read-only GoogleAdsService/search reporting only.",
+            "No campaign, budget, bid, keyword, ad, asset, conversion, or account-setting mutations.",
+            "Credential values and customer IDs must stay in ignored local config or environment only.",
+        ],
+        manual_step="Run dry-run first, then run the read-only export only after operator approval.",
+        readiness={
+            "enabled": enabled,
+            "customer_id_configured": customer_present,
+            "local_auth_configured": auth_present,
+            "read_only_exporter_available": True,
+        },
+    )
+
+
+def _callrail_action(
+    profile: DashboardLabProfile,
+    *,
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    enabled = "callrail" in profile.data_sources
+    input_present = _any_present(
+        local_config,
+        ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path"),
+    )
+    missing = []
+    if not enabled:
+        missing.append("CallRail is not enabled for this profile")
+    if enabled and not input_present:
+        missing.append("ignored CallRail calls CSV")
+    status = "ready" if enabled and input_present else "blocked_missing_config"
+    blocked_reason = None if status == "ready" else "CallRail needs an ignored local CSV before aggregate import."
+    if not enabled:
+        status = "blocked_not_enabled"
+        blocked_reason = "CallRail is not enabled for this profile."
+    input_path = f"inputs/local-real/callrail/{profile.slug}/calls.csv"
+    return _action(
+        action_id="callrail-csv-import",
+        label="Import CallRail aggregate local-real output",
+        provider="callrail",
+        status=status,
+        blocked_reason=blocked_reason,
+        command=(
+            "\n".join(
+                [
+                    f'python scripts/diagnose_callrail_export_shape.py --profile {profile.slug} --input "{input_path}"',
+                    f'python scripts/import_callrail_export.py --profile {profile.slug} --input "{input_path}" --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output',
+                    f'python scripts/validate_callrail_summary.py --input "{profile.importer_output_folder / "callrail-summary.json"}"',
+                ]
+            )
+            if enabled
+            else ""
+        ),
+        expected_output=str(profile.importer_output_folder / "callrail-summary.json"),
+        missing_inputs=missing,
+        safety_notes=[
+            "Reads an ignored local CSV only.",
+            "Writes aggregate callrail-summary.json without caller names, phone numbers, recordings, transcripts, or raw rows.",
+            "No CallRail API call is made by this CSV import path.",
+        ],
+        manual_step="Place the CSV under inputs/local-real/callrail/{profile}/, diagnose shape, then import aggregate output.",
+        readiness={
+            "enabled": enabled,
+            "ignored_csv_configured": input_present,
+            "aggregate_importer_available": True,
+        },
+    )
+
+
+def _form_fills_action(
+    profile: DashboardLabProfile,
+    *,
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    enabled = "form_fills" in profile.data_sources
+    input_present = _any_present(
+        local_config,
+        ("input_csv", "forms_csv", "form_fills_csv", "source_csv", "input_path"),
+    )
+    missing = []
+    if not enabled:
+        missing.append("Form Fills are not enabled for this profile")
+    if enabled and not input_present:
+        missing.append("ignored date-only form fills CSV or JSON")
+    status = "ready" if enabled and input_present else "blocked_missing_config"
+    blocked_reason = None if status == "ready" else "Form Fills need an ignored date-only local input before import."
+    if not enabled:
+        status = "blocked_not_enabled"
+        blocked_reason = "Form Fills are not enabled for this profile."
+    input_path = f"inputs/local-real/form-fills/{profile.slug}/form-fills.csv"
+    return _action(
+        action_id="form-fills-date-only-import",
+        label="Import date-only Form Fills local-real output",
+        provider="form_fills",
+        status=status,
+        blocked_reason=blocked_reason,
+        command=(
+            "\n".join(
+                [
+                    f'python scripts/import_form_fills.py --profile {profile.slug} --input "{input_path}" --real-output',
+                    f'python scripts/validate_form_fills_summary.py --input "{profile.importer_output_folder / "form-fills-summary.json"}"',
+                ]
+            )
+            if enabled
+            else ""
+        ),
+        expected_output=str(profile.importer_output_folder / "form-fills-summary.json"),
+        missing_inputs=missing,
+        safety_notes=[
+            "Input must be date-only.",
+            "Names, emails, phone numbers, messages, IP addresses, and raw form payloads are rejected.",
+            "No live API call is made by this local importer.",
+        ],
+        manual_step="Create an ignored date-only form-fill input, import it locally, then validate the summary.",
+        readiness={
+            "enabled": enabled,
+            "date_only_input_configured": input_present,
+            "date_only_importer_available": True,
+        },
+    )
+
+
 def _validate_output_action(profile: DashboardLabProfile) -> dict[str, Any]:
     return _action(
         action_id="validate-local-real-output",
@@ -540,13 +728,10 @@ def _copy_to_dashboard_lab_action(profile: DashboardLabProfile) -> dict[str, Any
     source = profile.importer_output_folder
     destination = profile.dashboard_lab_local_fixture_folder
     command = "\n".join(
-        [
-            f'New-Item -ItemType Directory -Force "{destination}" | Out-Null',
-            f'Copy-Item "{source / "client-profile.json"}" "{destination / "client-profile.json"}" -Force',
-            f'Copy-Item "{source / "ga4-summary.json"}" "{destination / "ga4-summary.json"}" -Force',
-            f'Copy-Item "{source / "gsc-summary.json"}" "{destination / "gsc-summary.json"}" -Force',
-            f'Copy-Item "{source / "combined-dashboard-summary.json"}" "{destination / "combined-dashboard-summary.json"}" -Force',
-            f'Copy-Item "{source / "local-falcon-summary.json"}" "{destination / "local-falcon-summary.json"}" -Force',
+        [f'New-Item -ItemType Directory -Force "{destination}" | Out-Null']
+        + [
+            f'Copy-Item "{source / filename}" "{destination / filename}" -Force'
+            for filename in _expected_dashboard_files_for_profile(profile)
         ]
     )
     return _action(
@@ -805,13 +990,7 @@ def _validation_overall_status(
 
 
 def _expected_dashboard_files_for_profile(profile: DashboardLabProfile) -> list[str]:
-    return [
-        "client-profile.json",
-        "ga4-summary.json",
-        "gsc-summary.json",
-        "combined-dashboard-summary.json",
-        "local-falcon-summary.json",
-    ]
+    return expected_dashboard_files(profile)
 
 
 def _required_dashboard_files_for_profile(profile: DashboardLabProfile) -> list[str]:
@@ -1029,6 +1208,7 @@ def serialize_output_report(profile: DashboardLabProfile, report: Any) -> dict[s
         "folder_exists": report.folder_exists,
         "ok": report.ok,
         "warnings": report.warnings,
+        "expected_files": _expected_dashboard_files_for_profile(profile),
         "files": [
             {
                 "file": item.file,

@@ -26,13 +26,14 @@ BASE_EXPECTED_DASHBOARD_FILES = [
 ]
 EXPECTED_DASHBOARD_FILES = BASE_EXPECTED_DASHBOARD_FILES
 LOCAL_FALCON_MANIFEST_DIR = ROOT / "local-falcon-manifests"
-SUPPORTED_IMPORTER_PROVIDERS = {"ga4", "gsc", "local_falcon", "google_ads_search", "callrail"}
+SUPPORTED_IMPORTER_PROVIDERS = {"ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"}
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
     "local_falcon": "local-falcon-summary.json",
     "google_ads_search": "google-ads-summary.json",
     "callrail": "callrail-summary.json",
+    "form_fills": "form-fills-summary.json",
 }
 PLANNED_PROVIDER_OUTPUT_FILES = {
     "google_ads_search": "google-ads-search-summary.json",
@@ -45,6 +46,7 @@ PROVIDER_LABELS = {
     "google_ads_search": "Google Ads Search",
     "google_lsa": "Google LSA",
     "callrail": "CallRail",
+    "form_fills": "Form Fills",
     "leads": "Leads",
     "content": "Content",
     "strategy": "Strategy",
@@ -58,6 +60,7 @@ PROVIDER_DASHBOARD_LAB_WRITERS = {
     "local_falcon": "Ready",
     "google_ads_search": "Ready",
     "callrail": "Ready",
+    "form_fills": "Ready",
 }
 
 
@@ -925,8 +928,17 @@ def _live_fetch_readiness(
         if not missing and not input_present:
             missing.append("ignored CallRail calls CSV")
         ready = input_present
+    elif provider == "form_fills":
+        input_present = _any_present(
+            local_config,
+            ("input_csv", "forms_csv", "form_fills_csv", "source_csv", "input_path"),
+        )
+        missing = _missing_config_items(local_config)
+        if not missing and not input_present:
+            missing.append("ignored date-only form fills CSV or JSON")
+        ready = input_present
     return {
-        "status": "Ready" if ready else "Local import needs config" if provider == "callrail" else "Live fetch needs config",
+        "status": "Ready" if ready else "Local import needs config" if provider in {"callrail", "form_fills"} else "Live fetch needs config",
         "ready": ready,
         "missing": missing,
     }
@@ -1048,6 +1060,14 @@ def _safe_config_state(
             ),
             "aggregate_importer_available": True,
         }
+    if provider == "form_fills":
+        return {
+            "date_only_input_configured": _any_present(
+                local_config,
+                ("input_csv", "forms_csv", "form_fills_csv", "source_csv", "input_path"),
+            ),
+            "date_only_importer_available": True,
+        }
     return {}
 
 
@@ -1066,6 +1086,8 @@ def _required_config_items(provider: str) -> list[str]:
         ]
     if provider == "callrail":
         return ["ignored local CallRail calls CSV export", "aggregate CallRail importer available locally"]
+    if provider == "form_fills":
+        return ["ignored local date-only form fills CSV or JSON", "date-only Form Fills importer available locally"]
     return []
 
 
@@ -1158,6 +1180,13 @@ def _suggested_command(profile: DashboardLabProfile, provider: str, matrix_row: 
                 f"python scripts/diagnose_callrail_export_shape.py --profile {profile.slug} --input inputs/local-real/callrail/{profile.slug}/calls.csv",
                 f"python scripts/import_callrail_export.py --profile {profile.slug} --input inputs/local-real/callrail/{profile.slug}/calls.csv --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output",
                 f"python scripts/validate_callrail_summary.py --input exports/local-real/dashboard-lab/{profile.slug}/callrail-summary.json",
+            ]
+        )
+    if provider == "form_fills":
+        return "\n".join(
+            [
+                f"python scripts/import_form_fills.py --profile {profile.slug} --input inputs/local-real/form-fills/{profile.slug}/form-fills.csv --real-output",
+                f"python scripts/validate_form_fills_summary.py --input exports/local-real/dashboard-lab/{profile.slug}/form-fills-summary.json",
             ]
         )
     return ""

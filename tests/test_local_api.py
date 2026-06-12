@@ -125,6 +125,85 @@ def test_profile_detail_includes_planned_capabilities_without_fetch_actions(tmp_
     assert next(item for item in planned if item["provider"] == "callrail")["command"] == ""
 
 
+def test_profile_detail_includes_current_enabled_provider_files_and_actions(tmp_path):
+    registry = _registry(
+        tmp_path,
+        capabilities=[
+            {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+            {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+            {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "Represented through local-falcon-summary.json"},
+            {"key": "google_ads_search", "label": "Google Ads Search", "status": "enabled", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-summary.json"},
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json"},
+        ],
+        data_sources=["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"],
+    )
+    source = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    for filename in (
+        "client-profile.json",
+        "combined-dashboard-summary.json",
+        "ga4-summary.json",
+        "gsc-summary.json",
+        "local-falcon-summary.json",
+        "google-ads-summary.json",
+        "callrail-summary.json",
+        "form-fills-summary.json",
+    ):
+        _write_json(source / filename, {"schema_version": f"{filename}.v1", "hidden": "do-not-return"})
+    _write_json(source / "ga4-snapshot.json", {"schema_version": "ga4_snapshot.v1", "hidden": "do-not-return"})
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={
+                "MUSIMACK_GA4_PROPERTY_ID": "property-123",
+                "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS": "C:/private/client-secret.json",
+                "MUSIMACK_GA4_OAUTH_TOKEN_FILE": "C:/private/token.json",
+                "MUSIMACK_GSC_OAUTH_CLIENT_SECRETS": "C:/private/client-secret.json",
+                "MUSIMACK_GSC_OAUTH_TOKEN_FILE": "C:/private/gsc-token.json",
+                "GOOGLE_ADS_DEVELOPER_TOKEN": "developer-token-secret",
+                "GOOGLE_ADS_OAUTH_CLIENT_SECRETS": "C:/private/google-ads-client-secret.json",
+                "GOOGLE_ADS_OAUTH_TOKEN_FILE": "C:/private/google-ads-token.json",
+                "MUSIMACK_GOOGLE_ADS_CUSTOMER_ID": "9999999999",
+                "LOCAL_FALCON_API_KEY": "local-falcon-secret",
+            },
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile")
+    preview = client.get("/api/profiles/demo-profile/actions/copy-to-dashboard-lab/preview")
+
+    assert response.status_code == 200
+    assert preview.status_code == 200
+    payload = response.json()
+    expected_files = [
+        "client-profile.json",
+        "ga4-summary.json",
+        "gsc-summary.json",
+        "combined-dashboard-summary.json",
+        "local-falcon-summary.json",
+        "google-ads-summary.json",
+        "callrail-summary.json",
+        "form-fills-summary.json",
+    ]
+    assert payload["output_status"]["expected_files"] == expected_files
+    assert [item["file"] for item in preview.json()["items"]] == expected_files
+    assert "ga4-snapshot.json" not in payload["output_status"]["expected_files"]
+    assert "ga4-snapshot.json" not in [item["file"] for item in preview.json()["items"]]
+    assert _action(payload["action_plan"], "google-ads-search-read-only-export")["provider"] == "google_ads_search"
+    assert _action(payload["action_plan"], "callrail-csv-import")["provider"] == "callrail"
+    assert _action(payload["action_plan"], "form-fills-date-only-import")["provider"] == "form_fills"
+    serialized = json.dumps({"profile": payload, "preview": preview.json()})
+    assert "do-not-return" not in serialized
+    assert "property-123" not in serialized
+    assert "9999999999" not in serialized
+    assert "developer-token-secret" not in serialized
+    assert "local-falcon-secret" not in serialized
+    assert "C:/private" not in serialized
+    assert "configured_secret_value" not in serialized
+
+
 def test_unknown_profile_returns_404(tmp_path):
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
 
@@ -916,6 +995,43 @@ def _local_profile_config(tmp_path: Path) -> Path:
                                 "manifest_path": str(tmp_path / "private-manifest.json"),
                                 "api_key_present": True,
                                 "private_note": "configured_secret_value",
+                            },
+                        }
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return local_config
+
+
+def _full_provider_local_config(tmp_path: Path) -> Path:
+    local_config = tmp_path / "dashboard_lab_profiles.local.json"
+    local_config.write_text(
+        json.dumps(
+            {
+                "profiles": {
+                    "demo-profile": {
+                        "providers": {
+                            "ga4": {"property_id": "123456789", "credentials_configured": True},
+                            "gsc": {"site_url": "https://private-property.example.test/", "credentials_configured": True},
+                            "local_falcon": {
+                                "manifest_path": str(tmp_path / "private-manifest.json"),
+                                "api_key_present": True,
+                                "private_note": "configured_secret_value",
+                            },
+                            "google_ads_search": {
+                                "customer_id": "9999999999",
+                                "credentials_configured": True,
+                                "oauth_client_secrets": "C:/private/google-ads-client-secret.json",
+                                "oauth_token_file": "C:/private/google-ads-token.json",
+                            },
+                            "callrail": {
+                                "input_csv": str(tmp_path / "private-callrail.csv"),
+                            },
+                            "form_fills": {
+                                "input_csv": str(tmp_path / "private-form-fills.csv"),
                             },
                         }
                     }
