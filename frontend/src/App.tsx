@@ -30,6 +30,7 @@ type OutputStatus = {
   folder_exists: boolean;
   ok: boolean;
   warnings: string[];
+  expected_files: string[];
   files: OutputFileStatus[];
 };
 
@@ -148,6 +149,52 @@ type LastActions = {
   skipped_malformed: number;
 };
 
+type ProfileCapability = {
+  key: string;
+  label: string;
+  status: string;
+  kind: string;
+  provider: string;
+  expected_output_file: string;
+  notes: string;
+};
+
+type ProviderSetupChecklistItem = {
+  provider_key: string;
+  provider_label: string;
+  expected_output_file: string;
+  output_exists: boolean;
+  local_output_state: string;
+  dashboard_lab_writer_status: string;
+  required_config_items: string[];
+  local_config_file_present: boolean;
+  local_config_path_label: string;
+  local_config_valid: boolean;
+  local_config_error: string;
+  config_state: Record<string, boolean>;
+  config_visible: boolean;
+  missing_config_details: string[];
+  safe_next_action: string;
+  blocked_reason: string;
+  status: string;
+  severity: string;
+  capability_status: string;
+  supported_in_console: boolean;
+  validation_ready: string;
+  dashboard_copy_ready: string;
+  validate_readiness: string;
+  dashboard_copy_readiness: string;
+};
+
+type GuardedImportPhase = {
+  phase: string;
+  label: string;
+  providers: Array<Record<string, string | boolean>>;
+  network_allowed: boolean;
+  copy_allowed: boolean;
+  notes: string[];
+};
+
 type ProfileSummary = {
   slug: string;
   display_name: string;
@@ -156,7 +203,9 @@ type ProfileSummary = {
   service_model: string;
   dashboard_lab_route: string;
   enabled_providers: string[];
+  capabilities: ProfileCapability[];
   provider_readiness: ProviderReadiness[];
+  provider_setup_checklist: ProviderSetupChecklistItem[];
 };
 
 type ProfileDetail = ProfileSummary & {
@@ -166,6 +215,10 @@ type ProfileDetail = ProfileSummary & {
   };
   output_status: OutputStatus;
   action_plan: ActionPlan;
+  guarded_import_sequence: {
+    profile_slug: string;
+    phases: GuardedImportPhase[];
+  };
   last_actions: LastActions;
   safety: {
     read_only: boolean;
@@ -311,60 +364,14 @@ function App() {
               </div>
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
-              <dl className="profile-grid">
-                <div>
-                  <dt>Vertical</dt>
-                  <dd>{detail.vertical}</dd>
-                </div>
-                <div>
-                  <dt>Service model</dt>
-                  <dd>{detail.service_model}</dd>
-                </div>
-                <div>
-                  <dt>Local-real output</dt>
-                  <dd>{detail.paths.local_real_output_folder}</dd>
-                </div>
-                <div>
-                  <dt>Dashboard-lab local fixture</dt>
-                  <dd>{detail.paths.dashboard_lab_local_fixture_folder}</dd>
-                </div>
-              </dl>
+              <OnboardingOverview detail={detail} />
 
               <LastActionSummary lastActions={detail.last_actions} />
 
-              <h3>Data Source Readiness</h3>
-              <div className="readiness-grid">
-                {detail.provider_readiness.map((provider) => (
-                  <article className="readiness-card" key={provider.provider}>
-                    <div className="card-heading">
-                      <h4>{provider.label}</h4>
-                      <span className={provider.config_ready ? 'badge ok' : 'badge warn'}>
-                        {provider.config_ready ? 'Ready' : 'Needs config'}
-                      </span>
-                    </div>
-                    <dl>
-                      <div>
-                        <dt>Enabled</dt>
-                        <dd>{yesNo(provider.enabled)}</dd>
-                      </div>
-                      <div>
-                        <dt>Credentials</dt>
-                        <dd>{yesNo(provider.credentials_ready)}</dd>
-                      </div>
-                      <div>
-                        <dt>Expected file</dt>
-                        <dd>{provider.expected_output_file}</dd>
-                      </div>
-                      <div>
-                        <dt>Output exists</dt>
-                        <dd>{yesNo(provider.output_file_exists)}</dd>
-                      </div>
-                    </dl>
-                  </article>
-                ))}
-              </div>
+              <ProviderChecklist detail={detail} />
 
               <h3>Output Folder Status</h3>
+              <ExpectedFilesPanel outputStatus={detail.output_status} />
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -440,7 +447,8 @@ function App() {
                   <p>
                     Copies only expected JSON fixture files from <code>{copyPreview?.source_folder ?? detail.paths.local_real_output_folder}</code>{' '}
                     into <code>{copyPreview?.destination_folder ?? detail.paths.dashboard_lab_local_fixture_folder}</code>.
-                    No provider calls, no portal action, and never committed <code>public/fixtures</code>.
+                    No provider calls, no portal action, no <code>ga4-snapshot.json</code>, and never committed{' '}
+                    <code>public/fixtures</code>.
                   </p>
                 </div>
                 {copyPreview ? <CopyPreviewView copyPreview={copyPreview} /> : <p>Loading copy preview...</p>}
@@ -483,73 +491,11 @@ function App() {
                 {actionHistory ? <RunHistoryView history={actionHistory} /> : <p>Loading recent actions...</p>}
               </section>
 
-              <h3>Action Plan</h3>
-              <div className="action-grid">
-                {detail.action_plan.actions.map((action) => (
-                  <article className="action-card" key={action.id}>
-                    <div className="card-heading">
-                      <div>
-                        <h4>{action.label}</h4>
-                        <p>{providerLabel(action.provider)}</p>
-                      </div>
-                      <span className={statusClass(action.status)}>{statusLabel(action.status)}</span>
-                    </div>
-
-                    {action.blocked_reason ? (
-                      <p className="blocked-reason">
-                        <strong>Blocked:</strong> {action.blocked_reason}
-                      </p>
-                    ) : null}
-
-                    {action.missing_inputs.length ? (
-                      <div className="mini-section">
-                        <h5>Missing Inputs</h5>
-                        <ul>
-                          {action.missing_inputs.map((input) => (
-                            <li key={input}>{input}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    <dl className="action-meta">
-                      <div>
-                        <dt>Expected output</dt>
-                        <dd>{action.expected_output}</dd>
-                      </div>
-                      <div>
-                        <dt>Manual step</dt>
-                        <dd>{action.manual_step}</dd>
-                      </div>
-                    </dl>
-
-                    {action.command ? (
-                      <div className="command-block">
-                        <div className="command-heading">
-                          <span>Preview command</span>
-                          <button
-                            type="button"
-                            className="copy-button"
-                            onClick={() => copyCommand(action.id, action.command, setCopiedActionId)}
-                          >
-                            {copiedActionId === action.id ? 'Copied' : 'Copy command'}
-                          </button>
-                        </div>
-                        <pre>{action.command}</pre>
-                      </div>
-                    ) : null}
-
-                    <div className="mini-section">
-                      <h5>Safety Notes</h5>
-                      <ul>
-                        {action.safety_notes.map((note) => (
-                          <li key={note}>{note}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </article>
-                ))}
-              </div>
+              <GroupedActionPlan
+                actions={detail.action_plan.actions}
+                copiedActionId={copiedActionId}
+                setCopiedActionId={setCopiedActionId}
+              />
             </>
           ) : (
             <div className="empty-state">
@@ -560,6 +506,496 @@ function App() {
       </div>
     </main>
   );
+}
+
+const PROVIDER_ORDER = [
+  'ga4',
+  'gsc',
+  'local_falcon',
+  'google_ads_search',
+  'callrail',
+  'form_fills',
+  'profile',
+  'dashboard_lab',
+];
+
+const STANDARD_PROVIDER_KEYS = ['ga4', 'gsc', 'local_falcon', 'google_ads_search', 'callrail', 'form_fills'];
+
+const PROVIDER_EXPECTED_FILES: Record<string, string> = {
+  ga4: 'ga4-summary.json',
+  gsc: 'gsc-summary.json',
+  local_falcon: 'local-falcon-summary.json',
+  google_ads_search: 'google-ads-summary.json',
+  callrail: 'callrail-summary.json',
+  form_fills: 'form-fills-summary.json',
+};
+
+const PROVIDER_SAFETY_NOTES: Record<string, string> = {
+  ga4: 'Sanitized GA4 summary output for dashboard-lab; raw snapshot output is not copied to dashboard-lab fixtures.',
+  gsc: 'Search Console summary output only; no raw query payloads or OAuth values are shown here.',
+  local_falcon: 'Local fixture summary for source-aware visibility where available; API keys and report manifests stay local.',
+  google_ads_search: 'Read-only Google Ads Search reporting only; no campaign, budget, bid, keyword, ad, asset, conversion, or account mutations.',
+  callrail: 'Aggregate CallRail summary only; no caller names, phone numbers, recordings, transcripts, or raw rows.',
+  form_fills: 'Date-only conversion counts; names, emails, phone numbers, messages, IPs, and form payloads are not allowed.',
+  profile: 'Validates local-real output metadata without returning raw fixture payloads.',
+  dashboard_lab: 'Guarded copy targets dashboard-lab public/local-fixtures only and excludes ga4-snapshot.json.',
+};
+
+function OnboardingOverview({ detail }: { detail: ProfileDetail }) {
+  const providerCount = detail.provider_setup_checklist.length || detail.provider_readiness.length;
+  const outputCount = detail.output_status.files.filter((file) => file.exists).length;
+  const expectedCount = detail.output_status.expected_files.length || detail.output_status.files.length;
+  const enabledProviders = detail.enabled_providers.map(providerLabel).join(', ');
+
+  return (
+    <section className="onboarding-panel" aria-label="Profile onboarding overview">
+      <div className="checklist-heading">
+        <div>
+          <h3>Onboarding Checklist</h3>
+          <p>
+            Read left to right: profile basics, ignored local config, credentials or local inputs, provider outputs,
+            validation, then guarded dashboard-lab copy.
+          </p>
+        </div>
+        <span className="badge neutral">{providerCount} provider steps</span>
+      </div>
+      <div className="phase-strip" aria-label="Onboarding phases">
+        <PhaseStep title="1. Profile basics" detail={`${detail.vertical} · ${detail.service_model}`} ready />
+        <PhaseStep title="2. Local config" detail="Ignored local env/config only" ready={detail.safety.local_only} />
+        <PhaseStep title="3. Credentials or inputs" detail="Presence checks only" ready />
+        <PhaseStep title="4. Provider outputs" detail={`${outputCount} of ${expectedCount} files exist`} ready={detail.output_status.ok} />
+        <PhaseStep title="5. Validation" detail="Reads local-real metadata" ready={Boolean(detail.last_actions.last_validation)} />
+        <PhaseStep title="6. Guarded copy" detail="Allowlisted summaries only" ready={Boolean(detail.last_actions.last_copy)} />
+      </div>
+      <dl className="profile-grid">
+        <div>
+          <dt>Enabled providers</dt>
+          <dd>{enabledProviders || 'No provider sources enabled'}</dd>
+        </div>
+        <div>
+          <dt>Dashboard-lab route</dt>
+          <dd>{detail.dashboard_lab_route}</dd>
+        </div>
+        <div>
+          <dt>Local-real output</dt>
+          <dd>{detail.paths.local_real_output_folder}</dd>
+        </div>
+        <div>
+          <dt>Dashboard-lab local fixture</dt>
+          <dd>{detail.paths.dashboard_lab_local_fixture_folder}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function PhaseStep({ title, detail, ready }: { title: string; detail: string; ready: boolean }) {
+  return (
+    <article className={ready ? 'phase-step ready' : 'phase-step'}>
+      <strong>{title}</strong>
+      <span>{detail}</span>
+    </article>
+  );
+}
+
+function ProviderChecklist({ detail }: { detail: ProfileDetail }) {
+  const providerReadiness = new Map(detail.provider_readiness.map((provider) => [provider.provider, provider]));
+  const sourceChecklist = detail.provider_setup_checklist.length
+    ? detail.provider_setup_checklist
+    : detail.provider_readiness.map(readinessToChecklistItem);
+  const seenProviders = new Set(sourceChecklist.map((item) => item.provider_key));
+  const catalogFallbacks = STANDARD_PROVIDER_KEYS.filter((provider) => !seenProviders.has(provider)).map((provider) =>
+    disabledProviderChecklistItem(provider),
+  );
+  const checklist = [...sourceChecklist, ...catalogFallbacks];
+  const sortedChecklist = [...checklist].sort(
+    (a, b) => providerSortIndex(a.provider_key) - providerSortIndex(b.provider_key),
+  );
+
+  return (
+    <section className="provider-checklist" aria-label="Provider onboarding checklist">
+      <div className="checklist-heading">
+        <div>
+          <h3>Provider Checklist</h3>
+          <p>
+            Each card shows readiness without exposing secret values, customer IDs, raw local config, or provider rows.
+          </p>
+        </div>
+      </div>
+      <div className="provider-grid">
+        {sortedChecklist.map((item) => (
+          <ProviderChecklistCard
+            key={item.provider_key}
+            item={item}
+            readiness={providerReadiness.get(item.provider_key)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProviderChecklistCard({
+  item,
+  readiness,
+}: {
+  item: ProviderSetupChecklistItem;
+  readiness: ProviderReadiness | undefined;
+}) {
+  const configItems = Object.entries(item.config_state);
+  const configReady = readiness?.config_ready ?? (item.status === 'ready' || item.status === 'output_available');
+  const outputReady = readiness?.output_file_exists ?? item.output_exists;
+
+  return (
+    <article className="provider-card">
+      <div className="card-heading">
+        <div>
+          <h4>{item.provider_label}</h4>
+          <p>{PROVIDER_SAFETY_NOTES[item.provider_key] ?? 'Local dashboard summary output only.'}</p>
+        </div>
+        <span className={checklistStatusClass(item.status, item.severity)}>{checklistStatusLabel(item.status)}</span>
+      </div>
+
+      <div className="readiness-rail" aria-label={`${item.provider_label} readiness`}>
+        <ReadinessPip label="Config" ready={configReady || item.local_config_file_present} />
+        <ReadinessPip label="Credentials / input" ready={readiness?.credentials_ready ?? configReady} />
+        <ReadinessPip label="Output" ready={outputReady} />
+        <ReadinessPip label="Validate" ready={item.validate_readiness === 'Ready'} />
+        <ReadinessPip label="Copy" ready={item.dashboard_copy_readiness === 'Ready'} />
+      </div>
+
+      <dl className="provider-meta">
+        <div>
+          <dt>Expected summary</dt>
+          <dd>{item.expected_output_file || readiness?.expected_output_file || 'No provider summary expected'}</dd>
+        </div>
+        <div>
+          <dt>Local output</dt>
+          <dd>{item.local_output_state || (outputReady ? 'Output exists' : 'Missing')}</dd>
+        </div>
+        <div>
+          <dt>Dashboard writer</dt>
+          <dd>{item.dashboard_lab_writer_status || 'Not reported'}</dd>
+        </div>
+        <div>
+          <dt>Copy readiness</dt>
+          <dd>{item.dashboard_copy_readiness || 'Not reported'}</dd>
+        </div>
+      </dl>
+
+      {item.required_config_items.length ? (
+        <div className="mini-section">
+          <h5>Setup needs</h5>
+          <div className="chip-row">
+            {item.required_config_items.map((requiredItem) => (
+              <span className="setup-chip" key={requiredItem}>
+                {requiredItem}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {configItems.length && item.config_visible ? (
+        <div className="mini-section">
+          <h5>Local readiness checks</h5>
+          <ul className="status-list">
+            {configItems.map(([key, value]) => (
+              <li key={key}>
+                <span className={value ? 'tiny-dot ok' : 'tiny-dot warn'} />
+                <span>{humanizeKey(key)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {item.missing_config_details.length ? (
+        <div className="mini-section">
+          <h5>Missing</h5>
+          <ul>
+            {item.missing_config_details.map((missing) => (
+              <li key={missing}>{missing}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <p className={item.blocked_reason ? 'blocked-reason' : 'next-action'}>
+        <strong>{item.blocked_reason ? 'Blocked: ' : 'Next: '}</strong>
+        {item.blocked_reason || item.safe_next_action}
+      </p>
+    </article>
+  );
+}
+
+function ExpectedFilesPanel({ outputStatus }: { outputStatus: OutputStatus }) {
+  const expectedFiles = mergeExpectedFiles(
+    outputStatus.expected_files.length ? outputStatus.expected_files : outputStatus.files.map((file) => file.file),
+  );
+  return (
+    <section className="expected-files-panel" aria-label="Expected dashboard-lab summary files">
+      <div>
+        <h4>Expected dashboard-lab summaries</h4>
+        <p>
+          Guarded copy uses this allowlist of dashboard summary files. <code>ga4-snapshot.json</code> is intentionally
+          excluded from dashboard-lab fixture copy.
+        </p>
+      </div>
+      <div className="file-chip-row">
+        {expectedFiles.map((file) => (
+          <span className={file === 'ga4-snapshot.json' ? 'file-chip excluded' : 'file-chip'} key={file}>
+            {file}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GroupedActionPlan({
+  actions,
+  copiedActionId,
+  setCopiedActionId,
+}: {
+  actions: ActionPlanItem[];
+  copiedActionId: string;
+  setCopiedActionId: (actionId: string) => void;
+}) {
+  const groups = groupActionsByProvider(actions);
+  return (
+    <section className="action-plan-panel" aria-label="Grouped action plan">
+      <div className="checklist-heading">
+        <div>
+          <h3>Provider Action Plan</h3>
+          <p>
+            Commands are copyable guidance for operator-run local workflows. The console only exposes guarded validation
+            and dashboard-lab copy actions.
+          </p>
+        </div>
+      </div>
+      <div className="action-group-stack">
+        {groups.map(([provider, providerActions]) => (
+          <section className="action-group" key={provider} aria-label={`${providerLabel(provider)} action plan`}>
+            <div className="action-group-heading">
+              <div>
+                <h4>{providerLabel(provider)}</h4>
+                <p>{PROVIDER_SAFETY_NOTES[provider] ?? 'Local workflow guidance only.'}</p>
+              </div>
+            </div>
+            <div className="action-grid">
+              {providerActions.map((action) => (
+                <ActionCard
+                  action={action}
+                  copiedActionId={copiedActionId}
+                  setCopiedActionId={setCopiedActionId}
+                  key={action.id}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ActionCard({
+  action,
+  copiedActionId,
+  setCopiedActionId,
+}: {
+  action: ActionPlanItem;
+  copiedActionId: string;
+  setCopiedActionId: (actionId: string) => void;
+}) {
+  return (
+    <article className="action-card">
+      <div className="card-heading">
+        <div>
+          <h4>{action.label}</h4>
+          <p>{providerLabel(action.provider)}</p>
+        </div>
+        <span className={statusClass(action.status)}>{statusLabel(action.status)}</span>
+      </div>
+
+      {action.blocked_reason ? (
+        <p className="blocked-reason">
+          <strong>Blocked:</strong> {action.blocked_reason}
+        </p>
+      ) : null}
+
+      {action.missing_inputs.length ? (
+        <div className="mini-section">
+          <h5>Missing Inputs</h5>
+          <ul>
+            {action.missing_inputs.map((input) => (
+              <li key={input}>{input}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <dl className="action-meta">
+        <div>
+          <dt>Expected output</dt>
+          <dd>{action.expected_output}</dd>
+        </div>
+        <div>
+          <dt>Manual step</dt>
+          <dd>{action.manual_step}</dd>
+        </div>
+      </dl>
+
+      {action.command ? (
+        <div className="command-block">
+          <div className="command-heading">
+            <span>Copyable operator command</span>
+            <button
+              type="button"
+              className="copy-button"
+              onClick={() => copyCommand(action.id, action.command, setCopiedActionId)}
+            >
+              {copiedActionId === action.id ? 'Copied' : 'Copy command'}
+            </button>
+          </div>
+          <pre>{action.command}</pre>
+        </div>
+      ) : null}
+
+      <div className="mini-section">
+        <h5>Safety Notes</h5>
+        <ul>
+          {action.safety_notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      </div>
+    </article>
+  );
+}
+
+function ReadinessPip({ label, ready }: { label: string; ready: boolean }) {
+  return (
+    <span className={ready ? 'readiness-pip ok' : 'readiness-pip warn'}>
+      <span aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+function readinessToChecklistItem(provider: ProviderReadiness): ProviderSetupChecklistItem {
+  return {
+    provider_key: provider.provider,
+    provider_label: provider.label,
+    expected_output_file: provider.expected_output_file,
+    output_exists: provider.output_file_exists,
+    local_output_state: provider.output_file_exists ? 'Output exists' : 'Missing output',
+    dashboard_lab_writer_status: 'Available',
+    required_config_items: [],
+    local_config_file_present: provider.readiness.config_present,
+    local_config_path_label: '',
+    local_config_valid: true,
+    local_config_error: '',
+    config_state: {
+      config_present: provider.readiness.config_present,
+      credentials_present: provider.readiness.credentials_present,
+    },
+    config_visible: true,
+    missing_config_details: provider.config_ready ? [] : ['Local config or credentials need attention'],
+    safe_next_action: provider.output_file_exists ? 'Validate existing output or copy when ready.' : 'Create local output, then validate.',
+    blocked_reason: provider.config_ready ? '' : 'Local provider config is not complete.',
+    status: provider.config_ready ? 'ready' : 'needs_config',
+    severity: provider.config_ready ? 'ok' : 'warning',
+    capability_status: provider.enabled ? 'enabled' : 'planned',
+    supported_in_console: true,
+    validation_ready: provider.output_file_exists ? 'Ready' : 'Not available yet',
+    dashboard_copy_ready: provider.output_file_exists ? 'Ready' : 'Not available yet',
+    validate_readiness: provider.output_file_exists ? 'Ready' : 'Not available yet',
+    dashboard_copy_readiness: provider.output_file_exists ? 'Ready' : 'Not available yet',
+  };
+}
+
+function disabledProviderChecklistItem(provider: string): ProviderSetupChecklistItem {
+  return {
+    provider_key: provider,
+    provider_label: providerLabel(provider),
+    expected_output_file: PROVIDER_EXPECTED_FILES[provider] ?? '',
+    output_exists: false,
+    local_output_state: 'Not enabled for this profile',
+    dashboard_lab_writer_status: 'Available when enabled',
+    required_config_items: [],
+    local_config_file_present: false,
+    local_config_path_label: '',
+    local_config_valid: true,
+    local_config_error: '',
+    config_state: {},
+    config_visible: false,
+    missing_config_details: [],
+    safe_next_action: 'Enable this provider in the profile registry before preparing local output.',
+    blocked_reason: 'Provider is not enabled for this profile.',
+    status: 'not_enabled',
+    severity: 'neutral',
+    capability_status: 'planned',
+    supported_in_console: true,
+    validation_ready: 'Not available yet',
+    dashboard_copy_ready: 'Not available yet',
+    validate_readiness: 'Not available yet',
+    dashboard_copy_readiness: 'Not available yet',
+  };
+}
+
+function groupActionsByProvider(actions: ActionPlanItem[]) {
+  const grouped = new Map<string, ActionPlanItem[]>();
+  for (const action of actions) {
+    const current = grouped.get(action.provider) ?? [];
+    current.push(action);
+    grouped.set(action.provider, current);
+  }
+  return [...grouped.entries()].sort(([a], [b]) => providerSortIndex(a) - providerSortIndex(b));
+}
+
+function providerSortIndex(provider: string) {
+  const index = PROVIDER_ORDER.indexOf(provider);
+  return index === -1 ? PROVIDER_ORDER.length : index;
+}
+
+function mergeExpectedFiles(files: string[]) {
+  const merged = [
+    'client-profile.json',
+    'combined-dashboard-summary.json',
+    ...files,
+  ];
+  return [...new Set(merged)].filter((file) => file !== 'ga4-snapshot.json');
+}
+
+function checklistStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    ready: 'Ready',
+    output_available: 'Output exists',
+    ready_to_fetch: 'Ready for local run',
+    needs_config: 'Needs config',
+    not_enabled: 'Not enabled',
+    planned: 'Planned',
+    capability: 'Capability',
+  };
+  return labels[status] ?? statusLabel(status);
+}
+
+function checklistStatusClass(status: string, severity: string) {
+  if (status === 'ready' || status === 'output_available' || severity === 'ok') {
+    return 'badge ok';
+  }
+  if (status === 'ready_to_fetch' || status === 'planned' || status === 'capability' || status === 'not_enabled') {
+    return 'badge neutral';
+  }
+  return 'badge warn';
+}
+
+function humanizeKey(value: string) {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function yesNo(value: boolean) {
@@ -657,6 +1093,9 @@ function providerLabel(provider: string) {
     ga4: 'GA4',
     gsc: 'GSC',
     local_falcon: 'Local Falcon',
+    google_ads_search: 'Google Ads Search',
+    callrail: 'CallRail',
+    form_fills: 'Form Fills',
     profile: 'Profile Output',
     dashboard_lab: 'Dashboard Lab',
   };
@@ -667,6 +1106,12 @@ function actionLabel(actionId: string) {
   const labels: Record<string, string> = {
     'validate-output': 'Validate output',
     'copy-to-dashboard-lab': 'Copy to dashboard-lab',
+    'ga4-snapshot': 'GA4 summary workflow',
+    'gsc-fetch': 'GSC local-real fetch',
+    'local-falcon-read-only-fetch': 'Local Falcon read-only fetch',
+    'google-ads-search-read-only-export': 'Google Ads Search read-only export',
+    'callrail-csv-import': 'CallRail CSV import',
+    'form-fills-date-only-import': 'Form Fills date-only import',
   };
   return labels[actionId] ?? actionId;
 }

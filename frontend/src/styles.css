@@ -193,6 +193,82 @@ code {
   padding: 12px;
 }
 
+.onboarding-panel,
+.provider-checklist,
+.action-plan-panel,
+.expected-files-panel {
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  margin: 18px 0 24px;
+  padding: 14px;
+}
+
+.onboarding-panel {
+  background: #fbfcfd;
+}
+
+.checklist-heading,
+.action-group-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.checklist-heading h3,
+.checklist-heading p,
+.action-group-heading h4,
+.action-group-heading p,
+.expected-files-panel h4,
+.expected-files-panel p {
+  margin: 0;
+}
+
+.checklist-heading p,
+.action-group-heading p,
+.expected-files-panel p {
+  color: #485160;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.phase-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.phase-step {
+  background: #ffffff;
+  border: 1px solid #e2e7ee;
+  border-radius: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.phase-step.ready {
+  border-color: #b9d9c2;
+}
+
+.phase-step strong,
+.phase-step span {
+  display: block;
+}
+
+.phase-step strong {
+  color: #253043;
+  font-size: 13px;
+}
+
+.phase-step span {
+  color: #687181;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 4px;
+}
+
 dt {
   color: #687181;
   font-size: 12px;
@@ -211,16 +287,142 @@ dd {
   margin: 12px 0 24px;
 }
 
-.readiness-card {
+.readiness-card,
+.provider-card {
   border: 1px solid #dfe3ea;
   border-radius: 8px;
   padding: 14px;
 }
 
-.readiness-card h4 {
+.readiness-card h4,
+.provider-card h4 {
   font-size: 16px;
   letter-spacing: 0;
   margin: 0;
+}
+
+.provider-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.provider-card {
+  display: grid;
+  gap: 14px;
+}
+
+.provider-card .card-heading p {
+  color: #687181;
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 4px 0 0;
+}
+
+.readiness-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.readiness-pip {
+  align-items: center;
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 999px;
+  color: #485160;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  padding: 6px 9px;
+}
+
+.readiness-pip > span {
+  border-radius: 999px;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.readiness-pip.ok > span,
+.tiny-dot.ok {
+  background: #2b8a4b;
+}
+
+.readiness-pip.warn > span,
+.tiny-dot.warn {
+  background: #c6951a;
+}
+
+.provider-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.chip-row,
+.file-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setup-chip,
+.file-chip {
+  background: #f3f5f8;
+  border: 1px solid #d7dee8;
+  border-radius: 999px;
+  color: #394352;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 9px;
+}
+
+.file-chip.excluded {
+  background: #fff6dc;
+  border-color: #dfc477;
+  color: #6b520b;
+}
+
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.status-list li {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.tiny-dot {
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
+.next-action {
+  background: #eef4fb;
+  border: 1px solid #bfd1e5;
+  border-radius: 8px;
+  color: #254e75;
+  line-height: 1.45;
+  margin: 0;
+  padding: 10px;
+}
+
+.expected-files-panel {
+  align-items: flex-start;
+  background: #f8fafb;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.1fr);
 }
 
 .readiness-card dl {
@@ -290,6 +492,21 @@ tr:last-child td {
   gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 12px;
+}
+
+.action-group-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.action-group {
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.action-group .action-grid {
+  margin-top: 0;
 }
 
 .validation-panel {
@@ -531,8 +748,11 @@ pre {
   .workspace,
   .profile-grid,
   .readiness-grid,
+  .provider-grid,
   .action-grid,
-  .summary-grid {
+  .summary-grid,
+  .phase-strip,
+  .expected-files-panel {
     grid-template-columns: 1fr;
   }
 
