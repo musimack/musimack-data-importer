@@ -57,7 +57,7 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert musimack.domain == "musimackmarketing.com"
     assert musimack.data_sources == ["ga4", "gsc", "local_falcon"]
     assert wc.display_name == "WC Land Renewal"
-    assert wc.data_sources == ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail"]
+    assert wc.data_sources == ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"]
     assert _capability(wc, "google_ads_search").status == "enabled"
     assert _capability(wc, "google_ads_search").expected_output_file == "google-ads-summary.json"
     assert _capability(wc, "callrail").status == "enabled"
@@ -70,6 +70,7 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
         "local-falcon-summary.json",
         "google-ads-summary.json",
         "callrail-summary.json",
+        "form-fills-summary.json",
     ]
     assert tattoo.importer_output_folder.as_posix().endswith("exports/local-real/dashboard-lab/portland-tattoo-co")
     assert {profile.domain for profile in profiles} >= {

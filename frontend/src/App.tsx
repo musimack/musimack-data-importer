@@ -364,138 +364,91 @@ function App() {
               </div>
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
-              <OnboardingOverview detail={detail} />
+              <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
 
-              <LastActionSummary lastActions={detail.last_actions} />
+              <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
 
               <ProviderChecklist detail={detail} />
 
-              <h3>Output Folder Status</h3>
-              <ExpectedFilesPanel outputStatus={detail.output_status} />
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>File</th>
-                      <th>Exists</th>
-                      <th>JSON</th>
-                      <th>Schema</th>
-                      <th>Size</th>
-                      <th>Last modified</th>
-                      <th>Warning</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.output_status.files.map((file) => (
-                      <tr key={file.file}>
-                        <td>{file.file}</td>
-                        <td>{yesNo(file.exists)}</td>
-                        <td>{file.json_valid === null ? '' : yesNo(file.json_valid)}</td>
-                        <td>{file.schema_version}</td>
-                        <td>{file.size}</td>
-                        <td>{file.last_modified}</td>
-                        <td>{file.warning}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <h3>Guarded Validation</h3>
-              <section className="validation-panel">
-                <div>
-                  <h4>Validate local output</h4>
-                  <p>
-                    Reads local metadata only from <code>{detail.paths.local_real_output_folder}</code>.
-                    No provider calls, no copy action, no portal action, and no staging/production access.
-                  </p>
-                </div>
-                <label className="confirmation-row">
-                  <input
-                    type="checkbox"
-                    checked={validationConfirmed}
-                    onChange={(event) => setValidationConfirmed(event.target.checked)}
-                  />
-                  <span>
-                    I understand this only reads ignored local-real output metadata and does not contact providers or
-                    copy files.
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={!validationConfirmed || validationRunning}
-                  onClick={() =>
-                    runValidation(
-                      detail.slug,
-                      setValidationRunning,
-                      setValidationResult,
-                      setError,
-                      () => refreshSelectedProfile('Status refreshed after validation'),
-                    )
-                  }
-                >
-                  {validationRunning ? 'Validating...' : 'Validate local output'}
-                </button>
-                {validationResult ? <ValidationResultView validationResult={validationResult} /> : null}
-              </section>
-
-              <h3>Guarded Dashboard-Lab Copy</h3>
-              <section className="validation-panel">
-                <div>
-                  <h4>Copy to dashboard-lab local fixtures</h4>
-                  <p>
-                    Copies only expected JSON fixture files from <code>{copyPreview?.source_folder ?? detail.paths.local_real_output_folder}</code>{' '}
-                    into <code>{copyPreview?.destination_folder ?? detail.paths.dashboard_lab_local_fixture_folder}</code>.
-                    No provider calls, no portal action, no <code>ga4-snapshot.json</code>, and never committed{' '}
-                    <code>public/fixtures</code>.
-                  </p>
-                </div>
-                {copyPreview ? <CopyPreviewView copyPreview={copyPreview} /> : <p>Loading copy preview...</p>}
-                <label className="confirmation-row">
-                  <input
-                    type="checkbox"
-                    checked={copyConfirmed}
-                    onChange={(event) => setCopyConfirmed(event.target.checked)}
-                  />
-                  <span>
-                    I understand this copies ignored real local output into dashboard-lab public/local-fixtures only and
-                    never into committed fixtures.
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={!copyConfirmed || copyRunning || !copyPreview}
-                  onClick={() =>
-                    runCopy(
-                      detail.slug,
-                      setCopyRunning,
-                      setCopyResult,
-                      setError,
-                      () => refreshSelectedProfile('Status refreshed after copy'),
-                    )
-                  }
-                >
-                  {copyRunning ? 'Copying...' : 'Copy to dashboard-lab local fixtures'}
-                </button>
-                {copyResult ? <CopyResultView copyResult={copyResult} /> : null}
-              </section>
-
-              <h3>Recent Local Actions</h3>
-              <section className="history-panel">
-                <p>
-                  Run history is local-only and reads ignored audit logs. It does not contain provider payloads or
-                  secrets.
-                </p>
-                {actionHistory ? <RunHistoryView history={actionHistory} /> : <p>Loading recent actions...</p>}
-              </section>
-
-              <GroupedActionPlan
-                actions={detail.action_plan.actions}
-                copiedActionId={copiedActionId}
-                setCopiedActionId={setCopiedActionId}
+              <SafeCopyReadiness
+                detail={detail}
+                copyPreview={copyPreview}
+                validationConfirmed={validationConfirmed}
+                setValidationConfirmed={setValidationConfirmed}
+                validationRunning={validationRunning}
+                validationResult={validationResult}
+                copyConfirmed={copyConfirmed}
+                setCopyConfirmed={setCopyConfirmed}
+                copyRunning={copyRunning}
+                copyResult={copyResult}
+                onValidate={() =>
+                  runValidation(
+                    detail.slug,
+                    setValidationRunning,
+                    setValidationResult,
+                    setError,
+                    () => refreshSelectedProfile('Status refreshed after validation'),
+                  )
+                }
+                onCopy={() =>
+                  runCopy(
+                    detail.slug,
+                    setCopyRunning,
+                    setCopyResult,
+                    setError,
+                    () => refreshSelectedProfile('Status refreshed after copy'),
+                  )
+                }
               />
+
+              <details className="advanced-panel">
+                <summary>Advanced / Operator Diagnostics</summary>
+                <div className="advanced-content">
+                  <LastActionSummary lastActions={detail.last_actions} />
+
+                  <h3>Expected Dashboard Files</h3>
+                  <ExpectedFilesPanel outputStatus={detail.output_status} />
+
+                  <h3>Output Folder Details</h3>
+                  <OutputStatusTable outputStatus={detail.output_status} />
+
+                  {validationResult ? (
+                    <>
+                      <h3>Validation Details</h3>
+                      <ValidationResultView validationResult={validationResult} />
+                    </>
+                  ) : null}
+
+                  {copyPreview ? (
+                    <>
+                      <h3>Copy Preview Details</h3>
+                      <CopyPreviewView copyPreview={copyPreview} />
+                    </>
+                  ) : null}
+
+                  {copyResult ? (
+                    <>
+                      <h3>Copy Result Details</h3>
+                      <CopyResultView copyResult={copyResult} />
+                    </>
+                  ) : null}
+
+                  <h3>Recent Local Actions</h3>
+                  <section className="history-panel">
+                    <p>
+                      Run history is local-only and reads ignored audit logs. It does not contain provider payloads or
+                      secrets.
+                    </p>
+                    {actionHistory ? <RunHistoryView history={actionHistory} /> : <p>Loading recent actions...</p>}
+                  </section>
+
+                  <GroupedActionPlan
+                    actions={detail.action_plan.actions}
+                    copiedActionId={copiedActionId}
+                    setCopiedActionId={setCopiedActionId}
+                  />
+                </div>
+              </details>
             </>
           ) : (
             <div className="empty-state">
@@ -541,6 +494,173 @@ const PROVIDER_SAFETY_NOTES: Record<string, string> = {
   dashboard_lab: 'Guarded copy targets dashboard-lab public/local-fixtures only and excludes ga4-snapshot.json.',
 };
 
+function SimpleOnboardingSummary({
+  detail,
+  copyPreview,
+}: {
+  detail: ProfileDetail;
+  copyPreview: CopyPreview | null;
+}) {
+  const summary = onboardingSummary(detail, copyPreview);
+  return (
+    <section className="simple-summary-card" aria-label="Client onboarding summary">
+      <div className="simple-summary-main">
+        <div>
+          <span className="eyebrow">Client onboarding</span>
+          <h3>{detail.display_name}</h3>
+          <p>{detail.slug}</p>
+        </div>
+        <span className={summary.statusClass}>{summary.status}</span>
+      </div>
+      <p className="next-step-copy">{summary.nextStep}</p>
+      <div className="summary-counts" aria-label="Onboarding status counts">
+        <MetricPill label="Enabled providers" value={summary.enabledProviders} />
+        <MetricPill label="Ready providers" value={summary.readyProviders} />
+        <MetricPill label="Missing outputs" value={summary.missingOutputs} />
+        <MetricPill label="Validation" value={summary.validationStatus} />
+        <MetricPill label="Copy readiness" value={summary.copyStatus} />
+      </div>
+    </section>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="metric-pill">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function PrimaryNextAction({
+  detail,
+  copyPreview,
+}: {
+  detail: ProfileDetail;
+  copyPreview: CopyPreview | null;
+}) {
+  const actions = recommendedNextActions(detail, copyPreview);
+  return (
+    <section className="next-action-card" aria-label="Recommended next actions">
+      <div>
+        <span className="eyebrow">Recommended next</span>
+        <h3>{actions[0].title}</h3>
+        <p>{actions[0].description}</p>
+      </div>
+      {actions.length > 1 ? (
+        <div className="secondary-next-action">
+          <strong>{actions[1].title}</strong>
+          <span>{actions[1].description}</span>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SafeCopyReadiness({
+  detail,
+  copyPreview,
+  validationConfirmed,
+  setValidationConfirmed,
+  validationRunning,
+  validationResult,
+  copyConfirmed,
+  setCopyConfirmed,
+  copyRunning,
+  copyResult,
+  onValidate,
+  onCopy,
+}: {
+  detail: ProfileDetail;
+  copyPreview: CopyPreview | null;
+  validationConfirmed: boolean;
+  setValidationConfirmed: (confirmed: boolean) => void;
+  validationRunning: boolean;
+  validationResult: ValidationRunResult | null;
+  copyConfirmed: boolean;
+  setCopyConfirmed: (confirmed: boolean) => void;
+  copyRunning: boolean;
+  copyResult: CopyRunResult | null;
+  onValidate: () => void;
+  onCopy: () => void;
+}) {
+  const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.every((item) => item.source_exists);
+  return (
+    <section className="safe-copy-card" aria-label="Dashboard-lab copy readiness">
+      <div className="safe-copy-heading">
+        <div>
+          <span className="eyebrow">Guarded finish step</span>
+          <h3>Dashboard-lab copy readiness</h3>
+          <p>
+            Validation checks ignored local-real output. Copy is guarded and moves only allowlisted dashboard summary
+            fixtures into <code>public/local-fixtures</code>. <code>ga4-snapshot.json</code> is excluded.
+          </p>
+        </div>
+        <span className={copyReady ? 'badge ok' : 'badge warn'}>{copyReady ? 'Copy sources ready' : 'Copy not ready'}</span>
+      </div>
+
+      <div className="guarded-actions">
+        <article>
+          <h4>Validate local-real outputs</h4>
+          <p>No provider calls, no portal access, no fixture copy.</p>
+          <label className="confirmation-row compact-confirmation">
+            <input
+              type="checkbox"
+              checked={validationConfirmed}
+              onChange={(event) => setValidationConfirmed(event.target.checked)}
+            />
+            <span>I understand this only reads ignored local output metadata.</span>
+          </label>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!validationConfirmed || validationRunning}
+            onClick={onValidate}
+          >
+            {validationRunning ? 'Validating...' : 'Validate local output'}
+          </button>
+          {validationResult ? (
+            <p className="compact-result">
+              Result: <strong>{validationStatusLabel(validationResult.status)}</strong>
+            </p>
+          ) : null}
+        </article>
+
+        <article>
+          <h4>Copy validated summaries</h4>
+          <p>Copies summaries only after explicit confirmation. No raw snapshots or credentials are copied.</p>
+          <label className="confirmation-row compact-confirmation">
+            <input
+              type="checkbox"
+              checked={copyConfirmed}
+              onChange={(event) => setCopyConfirmed(event.target.checked)}
+            />
+            <span>I understand this copies ignored summaries into dashboard-lab local fixtures only.</span>
+          </label>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!copyConfirmed || copyRunning || !copyPreview}
+            onClick={onCopy}
+          >
+            {copyRunning ? 'Copying...' : 'Copy to dashboard-lab'}
+          </button>
+          {copyResult ? (
+            <p className="compact-result">
+              Result: <strong>{copyResult.status === 'ok' ? 'Copy complete' : 'Copy completed with warnings'}</strong>
+            </p>
+          ) : null}
+        </article>
+      </div>
+
+      <p className="safe-copy-footnote">
+        Output folder: <code>{detail.paths.local_real_output_folder}</code>
+      </p>
+    </section>
+  );
+}
+
 function OnboardingOverview({ detail }: { detail: ProfileDetail }) {
   const providerCount = detail.provider_setup_checklist.length || detail.provider_readiness.length;
   const outputCount = detail.output_status.files.filter((file) => file.exists).length;
@@ -560,7 +680,7 @@ function OnboardingOverview({ detail }: { detail: ProfileDetail }) {
         <span className="badge neutral">{providerCount} provider steps</span>
       </div>
       <div className="phase-strip" aria-label="Onboarding phases">
-        <PhaseStep title="1. Profile basics" detail={`${detail.vertical} · ${detail.service_model}`} ready />
+        <PhaseStep title="1. Profile basics" detail={`${detail.vertical} / ${detail.service_model}`} ready />
         <PhaseStep title="2. Local config" detail="Ignored local env/config only" ready={detail.safety.local_only} />
         <PhaseStep title="3. Credentials or inputs" detail="Presence checks only" ready />
         <PhaseStep title="4. Provider outputs" detail={`${outputCount} of ${expectedCount} files exist`} ready={detail.output_status.ok} />
@@ -611,6 +731,8 @@ function ProviderChecklist({ detail }: { detail: ProfileDetail }) {
   const sortedChecklist = [...checklist].sort(
     (a, b) => providerSortIndex(a.provider_key) - providerSortIndex(b.provider_key),
   );
+  const enabledItems = sortedChecklist.filter((item) => item.status !== 'not_enabled');
+  const disabledItems = sortedChecklist.filter((item) => item.status === 'not_enabled');
 
   return (
     <section className="provider-checklist" aria-label="Provider onboarding checklist">
@@ -623,7 +745,7 @@ function ProviderChecklist({ detail }: { detail: ProfileDetail }) {
         </div>
       </div>
       <div className="provider-grid">
-        {sortedChecklist.map((item) => (
+        {enabledItems.map((item) => (
           <ProviderChecklistCard
             key={item.provider_key}
             item={item}
@@ -631,6 +753,16 @@ function ProviderChecklist({ detail }: { detail: ProfileDetail }) {
           />
         ))}
       </div>
+      {disabledItems.length ? (
+        <details className="not-enabled-panel">
+          <summary>Not enabled for this profile</summary>
+          <div className="not-enabled-list">
+            {disabledItems.map((item) => (
+              <span key={item.provider_key}>{item.provider_label}</span>
+            ))}
+          </div>
+        </details>
+      ) : null}
     </section>
   );
 }
@@ -750,6 +882,39 @@ function ExpectedFilesPanel({ outputStatus }: { outputStatus: OutputStatus }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function OutputStatusTable({ outputStatus }: { outputStatus: OutputStatus }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Exists</th>
+            <th>JSON</th>
+            <th>Schema</th>
+            <th>Size</th>
+            <th>Last modified</th>
+            <th>Warning</th>
+          </tr>
+        </thead>
+        <tbody>
+          {outputStatus.files.map((file) => (
+            <tr key={file.file}>
+              <td>{file.file}</td>
+              <td>{yesNo(file.exists)}</td>
+              <td>{file.json_valid === null ? '' : yesNo(file.json_valid)}</td>
+              <td>{file.schema_version}</td>
+              <td>{file.size}</td>
+              <td>{file.last_modified}</td>
+              <td>{file.warning}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -943,6 +1108,115 @@ function disabledProviderChecklistItem(provider: string): ProviderSetupChecklist
     validate_readiness: 'Not available yet',
     dashboard_copy_readiness: 'Not available yet',
   };
+}
+
+function onboardingSummary(detail: ProfileDetail, copyPreview: CopyPreview | null) {
+  const enabledItems = activeProviderItems(detail);
+  const readyProviders = enabledItems.filter((item) => item.output_exists).length;
+  const missingOutputs = enabledItems.filter((item) => !item.output_exists).length;
+  const validationStatus = detail.last_actions.last_validation ? 'Done' : detail.output_status.ok ? 'Ready' : 'Needed';
+  const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.every((item) => item.source_exists);
+  const copyStatus = detail.last_actions.last_copy ? 'Copied' : copyReady ? 'Ready' : 'Not ready';
+  const firstMissing = enabledItems.find((item) => !item.output_exists);
+  const firstBlocked = enabledItems.find((item) => item.blocked_reason);
+
+  let status = 'Needs setup';
+  let statusClass = 'badge warn';
+  let nextStep = 'Next: review the provider checklist and add the first missing local input or output.';
+
+  if (!enabledItems.length) {
+    status = 'Not started';
+    nextStep = 'Next: choose a client profile with enabled dashboard providers.';
+  } else if (detail.last_actions.last_copy && detail.output_status.ok) {
+    status = 'Copied / available locally';
+    statusClass = 'badge ok';
+    nextStep = 'Next: open dashboard-lab when you want to review the copied local fixture view.';
+  } else if (copyReady && detail.output_status.ok) {
+    status = 'Ready to copy';
+    statusClass = 'badge ok';
+    nextStep = 'Next: confirm the guarded copy action when you are ready to update dashboard-lab local fixtures.';
+  } else if (detail.output_status.ok) {
+    status = 'Ready to validate';
+    statusClass = 'badge neutral';
+    nextStep = 'Next: validate the local-real output folder, then copy the allowlisted summaries.';
+  } else if (readyProviders > 0) {
+    status = 'Partially ready';
+    statusClass = 'badge neutral';
+    nextStep = `Next: ${firstMissing?.safe_next_action || firstBlocked?.blocked_reason || 'finish missing provider output.'}`;
+  } else if (firstBlocked) {
+    nextStep = `Next: ${firstBlocked.blocked_reason}`;
+  }
+
+  return {
+    enabledProviders: enabledItems.length,
+    readyProviders,
+    missingOutputs,
+    validationStatus,
+    copyStatus,
+    status,
+    statusClass,
+    nextStep,
+  };
+}
+
+function recommendedNextActions(detail: ProfileDetail, copyPreview: CopyPreview | null) {
+  const enabledItems = activeProviderItems(detail);
+  const missingConfig = enabledItems.find((item) => item.blocked_reason && !item.output_exists);
+  const missingOutput = enabledItems.find((item) => !item.output_exists);
+  const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.every((item) => item.source_exists);
+
+  if (missingConfig) {
+    return [
+      {
+        title: `Finish ${missingConfig.provider_label} setup`,
+        description: missingConfig.blocked_reason || missingConfig.safe_next_action,
+      },
+    ];
+  }
+  if (missingOutput) {
+    return [
+      {
+        title: `Create ${missingOutput.provider_label} output`,
+        description: missingOutput.safe_next_action,
+      },
+    ];
+  }
+  if (!detail.last_actions.last_validation) {
+    return [
+      {
+        title: 'Validate local-real outputs',
+        description: 'Run the guarded validation check before copying summaries into dashboard-lab.',
+      },
+      {
+        title: 'Review copy readiness',
+        description: 'The copy step remains disabled until you confirm the safety checkbox.',
+      },
+    ];
+  }
+  if (copyReady && !detail.last_actions.last_copy) {
+    return [
+      {
+        title: 'Copy summaries to dashboard-lab',
+        description: 'Use the guarded copy action to update ignored dashboard-lab local fixtures.',
+      },
+    ];
+  }
+  return [
+    {
+      title: 'Review local dashboard output',
+      description: 'The local provider summaries are available. Use advanced diagnostics only when you need commands or file-level detail.',
+    },
+  ];
+}
+
+function activeProviderItems(detail: ProfileDetail) {
+  const enabled = new Set(detail.enabled_providers);
+  const sourceChecklist = detail.provider_setup_checklist.length
+    ? detail.provider_setup_checklist
+    : detail.provider_readiness.map(readinessToChecklistItem);
+  return sourceChecklist
+    .filter((item) => enabled.has(item.provider_key))
+    .sort((a, b) => providerSortIndex(a.provider_key) - providerSortIndex(b.provider_key));
 }
 
 function groupActionsByProvider(actions: ActionPlanItem[]) {

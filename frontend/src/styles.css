@@ -193,6 +193,9 @@ code {
   padding: 12px;
 }
 
+.simple-summary-card,
+.next-action-card,
+.safe-copy-card,
 .onboarding-panel,
 .provider-checklist,
 .action-plan-panel,
@@ -205,6 +208,112 @@ code {
 
 .onboarding-panel {
   background: #fbfcfd;
+}
+
+.simple-summary-card {
+  background: #f8fbfa;
+  border-color: #bfd9d2;
+  display: grid;
+  gap: 16px;
+}
+
+.simple-summary-main,
+.safe-copy-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.simple-summary-main h3,
+.simple-summary-main p,
+.next-action-card h3,
+.next-action-card p,
+.safe-copy-card h3,
+.safe-copy-card h4,
+.safe-copy-card p {
+  margin: 0;
+}
+
+.eyebrow {
+  color: #687181;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.simple-summary-main h3,
+.next-action-card h3,
+.safe-copy-card h3 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.simple-summary-main p,
+.safe-copy-card p,
+.next-action-card p,
+.safe-copy-footnote,
+.secondary-next-action span {
+  color: #485160;
+  line-height: 1.5;
+}
+
+.next-step-copy {
+  background: #ffffff;
+  border: 1px solid #d9e7e3;
+  border-radius: 8px;
+  color: #244f46;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0;
+  padding: 12px;
+}
+
+.summary-counts {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.metric-pill {
+  background: #ffffff;
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.metric-pill span {
+  color: #687181;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.metric-pill strong {
+  color: #253043;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.next-action-card {
+  background: #ffffff;
+  border-color: #bfd1e5;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.4fr);
+}
+
+.secondary-next-action {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
 }
 
 .checklist-heading,
@@ -310,6 +419,37 @@ dd {
 .provider-card {
   display: grid;
   gap: 14px;
+}
+
+.not-enabled-panel {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+}
+
+.not-enabled-panel summary {
+  color: #485160;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.not-enabled-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.not-enabled-list span {
+  background: #ffffff;
+  border: 1px solid #d7dee8;
+  border-radius: 999px;
+  color: #687181;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
 }
 
 .provider-card .card-heading p {
@@ -423,6 +563,67 @@ dd {
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.1fr);
+}
+
+.safe-copy-card {
+  background: #ffffff;
+  display: grid;
+  gap: 14px;
+}
+
+.guarded-actions {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guarded-actions article {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.compact-confirmation {
+  padding: 9px;
+}
+
+.compact-result {
+  color: #485160;
+  font-size: 13px;
+}
+
+.safe-copy-footnote {
+  font-size: 13px;
+}
+
+.advanced-panel {
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 0;
+}
+
+.advanced-panel > summary {
+  background: #f8fafb;
+  border-radius: 8px;
+  color: #253043;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 14px;
+}
+
+.advanced-panel[open] > summary {
+  border-bottom: 1px solid #dfe3ea;
+  border-radius: 8px 8px 0 0;
+}
+
+.advanced-content {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
 }
 
 .readiness-card dl {
@@ -736,7 +937,9 @@ pre {
   }
 
   .topbar,
-  .section-heading {
+  .section-heading,
+  .simple-summary-main,
+  .safe-copy-heading {
     display: block;
   }
 
@@ -749,6 +952,9 @@ pre {
   .profile-grid,
   .readiness-grid,
   .provider-grid,
+  .summary-counts,
+  .next-action-card,
+  .guarded-actions,
   .action-grid,
   .summary-grid,
   .phase-strip,

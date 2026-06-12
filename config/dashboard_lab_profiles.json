@@ -129,7 +129,7 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/wc-land-renewal",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/wc-land-renewal",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/wc-land-renewal",
-      "data_sources": ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail"],
+      "data_sources": ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"],
       "capabilities": [
         {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
         {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
@@ -137,6 +137,7 @@
         {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
         {"key": "google_ads_search", "label": "Google Ads Search", "status": "enabled", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-summary.json", "notes": "Local read-only paid search dashboard output only; no account mutations or portal integration."},
         {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json", "notes": "Aggregate call tracking dashboard output only; no caller details, recordings, transcripts, or phone numbers."},
+        {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json", "notes": "Date-only form-fill dashboard output only; no names, emails, phone numbers, messages, IPs, or raw submissions."},
         {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
         {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
         {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
