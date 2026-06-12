@@ -661,63 +661,6 @@ function SafeCopyReadiness({
   );
 }
 
-function OnboardingOverview({ detail }: { detail: ProfileDetail }) {
-  const providerCount = detail.provider_setup_checklist.length || detail.provider_readiness.length;
-  const outputCount = detail.output_status.files.filter((file) => file.exists).length;
-  const expectedCount = detail.output_status.expected_files.length || detail.output_status.files.length;
-  const enabledProviders = detail.enabled_providers.map(providerLabel).join(', ');
-
-  return (
-    <section className="onboarding-panel" aria-label="Profile onboarding overview">
-      <div className="checklist-heading">
-        <div>
-          <h3>Onboarding Checklist</h3>
-          <p>
-            Read left to right: profile basics, ignored local config, credentials or local inputs, provider outputs,
-            validation, then guarded dashboard-lab copy.
-          </p>
-        </div>
-        <span className="badge neutral">{providerCount} provider steps</span>
-      </div>
-      <div className="phase-strip" aria-label="Onboarding phases">
-        <PhaseStep title="1. Profile basics" detail={`${detail.vertical} / ${detail.service_model}`} ready />
-        <PhaseStep title="2. Local config" detail="Ignored local env/config only" ready={detail.safety.local_only} />
-        <PhaseStep title="3. Credentials or inputs" detail="Presence checks only" ready />
-        <PhaseStep title="4. Provider outputs" detail={`${outputCount} of ${expectedCount} files exist`} ready={detail.output_status.ok} />
-        <PhaseStep title="5. Validation" detail="Reads local-real metadata" ready={Boolean(detail.last_actions.last_validation)} />
-        <PhaseStep title="6. Guarded copy" detail="Allowlisted summaries only" ready={Boolean(detail.last_actions.last_copy)} />
-      </div>
-      <dl className="profile-grid">
-        <div>
-          <dt>Enabled providers</dt>
-          <dd>{enabledProviders || 'No provider sources enabled'}</dd>
-        </div>
-        <div>
-          <dt>Dashboard-lab route</dt>
-          <dd>{detail.dashboard_lab_route}</dd>
-        </div>
-        <div>
-          <dt>Local-real output</dt>
-          <dd>{detail.paths.local_real_output_folder}</dd>
-        </div>
-        <div>
-          <dt>Dashboard-lab local fixture</dt>
-          <dd>{detail.paths.dashboard_lab_local_fixture_folder}</dd>
-        </div>
-      </dl>
-    </section>
-  );
-}
-
-function PhaseStep({ title, detail, ready }: { title: string; detail: string; ready: boolean }) {
-  return (
-    <article className={ready ? 'phase-step ready' : 'phase-step'}>
-      <strong>{title}</strong>
-      <span>{detail}</span>
-    </article>
-  );
-}
-
 function ProviderChecklist({ detail }: { detail: ProfileDetail }) {
   const providerReadiness = new Map(detail.provider_readiness.map((provider) => [provider.provider, provider]));
   const sourceChecklist = detail.provider_setup_checklist.length

@@ -196,7 +196,6 @@ code {
 .simple-summary-card,
 .next-action-card,
 .safe-copy-card,
-.onboarding-panel,
 .provider-checklist,
 .action-plan-panel,
 .expected-files-panel {
@@ -204,10 +203,6 @@ code {
   border-radius: 8px;
   margin: 18px 0 24px;
   padding: 14px;
-}
-
-.onboarding-panel {
-  background: #fbfcfd;
 }
 
 .simple-summary-card {
@@ -340,42 +335,6 @@ code {
   color: #485160;
   line-height: 1.5;
   margin-top: 6px;
-}
-
-.phase-strip {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  margin-bottom: 14px;
-}
-
-.phase-step {
-  background: #ffffff;
-  border: 1px solid #e2e7ee;
-  border-radius: 8px;
-  min-width: 0;
-  padding: 10px;
-}
-
-.phase-step.ready {
-  border-color: #b9d9c2;
-}
-
-.phase-step strong,
-.phase-step span {
-  display: block;
-}
-
-.phase-step strong {
-  color: #253043;
-  font-size: 13px;
-}
-
-.phase-step span {
-  color: #687181;
-  font-size: 12px;
-  line-height: 1.35;
-  margin-top: 4px;
 }
 
 dt {
@@ -957,7 +916,6 @@ pre {
   .guarded-actions,
   .action-grid,
   .summary-grid,
-  .phase-strip,
   .expected-files-panel {
     grid-template-columns: 1fr;
   }
