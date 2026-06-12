@@ -17,19 +17,22 @@ from .profile_local_config import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROFILE_REGISTRY = ROOT / "config" / "dashboard_lab_profiles.json"
-EXPECTED_DASHBOARD_FILES = [
+BASE_EXPECTED_DASHBOARD_FILES = [
     "client-profile.json",
     "ga4-summary.json",
     "gsc-summary.json",
     "combined-dashboard-summary.json",
     "local-falcon-summary.json",
 ]
+EXPECTED_DASHBOARD_FILES = BASE_EXPECTED_DASHBOARD_FILES
 LOCAL_FALCON_MANIFEST_DIR = ROOT / "local-falcon-manifests"
-SUPPORTED_IMPORTER_PROVIDERS = {"ga4", "gsc", "local_falcon"}
+SUPPORTED_IMPORTER_PROVIDERS = {"ga4", "gsc", "local_falcon", "google_ads_search", "callrail"}
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
     "local_falcon": "local-falcon-summary.json",
+    "google_ads_search": "google-ads-summary.json",
+    "callrail": "callrail-summary.json",
 }
 PLANNED_PROVIDER_OUTPUT_FILES = {
     "google_ads_search": "google-ads-search-summary.json",
@@ -53,6 +56,8 @@ PROVIDER_DASHBOARD_LAB_WRITERS = {
     "ga4": "Ready",
     "gsc": "Ready",
     "local_falcon": "Ready",
+    "google_ads_search": "Ready",
+    "callrail": "Ready",
 }
 
 
@@ -314,10 +319,20 @@ def output_folder_status(profile: DashboardLabProfile) -> list[dict[str, str]]:
     return [item.as_row() for item in validate_profile_output(profile).files]
 
 
+def expected_dashboard_files(profile: DashboardLabProfile) -> list[str]:
+    files = list(BASE_EXPECTED_DASHBOARD_FILES)
+    for capability in _profile_capabilities(profile):
+        if capability.status != "enabled" or not capability.expected_output_file:
+            continue
+        if capability.expected_output_file not in files:
+            files.append(capability.expected_output_file)
+    return files
+
+
 def validate_profile_output(profile: DashboardLabProfile) -> OutputValidationReport:
     folder = profile.importer_output_folder
     folder_exists = folder.exists() and folder.is_dir()
-    files = [_file_status(folder / filename, filename) for filename in EXPECTED_DASHBOARD_FILES]
+    files = [_file_status(folder / filename, filename) for filename in expected_dashboard_files(profile)]
     missing = [item.file for item in files if not item.exists]
     malformed = [item.file for item in files if item.exists and item.json_valid is False]
     warnings = []
@@ -379,6 +394,32 @@ def command_guidance(profile: DashboardLabProfile) -> list[dict[str, str]]:
                         f"# Real manifests stay ignored under local-falcon-manifests/. Expected: {manifest}",
                         f'python scripts/fetch_local_falcon_api.py --profile {profile.slug} --transport live --execute --write',
                         f'python scripts/validate_local_falcon_summary.py --file "{profile.importer_output_folder / "local-falcon-summary.json"}"',
+                    ]
+                ),
+            }
+        )
+    if "google_ads_search" in profile.data_sources:
+        commands.append(
+            {
+                "provider": "Google Ads Search",
+                "command": "\n".join(
+                    [
+                        f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --dry-run",
+                        f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --real-output",
+                        f'python scripts/validate_google_ads_summary.py --input "{profile.importer_output_folder / "google-ads-summary.json"}"',
+                    ]
+                ),
+            }
+        )
+    if "callrail" in profile.data_sources:
+        commands.append(
+            {
+                "provider": "CallRail",
+                "command": "\n".join(
+                    [
+                        f'python scripts/diagnose_callrail_export_shape.py --profile {profile.slug} --input "inputs/local-real/callrail/{profile.slug}/calls.csv"',
+                        f'python scripts/import_callrail_export.py --profile {profile.slug} --input "inputs/local-real/callrail/{profile.slug}/calls.csv" --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output',
+                        f'python scripts/validate_callrail_summary.py --input "{profile.importer_output_folder / "callrail-summary.json"}"',
                     ]
                 ),
             }
@@ -482,6 +523,58 @@ def guarded_import_sequence(profile: DashboardLabProfile) -> dict[str, Any]:
                 ],
             }
         )
+    if "google_ads_search" in profile.data_sources:
+        provider_steps.append(
+            {
+                "provider": "google_ads_search",
+                "label": "Google Ads Search",
+                "phase": "operator_approved_live_fetch",
+                "requires_explicit_approval": True,
+                "writes_real_output": True,
+                "expected_output_file": "google-ads-summary.json",
+                "output_path": str(output / "google-ads-summary.json"),
+                "command": "\n".join(
+                    [
+                        f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --dry-run",
+                        f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --real-output",
+                        f'python scripts/validate_google_ads_summary.py --input "{output / "google-ads-summary.json"}"',
+                    ]
+                ),
+                "approval_prompt": "Operator confirms ignored Google Ads customer/config values are available and the read-only local exporter is approved for this profile.",
+                "guardrails": [
+                    "dry-run writes no files",
+                    "non-dry-run requires --real-output and local read-only credential readiness",
+                    "writes only aggregate google-ads-summary.json under exports/local-real",
+                    "does not mutate campaigns, budgets, bids, keywords, ads, settings, portal data, or dashboard-lab source",
+                ],
+            }
+        )
+    if "callrail" in profile.data_sources:
+        provider_steps.append(
+            {
+                "provider": "callrail",
+                "label": "CallRail",
+                "phase": "operator_approved_local_import",
+                "requires_explicit_approval": True,
+                "writes_real_output": True,
+                "expected_output_file": "callrail-summary.json",
+                "output_path": str(output / "callrail-summary.json"),
+                "command": "\n".join(
+                    [
+                        f'python scripts/diagnose_callrail_export_shape.py --profile {profile.slug} --input "inputs/local-real/callrail/{profile.slug}/calls.csv"',
+                        f'python scripts/import_callrail_export.py --profile {profile.slug} --input "inputs/local-real/callrail/{profile.slug}/calls.csv" --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output',
+                        f'python scripts/validate_callrail_summary.py --input "{output / "callrail-summary.json"}"',
+                    ]
+                ),
+                "approval_prompt": "Operator confirms the CallRail CSV is local, ignored, and approved for aggregate dashboard-lab import.",
+                "guardrails": [
+                    "reads ignored local CSV exports only",
+                    "writes aggregate callrail-summary.json under exports/local-real",
+                    "does not output caller names, phone numbers, recordings, transcripts, notes, or raw call rows",
+                    "does not call live CallRail APIs or mutate provider/portal data",
+                ],
+            }
+        )
     planned_steps = [
         {
             "provider": item.provider or item.key,
@@ -499,7 +592,7 @@ def guarded_import_sequence(profile: DashboardLabProfile) -> dict[str, Any]:
             ],
         }
         for item in _profile_capabilities(profile)
-        if item.status == "planned" and item.provider not in SUPPORTED_IMPORTER_PROVIDERS
+        if item.status == "planned"
     ]
     return {
         "profile_slug": profile.slug,
@@ -576,7 +669,7 @@ def copy_guidance(profile: DashboardLabProfile) -> str:
     lines = [
         f'New-Item -ItemType Directory -Force "{destination}" | Out-Null',
     ]
-    for filename in EXPECTED_DASHBOARD_FILES:
+    for filename in expected_dashboard_files(profile):
         lines.append(f'Copy-Item "{source / filename}" "{destination / filename}" -Force')
     return "\n".join(lines)
 
@@ -584,7 +677,7 @@ def copy_guidance(profile: DashboardLabProfile) -> str:
 def copy_dry_run(profile: DashboardLabProfile) -> list[CopyPlanItem]:
     _validate_copy_paths(profile)
     plan = []
-    for filename in EXPECTED_DASHBOARD_FILES:
+    for filename in expected_dashboard_files(profile):
         source = profile.importer_output_folder / filename
         destination = profile.dashboard_lab_local_fixture_folder / filename
         source_exists = source.exists() and source.is_file()
@@ -807,8 +900,33 @@ def _live_fetch_readiness(
             if not credential_present:
                 missing.append("LOCAL_FALCON_API_KEY")
         ready = manifest_present and credential_present
+    elif provider == "google_ads_search":
+        customer_present = _present(env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
+            local_config,
+            ("customer_id", "google_ads_customer_id", "customer_id_configured"),
+        )
+        auth_present = _any_present(
+            local_config,
+            ("oauth_client_secrets", "oauth_token_file", "credentials_configured"),
+        )
+        missing = _missing_config_items(local_config)
+        if not missing:
+            if not customer_present:
+                missing.append("Google Ads customer id")
+            if not auth_present:
+                missing.append("Google Ads local OAuth/client credentials")
+        ready = customer_present and auth_present
+    elif provider == "callrail":
+        input_present = _any_present(
+            local_config,
+            ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path"),
+        )
+        missing = _missing_config_items(local_config)
+        if not missing and not input_present:
+            missing.append("ignored CallRail calls CSV")
+        ready = input_present
     return {
-        "status": "Ready" if ready else "Live fetch needs config",
+        "status": "Ready" if ready else "Local import needs config" if provider == "callrail" else "Live fetch needs config",
         "ready": ready,
         "missing": missing,
     }
@@ -844,7 +962,9 @@ def _setup_checklist_row(
         "local_config_valid": config_metadata["valid"],
         "local_config_error": config_metadata["error"],
         "config_state": config_state,
-        "config_visible": any(bool(value) for key, value in config_state.items() if key != "ai_visibility_capability_present"),
+        "config_visible": False if matrix_row["capability_status"] == "planned" else any(
+            bool(value) for key, value in config_state.items() if key != "ai_visibility_capability_present"
+        ),
         "missing_config_details": missing_config_details,
         "safe_next_action": _safe_next_action(matrix_row, config_state),
         "blocked_reason": _blocked_reason(matrix_row, required_items),
@@ -918,7 +1038,15 @@ def _safe_config_state(
                 local_config,
                 ("oauth_client_secrets", "oauth_token_file", "credentials_configured"),
             ),
-            "importer_implemented": False,
+            "importer_implemented": True,
+        }
+    if provider == "callrail":
+        return {
+            "ignored_calls_csv_configured": _any_present(
+                local_config,
+                ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path"),
+            ),
+            "aggregate_importer_available": True,
         }
     return {}
 
@@ -932,10 +1060,12 @@ def _required_config_items(provider: str) -> list[str]:
         return ["ignored Local Falcon manifest", "LOCAL_FALCON_API_KEY visible to current process"]
     if provider == "google_ads_search":
         return [
-            "future Google Ads customer id in ignored local config",
-            "future Google Ads OAuth/client credentials",
-            "future read-only Google Ads Search importer implementation",
+            "Google Ads customer id in ignored local config",
+            "Google Ads OAuth/client credentials",
+            "read-only Google Ads Search exporter available locally",
         ]
+    if provider == "callrail":
+        return ["ignored local CallRail calls CSV export", "aggregate CallRail importer available locally"]
     return []
 
 
@@ -956,7 +1086,7 @@ def _setup_status(matrix_row: dict[str, Any]) -> str:
 def _safe_next_action(matrix_row: dict[str, Any], config_state: dict[str, bool]) -> str:
     if matrix_row["capability_status"] == "planned":
         if matrix_row["provider_key"] == "google_ads_search":
-            return "Google Ads Search real import is not implemented yet; keep this planned and do not create fake output."
+            return "Google Ads Search is still planned for this profile; do not create fake output or activate it without approval."
         return "Future provider integration; no active importer action yet."
     if not matrix_row["supported_in_console"]:
         return "Use this capability in planning only; no provider setup is required in the importer console."
@@ -979,7 +1109,7 @@ def _safe_next_action(matrix_row: dict[str, Any], config_state: dict[str, bool])
 def _blocked_reason(matrix_row: dict[str, Any], required_items: list[str]) -> str:
     if matrix_row["capability_status"] == "planned":
         if matrix_row["provider_key"] == "google_ads_search":
-            return "Google Ads Search real import is not implemented yet; output should remain absent until a future read-only importer exists."
+            return "Google Ads Search is not enabled for this profile; output should remain absent until this capability is approved."
         return "Planned capability; not enabled in importer console yet."
     if not matrix_row["supported_in_console"]:
         return "Capability does not have a provider fetch workflow in the importer console."
@@ -1012,6 +1142,22 @@ def _suggested_command(profile: DashboardLabProfile, provider: str, matrix_row: 
                 f"# Expected ignored manifest: {manifest}",
                 f"python scripts/fetch_local_falcon_api.py --profile {profile.slug} --transport live --execute --write",
                 f"python scripts/validate_local_falcon_summary.py --file exports/local-real/dashboard-lab/{profile.slug}/local-falcon-summary.json",
+            ]
+        )
+    if provider == "google_ads_search":
+        return "\n".join(
+            [
+                f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --dry-run",
+                f"python scripts/fetch_google_ads_api.py --profile {profile.slug} --real-output",
+                f"python scripts/validate_google_ads_summary.py --input exports/local-real/dashboard-lab/{profile.slug}/google-ads-summary.json",
+            ]
+        )
+    if provider == "callrail":
+        return "\n".join(
+            [
+                f"python scripts/diagnose_callrail_export_shape.py --profile {profile.slug} --input inputs/local-real/callrail/{profile.slug}/calls.csv",
+                f"python scripts/import_callrail_export.py --profile {profile.slug} --input inputs/local-real/callrail/{profile.slug}/calls.csv --start-date YYYY-MM-DD --end-date YYYY-MM-DD --real-output",
+                f"python scripts/validate_callrail_summary.py --input exports/local-real/dashboard-lab/{profile.slug}/callrail-summary.json",
             ]
         )
     return ""

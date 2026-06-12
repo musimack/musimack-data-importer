@@ -11,6 +11,7 @@ from src.operator_console import (
     copy_dry_run,
     copy_guidance,
     copy_local_real_to_dashboard_lab,
+    expected_dashboard_files,
     guarded_import_sequence,
     load_dashboard_lab_profiles,
     output_folder_status,
@@ -47,6 +48,7 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     lucy = profile_by_slug("lucy-escobar", profiles)
     pinnacle = profile_by_slug("pinnacle-contractors", profiles)
     musimack = profile_by_slug("musimack-marketing", profiles)
+    wc = profile_by_slug("wc-land-renewal", profiles)
     tattoo = profile_by_slug("portland-tattoo-co", profiles)
     assert lucy.domain == "lucyescobar.com"
     assert lucy.data_sources == ["ga4", "gsc"]
@@ -54,6 +56,21 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert pinnacle.data_sources == ["ga4", "gsc", "local_falcon"]
     assert musimack.domain == "musimackmarketing.com"
     assert musimack.data_sources == ["ga4", "gsc", "local_falcon"]
+    assert wc.display_name == "WC Land Renewal"
+    assert wc.data_sources == ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail"]
+    assert _capability(wc, "google_ads_search").status == "enabled"
+    assert _capability(wc, "google_ads_search").expected_output_file == "google-ads-summary.json"
+    assert _capability(wc, "callrail").status == "enabled"
+    assert _capability(wc, "callrail").expected_output_file == "callrail-summary.json"
+    assert expected_dashboard_files(wc) == [
+        "client-profile.json",
+        "ga4-summary.json",
+        "gsc-summary.json",
+        "combined-dashboard-summary.json",
+        "local-falcon-summary.json",
+        "google-ads-summary.json",
+        "callrail-summary.json",
+    ]
     assert tattoo.importer_output_folder.as_posix().endswith("exports/local-real/dashboard-lab/portland-tattoo-co")
     assert {profile.domain for profile in profiles} >= {
         "alumapdx.com",
@@ -418,7 +435,7 @@ def test_provider_setup_checklist_planned_providers_have_no_active_fetch_command
 
     assert ads["status"] == "planned"
     assert ads["suggested_command"] == ""
-    assert "not implemented yet" in ads["safe_next_action"]
+    assert "still planned for this profile" in ads["safe_next_action"]
     assert callrail["suggested_command"] == ""
 
 
@@ -478,9 +495,9 @@ def test_spanish_head_alpha_readiness_is_profile_scoped_and_ads_planned(tmp_path
     assert ads["expected_output_file"] == "google-ads-search-summary.json"
     assert ads["output_exists"] is False
     assert ads["config_visible"] is False
-    assert "future read-only Google Ads Search importer implementation" in ads["missing_config_details"]
-    assert "not implemented yet" in ads["safe_next_action"]
-    assert "not implemented yet" in ads["blocked_reason"]
+    assert "read-only Google Ads Search exporter available locally" in ads["missing_config_details"]
+    assert "still planned for this profile" in ads["safe_next_action"]
+    assert "not enabled for this profile" in ads["blocked_reason"]
     assert ads["validation_ready"] == "Not available yet"
     assert ads["dashboard_copy_ready"] == "Not available yet"
     assert ads["suggested_command"] == ""
