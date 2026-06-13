@@ -60,6 +60,7 @@ from src.profile_registry_writer import (
     preview_profile_registry_update,
     write_profile_registry_update,
 )
+from scripts.validate_local_falcon_manifest import validate_manifest as validate_local_falcon_manifest
 
 
 APP_NAME = "musimack-data-importer-local-api"
@@ -1018,6 +1019,29 @@ def build_onboarding_status(
     configured_provider_count = sum(1 for item in providers if item["enabled"] and item["config_state"] in {"Configured", "Configured via vault"})
     output_ready_count = sum(1 for item in providers if item["enabled"] and item["output_state"] == "Output exists")
     ready_for_copy_count = sum(1 for item in providers if item["enabled"] and item["copy_state"] == "Ready for dashboard-lab copy")
+    local_config_state = _onboarding_local_config_state(checklist)
+    vault_state = _onboarding_vault_state(local_config)
+    try:
+        safe_preview = build_safe_dashboard_lab_copy_preview(profile)["result"]
+    except HTTPException:
+        safe_preview = {"status": "not_ready", "eligible_count": 0, "items": []}
+    preflight = _build_onboarding_preflight(
+        profile=profile,
+        providers=providers,
+        checklist=checklist_map,
+        local_config=local_config,
+    )
+    next_action_stack = _onboarding_next_action_stack(
+        profile=profile,
+        onboarding_status={
+            "local_config": local_config_state,
+            "vault": vault_state,
+            "providers": providers,
+        },
+        preflight=preflight,
+        safe_preview=safe_preview,
+        last_actions=last_actions,
+    )
 
     return {
         "profile": {
@@ -1030,8 +1054,8 @@ def build_onboarding_status(
             "output_ready_count": output_ready_count,
             "ready_for_copy_count": ready_for_copy_count,
         },
-        "local_config": _onboarding_local_config_state(checklist),
-        "vault": _onboarding_vault_state(local_config),
+        "local_config": local_config_state,
+        "vault": vault_state,
         "validation": {
             "state": "Ready for validation" if output_status["folder_exists"] else "Validation unknown",
             "folder_exists": output_status["folder_exists"],
@@ -1045,6 +1069,9 @@ def build_onboarding_status(
             "last_copy": "Available" if last_actions["last_copy"] else "Not run",
         },
         "providers": providers,
+        "preflight": preflight,
+        "next_action_stack": next_action_stack,
+        "operator_guidance": _real_operator_guidance(),
         "safety": {
             "read_only": True,
             "no_provider_execution": True,
@@ -1244,6 +1271,192 @@ def _onboarding_provider_status(
         "copy_state": copy_state,
         "next_step": next_step,
     }
+
+
+def _build_onboarding_preflight(
+    *,
+    profile: DashboardLabProfile,
+    providers: list[dict[str, Any]],
+    checklist: Mapping[str, Mapping[str, Any]],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    rows = [
+        _provider_preflight_row(
+            profile=profile,
+            provider_status=provider_status,
+            checklist_item=checklist.get(str(provider_status["provider"]), {}),
+            local_config=_provider_config(local_config, str(provider_status["provider"])),
+        )
+        for provider_status in providers
+        if provider_status["enabled"]
+    ]
+    return {
+        "state": "Complete" if rows and all(item["overall_state"] == "Complete" for item in rows) else "In progress",
+        "providers": rows,
+    }
+
+
+def _provider_preflight_row(
+    *,
+    profile: DashboardLabProfile,
+    provider_status: Mapping[str, Any],
+    checklist_item: Mapping[str, Any],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    provider = str(provider_status["provider"])
+    output_exists = str(provider_status["output_state"]) == "Output exists"
+    config_state = str(provider_status["config_state"])
+    validation_state = str(provider_status["validation_state"])
+    credential_source = str(checklist_item.get("credential_source") or "")
+
+    if provider == "ga4":
+        checks = [
+            {"label": "Config metadata", "status": "Complete" if config_state == "Configured" else "Needs local config"},
+            {"label": "OAuth and env references", "status": "Complete" if config_state == "Configured" else "Needs local config"},
+            {"label": "Live pull", "status": "Complete" if output_exists else "Planned live step"},
+        ]
+    elif provider == "gsc":
+        site_present = bool(local_config.get("site_url")) or bool(local_config.get("site_url_configured"))
+        checks = [
+            {"label": "Config metadata", "status": "Complete" if config_state == "Configured" else "Needs local config"},
+            {"label": "Site URL", "status": "Complete" if site_present else "Missing setup"},
+            {"label": "Live pull", "status": "Complete" if output_exists else "Planned live step"},
+        ]
+    elif provider == "local_falcon":
+        manifest_path = _resolve_local_falcon_manifest_path(profile, local_config)
+        manifest_exists = bool(manifest_path and manifest_path.exists())
+        secret_status = "Blocked" if credential_source == "Vault locked" else "Complete" if config_state in {"Configured", "Configured via vault"} else "Needs secret"
+        checks = [
+            {"label": "Manifest", "status": "Complete" if manifest_exists else "Needs manifest"},
+            {"label": "Vault or env key", "status": secret_status},
+            {"label": "Fetch", "status": "Complete" if output_exists else "Planned live step" if manifest_exists and secret_status == "Complete" else "Missing setup"},
+        ]
+    elif provider == "google_ads_search":
+        checks = [
+            {"label": "Config metadata and env refs", "status": "Complete" if config_state == "Configured" else "Needs local config"},
+            {"label": "Read-only reporting", "status": "Complete" if output_exists else "Planned live step"},
+            {"label": "Mutation guardrail", "status": "Complete"},
+        ]
+    elif provider == "callrail":
+        input_ready = bool(local_config.get("local_input_filename"))
+        checks = [
+            {"label": "Local input file", "status": "Complete" if input_ready else "Needs input file"},
+            {"label": "Local import", "status": "Complete" if output_exists else "Ready for local step" if input_ready else "Missing setup"},
+        ]
+    elif provider == "form_fills":
+        input_ready = bool(local_config.get("local_input_filename"))
+        checks = [
+            {"label": "Local input file", "status": "Complete" if input_ready else "Needs input file"},
+            {"label": "Local import", "status": "Complete" if output_exists else "Ready for local step" if input_ready else "Missing setup"},
+        ]
+    else:
+        checks = [{"label": "Setup", "status": "Missing setup"}]
+
+    overall_state = (
+        "Blocked" if any(item["status"] == "Blocked" for item in checks)
+        else "Complete" if output_exists
+        else "Ready for local step" if any(item["status"] == "Ready for local step" for item in checks)
+        else "Planned live step" if any(item["status"] == "Planned live step" for item in checks)
+        else "Missing setup"
+    )
+    next_step = "Validate existing output." if validation_state == "Ready for validation" and overall_state == "Complete" else str(provider_status["next_step"])
+    return {
+        "provider": provider,
+        "label": str(provider_status["label"]),
+        "overall_state": overall_state,
+        "checks": checks,
+        "next_step": next_step,
+    }
+
+
+def _onboarding_next_action_stack(
+    *,
+    profile: DashboardLabProfile,
+    onboarding_status: Mapping[str, Any],
+    preflight: Mapping[str, Any],
+    safe_preview: Mapping[str, Any],
+    last_actions: Mapping[str, Any],
+) -> dict[str, Any]:
+    queue: list[dict[str, str]] = []
+    local_config_state = str(onboarding_status["local_config"]["state"])
+    vault_state = str(onboarding_status["vault"]["state"])
+    providers = [item for item in onboarding_status["providers"] if item["enabled"]]
+    preflight_rows = {item["provider"]: item for item in preflight.get("providers", []) if isinstance(item, Mapping)}
+    validation_done = _action_succeeded(last_actions.get("last_validation"))
+    copy_done = _action_succeeded(last_actions.get("last_copy"))
+
+    local_falcon = preflight_rows.get("local_falcon")
+    if local_falcon:
+        checks = {item["label"]: item["status"] for item in local_falcon.get("checks", []) if isinstance(item, Mapping)}
+        if checks.get("Manifest") == "Needs manifest":
+            queue.append(_next_action_item("local_falcon_manifest", "Add Local Falcon manifest file", "Needs manifest", "Create or place the local-only Local Falcon manifest before any fetch planning."))
+        if checks.get("Vault or env key") == "Needs secret":
+            queue.append(_next_action_item("local_falcon_key", "Add Local Falcon key", "Needs secret", "Save the key through the local vault or make the env reference available."))
+        if checks.get("Vault or env key") == "Blocked":
+            queue.append(_next_action_item("local_falcon_key_blocked", "Unlock Local Falcon key metadata", "Blocked", "Unlock the vault or use the env-based key source before continuing."))
+
+    for provider, label in (("callrail", "CallRail"), ("form_fills", "Form Fills")):
+        row = preflight_rows.get(provider)
+        if not row:
+            continue
+        checks = {item["label"]: item["status"] for item in row.get("checks", []) if isinstance(item, Mapping)}
+        if checks.get("Local input file") == "Needs input file":
+            queue.append(_next_action_item(f"{provider}_input", f"Add {label} local file", "Needs input file", f"Add the approved local {label} input file before import."))
+        elif checks.get("Local import") == "Ready for local step":
+            queue.append(_next_action_item(f"{provider}_import", f"Run {label} local import", "Ready for local step", f"Import the local {label} file into ignored dashboard summary output."))
+
+    if local_config_state != "Configured":
+        queue.append(_next_action_item("local_config", "Save local config", "Needs local config", "Complete the ignored local config metadata first."))
+    if vault_state == "Vault locked":
+        queue.append(_next_action_item("vault_unlock", "Unlock local vault", "Blocked", "Unlock the local encrypted vault to confirm saved Local Falcon key metadata."))
+
+    if any(item["output_state"] == "Output exists" for item in providers) and not validation_done:
+        queue.append(_next_action_item("validate_output", "Validate existing output", "Ready for local step", "Run the allowlisted local validator on the current summary output."))
+    if validation_done and safe_preview.get("status") != "ready" and any(item["copy_state"] == "Ready for dashboard-lab copy" for item in providers):
+        queue.append(_next_action_item("preview_copy", "Preview fixture copy", "Ready for local step", "Preview the guarded dashboard-lab copy set before copying."))
+    if validation_done and safe_preview.get("status") == "ready" and not copy_done:
+        queue.append(_next_action_item("copy_fixtures", "Copy validated fixtures", "Ready for local step", "Copy only eligible validated summaries into guarded local fixtures."))
+
+    for provider, label in (("ga4", "GA4"), ("gsc", "GSC"), ("local_falcon", "Local Falcon"), ("google_ads_search", "Google Ads Search")):
+        row = preflight_rows.get(provider)
+        if not row or row.get("overall_state") == "Complete":
+            continue
+        if any(item.get("status") == "Planned live step" for item in row.get("checks", []) if isinstance(item, Mapping)):
+            queue.append(_next_action_item(f"{provider}_planned", f"{label} live step planned or unavailable", "Planned live step", "Provider execution stays separately approved and is not run automatically here."))
+
+    deduped: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in queue:
+        if item["id"] in seen:
+            continue
+        seen.add(item["id"])
+        deduped.append(item)
+    primary = deduped[0] if deduped else _next_action_item("review", "Review local readiness", "Complete", "All visible local onboarding gates are currently satisfied.")
+    return {
+        "primary": primary,
+        "queue": deduped[1:5],
+    }
+
+
+def _next_action_item(action_id: str, label: str, status: str, detail: str) -> dict[str, str]:
+    return {
+        "id": action_id,
+        "label": label,
+        "status": status,
+        "detail": detail,
+    }
+
+
+def _real_operator_guidance() -> list[str]:
+    return [
+        "Tracked profile is real.",
+        "Local config writes ignored local config only.",
+        "Secrets stay local.",
+        "Imports and validation are local-only.",
+        "Fixture copy remains confirmation-gated.",
+        "Dashboard-lab source repo is not modified by this frontend.",
+        "Portal publishing is separate.",
+    ]
 
 
 def _completion_readiness_state(
@@ -1630,6 +1843,8 @@ def run_onboarding_action(
     if not action["available"]:
         if action["kind"] == "validate_existing_output":
             result = _run_onboarding_output_check(profile, action["provider"])
+        elif action["kind"] == "local_falcon_validate_manifest":
+            result = _run_local_falcon_manifest_validation(profile, local_config=_provider_config(local_config, "local_falcon"))
         else:
             result = {
                 "status": "unavailable",
@@ -1645,6 +1860,8 @@ def run_onboarding_action(
         result = _run_onboarding_readiness_check(profile, action["provider"], safe_env=safe_env, local_config=local_config)
     elif action["kind"] == "validate_existing_output":
         result = _run_onboarding_output_check(profile, action["provider"])
+    elif action["kind"] == "local_falcon_validate_manifest":
+        result = _run_local_falcon_manifest_validation(profile, local_config=_provider_config(local_config, "local_falcon"))
     elif action["kind"] == "dashboard_lab_copy_preview":
         result = build_safe_dashboard_lab_copy_preview(profile)["result"]
     elif action["kind"] == "dashboard_lab_copy_validated":
@@ -1728,6 +1945,28 @@ def _onboarding_action_catalog(
                 requires_confirmation=False,
             )
         )
+        if provider == "local_falcon":
+            manifest_validation_reason = _local_falcon_manifest_validation_unavailable_reason(
+                profile,
+                local_config=_provider_config(local_config, "local_falcon"),
+                enabled=enabled,
+            )
+            actions.append(
+                _onboarding_action(
+                    action_id="local_falcon.validate-manifest",
+                    provider=provider,
+                    kind="local_falcon_validate_manifest",
+                    label="Validate Local Falcon manifest",
+                    description="Validate the local-only Local Falcon manifest structure without fetching provider data or returning manifest contents.",
+                    available=enabled and manifest_validation_reason == "",
+                    unavailable_reason=manifest_validation_reason,
+                    read_only=True,
+                    writes_files=False,
+                    external_api=False,
+                    fixture_copy=False,
+                    requires_confirmation=False,
+                )
+            )
         if provider == "form_fills":
             actions.append(
                 _onboarding_action(
@@ -1983,6 +2222,79 @@ def _onboarding_validation_unavailable_reason(*, enabled: bool, validation_targe
     if not validation_target["input_path"].is_file():
         return "Expected local validation input is missing."
     return ""
+
+
+def _local_falcon_manifest_validation_unavailable_reason(
+    profile: DashboardLabProfile,
+    *,
+    local_config: Mapping[str, Any],
+    enabled: bool,
+) -> str:
+    if not enabled:
+        return "Provider is not enabled for this profile."
+    manifest_path = _resolve_local_falcon_manifest_path(profile, local_config)
+    if manifest_path is None:
+        return "Local Falcon manifest is missing or outside the allowed local manifest locations."
+    if not manifest_path.is_file():
+        return "Expected local Local Falcon manifest is missing."
+    return ""
+
+
+def _run_local_falcon_manifest_validation(
+    profile: DashboardLabProfile,
+    *,
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    manifest_path = _resolve_local_falcon_manifest_path(profile, local_config)
+    if manifest_path is None:
+        return {
+            "status": "unavailable",
+            "message": "Local Falcon manifest is missing or outside the allowed local manifest locations.",
+            "provider": "local_falcon",
+        }
+    if not manifest_path.is_file():
+        return {
+            "status": "unavailable",
+            "message": "Expected local Local Falcon manifest is missing.",
+            "provider": "local_falcon",
+        }
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {
+            "status": "failed",
+            "message": "Manifest JSON is invalid.",
+            "provider": "local_falcon",
+        }
+    except OSError:
+        return {
+            "status": "failed",
+            "message": "Manifest could not be read safely.",
+            "provider": "local_falcon",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": "failed",
+            "message": "Manifest must contain a JSON object.",
+            "provider": "local_falcon",
+        }
+    validation = validate_local_falcon_manifest(payload, profile=profile.slug, manifest_path=manifest_path)
+    return {
+        "status": "passed" if validation.safe_to_process else "failed",
+        "message": "Manifest validation passed." if validation.safe_to_process else "Manifest validation failed.",
+        "provider": "local_falcon",
+        "report_count": validation.report_count,
+        "report_source_counts": dict(validation.report_source_counts),
+        "planned_source_counts": dict(validation.planned_source_counts),
+        "missing_report_ids": validation.missing_report_ids,
+        "duplicate_report_ids": validation.duplicate_report_ids,
+        "duplicate_source_query_pairs": validation.duplicate_source_query_pairs,
+        "planned_missing_report_ids": validation.planned_missing_report_ids,
+        "google_ai_overview_pending_prompts": validation.google_ai_overview_pending_prompts,
+        "warning_count": len(validation.warnings),
+        "error_count": len(validation.errors),
+        "safe_to_process": validation.safe_to_process,
+    }
 
 
 def _safe_local_file_metadata(path: Path, file_label: str) -> dict[str, Any]:
@@ -3598,6 +3910,22 @@ def _local_falcon_manifest_configured(profile: DashboardLabProfile, local_config
         local_config,
         ("manifest", "manifest_path", "report_id", "local_falcon_manifest_configured"),
     )
+
+
+def _resolve_local_falcon_manifest_path(profile: DashboardLabProfile, local_config: Mapping[str, Any]) -> Path | None:
+    raw_value = str(local_config.get("manifest_path") or "").strip()
+    candidate = local_falcon_manifest_path(profile) if not raw_value else ROOT / Path(raw_value)
+    try:
+        resolved = candidate.resolve()
+    except OSError:
+        return None
+    allowed_roots = [
+        (ROOT / "local-falcon-manifests").resolve(),
+        (ROOT / ".tmp").resolve(),
+    ]
+    if any(resolved == root or root in resolved.parents for root in allowed_roots):
+        return resolved
+    return None
 
 
 def _any_present(config: Mapping[str, Any], keys: tuple[str, ...]) -> bool:

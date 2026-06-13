@@ -334,6 +334,26 @@ type OnboardingProviderStatus = {
   next_step: string;
 };
 
+type OnboardingPreflightCheck = {
+  label: string;
+  status: string;
+};
+
+type OnboardingPreflightProvider = {
+  provider: string;
+  label: string;
+  overall_state: string;
+  checks: OnboardingPreflightCheck[];
+  next_step: string;
+};
+
+type NextActionItem = {
+  id: string;
+  label: string;
+  status: string;
+  detail: string;
+};
+
 type OnboardingStatus = {
   profile: {
     slug: string;
@@ -368,6 +388,15 @@ type OnboardingStatus = {
     last_copy: string;
   };
   providers: OnboardingProviderStatus[];
+  preflight: {
+    state: string;
+    providers: OnboardingPreflightProvider[];
+  };
+  next_action_stack: {
+    primary: NextActionItem;
+    queue: NextActionItem[];
+  };
+  operator_guidance: string[];
   safety: {
     read_only: boolean;
     no_provider_execution: boolean;
@@ -813,6 +842,8 @@ function App() {
 
               <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
 
+              <OnboardingPreflightPanel status={detail.onboarding_status} />
+
               <OnboardingStatusDashboard status={detail.onboarding_status} />
 
               <CompletionSummaryPanel
@@ -838,7 +869,7 @@ function App() {
                 }
               />
 
-              <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
+              <PrimaryNextAction status={detail.onboarding_status} />
 
               <ProviderSetupWorkbench
                 detail={detail}
@@ -1205,6 +1236,64 @@ function MetricPill({ label, value }: { label: string; value: string | number })
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function OnboardingPreflightPanel({ status }: { status: OnboardingStatus }) {
+  return (
+    <section className="onboarding-preflight-card" aria-label="Provider onboarding preflight">
+      <div className="onboarding-status-heading">
+        <div>
+          <span className="eyebrow">Provider preflight</span>
+          <h3>Onboarding preflight</h3>
+          <p>
+            Safe setup checks only. This keeps local config values, vault contents, raw file paths, and provider payloads out of view.
+          </p>
+        </div>
+        <span className={statusBadgeClass(status.preflight.state)}>{status.preflight.state}</span>
+      </div>
+
+      <div className="preflight-grid">
+        {status.preflight.providers.map((provider) => (
+          <article className="preflight-panel" key={provider.provider}>
+            <div className="card-heading">
+              <div>
+                <h4>{provider.label}</h4>
+                <p>{provider.next_step}</p>
+              </div>
+              <span className={statusBadgeClass(provider.overall_state)}>{provider.overall_state}</span>
+            </div>
+            <dl className="preflight-checks">
+              {provider.checks.map((check) => (
+                <div key={`${provider.provider}-${check.label}`}>
+                  <dt>{check.label}</dt>
+                  <dd>
+                    <span className={statusBadgeClass(check.status)}>{check.status}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        ))}
+      </div>
+
+      <article className="operator-guidance-box">
+        <div className="card-heading">
+          <div>
+            <h4>Operator-first guidance</h4>
+            <p>Compact real-mode cues for local onboarding execution.</p>
+          </div>
+        </div>
+        <ul className="status-list">
+          {status.operator_guidance.map((item) => (
+            <li key={item}>
+              <span className="tiny-dot neutral" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </article>
+    </section>
   );
 }
 
@@ -2411,24 +2500,28 @@ function LocalConfigProviderSection({
 }
 
 function PrimaryNextAction({
-  detail,
-  copyPreview,
+  status,
 }: {
-  detail: ProfileDetail;
-  copyPreview: CopyPreview | null;
+  status: OnboardingStatus;
 }) {
-  const actions = recommendedNextActions(detail, copyPreview);
+  const primary = status.next_action_stack.primary;
+  const queue = status.next_action_stack.queue;
   return (
     <section className="next-action-card" aria-label="Recommended next actions">
       <div>
         <span className="eyebrow">Recommended next</span>
-        <h3>{actions[0].title}</h3>
-        <p>{actions[0].description}</p>
+        <h3>{primary.label}</h3>
+        <p>{primary.detail}</p>
       </div>
-      {actions.length > 1 ? (
+      <span className={statusBadgeClass(primary.status)}>{primary.status}</span>
+      {queue.length ? (
         <div className="secondary-next-action">
-          <strong>{actions[1].title}</strong>
-          <span>{actions[1].description}</span>
+          {queue.map((item) => (
+            <div className="secondary-next-action-item" key={item.id}>
+              <strong>{item.label}</strong>
+              <span>{item.detail}</span>
+            </div>
+          ))}
         </div>
       ) : null}
     </section>
@@ -3093,94 +3186,6 @@ function onboardingSummary(detail: ProfileDetail, copyPreview: CopyPreview | nul
   };
 }
 
-function recommendedNextActions(detail: ProfileDetail, copyPreview: CopyPreview | null) {
-  const enabledItems = activeProviderItems(detail);
-  const missingShell = !detail.slug || !detail.dashboard_lab_route;
-  const missingConfig = enabledItems.find((item) => item.blocked_reason && !item.output_exists);
-  const localFalconKey = enabledItems.find(
-    (item) =>
-      item.provider_key === 'local_falcon' &&
-      (item.config_state.api_key_vault_locked || item.credential_source === 'Missing'),
-  );
-  const importReady = enabledItems.find(
-    (item) =>
-      ['callrail', 'form_fills'].includes(item.provider_key) &&
-      item.status === 'ready_to_fetch' &&
-      !item.output_exists,
-  );
-  const missingOutput = enabledItems.find((item) => !item.output_exists);
-  const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.every((item) => item.source_exists);
-
-  if (missingShell) {
-    return [
-      {
-        title: 'Finish profile shell',
-        description: 'Complete the tracked profile shell before adding local-only provider setup.',
-      },
-    ];
-  }
-  if (localFalconKey) {
-    return [
-      {
-        title: 'Add Local Falcon key',
-        description: localFalconKey.config_state.api_key_vault_locked
-          ? 'Unlock the local vault to check the saved Local Falcon key metadata.'
-          : 'Add the Local Falcon key to env or the local encrypted vault before fetching report metadata.',
-      },
-    ];
-  }
-  if (missingConfig) {
-    return [
-      {
-        title: `Add ${missingConfig.provider_label} local config`,
-        description: missingConfig.blocked_reason || missingConfig.safe_next_action,
-      },
-    ];
-  }
-  if (importReady) {
-    return [
-      {
-        title: importReady.provider_key === 'form_fills' ? 'Import Form Fills' : 'Import CallRail',
-        description: importReady.safe_next_action,
-      },
-    ];
-  }
-  if (missingOutput) {
-    return [
-      {
-        title: `Create ${missingOutput.provider_label} output`,
-        description: missingOutput.safe_next_action,
-      },
-    ];
-  }
-  if (!detail.last_actions.last_validation) {
-    return [
-      {
-        title: 'Validate existing output',
-        description: 'Run the guarded validation check before copying summaries into dashboard-lab.',
-      },
-      {
-        title: 'Preview fixture copy',
-        description: 'The copy step remains disabled until you confirm the safety checkbox.',
-      },
-    ];
-  }
-  if (copyReady && !detail.last_actions.last_copy) {
-    return [
-      {
-        title: 'Copy validated fixtures',
-        description: 'Use the guarded copy action to update ignored dashboard-lab local fixtures.',
-      },
-    ];
-  }
-  return [
-    {
-      title: 'Review local dashboard output',
-      description: 'The local provider summaries are available. Use advanced diagnostics only when you need commands or file-level detail.',
-    },
-  ];
-}
-
 function providerSetupItems(detail: ProfileDetail) {
   const providerReadiness = new Map(detail.provider_readiness.map((provider) => [provider.provider, provider]));
   const sourceChecklist = (detail.provider_setup_checklist.length
@@ -3306,14 +3311,17 @@ function providerNeeds(
   if (item.provider_key === 'google_ads_search') {
     needs.push('Live fetch stays planned');
   }
+  if (item.provider_key === 'local_falcon' && !item.config_state.manifest_exists) {
+    needs.push('Needs manifest');
+  }
   return [...new Set(needs)];
 }
 
 function providerWorkflowNote(provider: string, secretStatus: string) {
   if (provider === 'local_falcon') {
     return secretStatus === 'Configured'
-      ? 'Local Falcon can use env or the local encrypted vault. The API key remains write-only in this UI.'
-      : 'Local Falcon supports env or the local encrypted vault. The API key is write-only and never shown after save.';
+      ? 'Local Falcon can use env or the local encrypted vault. The API key remains write-only, the manifest stays local-only, and live fetch remains planned or unavailable here.'
+      : 'Local Falcon supports env or the local encrypted vault. The API key is write-only, the manifest stays local-only, and live fetch remains planned or unavailable here.';
   }
   if (provider === 'google_ads_search') {
     return 'Google Ads Search is planned as read-only reporting only. No campaign, bid, budget, keyword, ad, asset, conversion, or account mutation happens here.';
@@ -3329,7 +3337,10 @@ function providerWorkflowNote(provider: string, secretStatus: string) {
 
 function providerPlannedActionNote(provider: string) {
   if (provider === 'google_ads_search') {
-    return 'Read-only reporting only; mutation workflows are not present.';
+    return 'Read-only reporting only. Live fetch stays planned or unavailable, and mutation workflows are not present.';
+  }
+  if (provider === 'local_falcon') {
+    return 'Manifest-first local workflow only. API key metadata can come from env or vault, stays write-only, and live fetch remains planned or unavailable.';
   }
   if (provider === 'callrail') {
     return 'Local CSV import only; no CallRail API call from this panel.';
@@ -3352,6 +3363,7 @@ function RealProfileGuardrails({ detail }: { detail: ProfileDetail }) {
     'Secrets stay in env or encrypted vault, never pasted into local config',
     'Imports write ignored local output only and provider execution is separately approved',
     'Fixture copy requires preview, validation, and explicit confirmation',
+    'Dashboard-lab source repo is not modified by this frontend',
     'Portal publishing remains separate',
   ];
   return (

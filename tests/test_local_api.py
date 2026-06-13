@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from server.main import create_app
+from server.main import ROOT, create_app
 from src.local_secret_vault import DEFAULT_VAULT_PATH, LocalSecretVault
 from src.operator_console import DEFAULT_PROFILE_REGISTRY, EXPECTED_DASHBOARD_FILES
 
@@ -1141,6 +1141,12 @@ def test_onboarding_status_endpoint_returns_safe_read_only_matrix(tmp_path):
     assert providers["google_ads_search"]["config_state"] == "Not enabled"
     assert providers["callrail"]["output_state"] == "Not applicable"
     assert payload["local_config"]["state"] == "Configured"
+    assert payload["preflight"]["state"] == "In progress"
+    assert payload["next_action_stack"]["primary"]["label"] == "Add Local Falcon manifest file"
+    local_falcon_preflight = next(item for item in payload["preflight"]["providers"] if item["provider"] == "local_falcon")
+    assert local_falcon_preflight["overall_state"] == "Missing setup"
+    assert any(check["label"] == "Manifest" and check["status"] == "Needs manifest" for check in local_falcon_preflight["checks"])
+    assert "Portal publishing is separate." in payload["operator_guidance"]
     assert "demo-profile.local.json" in serialized
     assert "do-not-return" not in serialized
     assert "property-123" not in serialized
@@ -1205,6 +1211,8 @@ def test_onboarding_actions_list_returns_safe_metadata_and_future_actions(tmp_pa
     assert actions["ga4-future-run"]["available"] is False
     assert actions["ga4-future-run"]["writes_files"] is True
     assert actions["ga4-future-run"]["external_api"] is True
+    assert actions["local_falcon.validate-manifest"]["available"] is False
+    assert actions["local_falcon.validate-manifest"]["unavailable_reason"] == "Local Falcon manifest is missing or outside the allowed local manifest locations."
     assert actions["google_ads_search-check-readiness"]["available"] is False
     assert "do-not-return" not in serialized
     assert "property-123" not in serialized
@@ -1247,6 +1255,120 @@ def test_onboarding_actions_preview_and_run_safe_read_only_actions_without_write
     assert str(tmp_path) not in serialized
     after_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
     assert after_files == before_files
+
+
+def test_onboarding_status_sequences_local_falcon_and_local_file_blockers_safely(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["local_falcon", "callrail", "form_fills"],
+        capabilities=[
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json"},
+        ],
+    )
+    manifest_dir = ROOT / ".tmp"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest_name = f"manifest-{tmp_path.name}.json"
+    manifest_path = manifest_dir / manifest_name
+    _write_json(
+        manifest_path,
+        {
+            "profile": "demo-profile",
+            "reports": [{"source": "Google Maps", "keyword": "safe keyword", "report_id": "report-1"}],
+        },
+    )
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "local_falcon": {"manifest_path": f".tmp/{manifest_name}", "api_key_env": "DEMO_LOCAL_FALCON_KEY"},
+                    "callrail": {},
+                    "form_fills": {},
+                }
+            }
+        },
+    )
+    client = TestClient(create_app(registry_path=registry, env={}, local_profile_config_path=config_path))
+
+    try:
+        response = client.get("/api/profiles/demo-profile/onboarding-status")
+    finally:
+        manifest_path.unlink(missing_ok=True)
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["next_action_stack"]["primary"]["label"] == "Add Local Falcon key"
+    assert [item["label"] for item in payload["next_action_stack"]["queue"][:2]] == [
+        "Add CallRail local file",
+        "Add Form Fills local file",
+    ]
+    local_falcon = next(item for item in payload["preflight"]["providers"] if item["provider"] == "local_falcon")
+    assert any(check["label"] == "Manifest" and check["status"] == "Complete" for check in local_falcon["checks"])
+    assert any(check["label"] == "Vault or env key" and check["status"] == "Needs secret" for check in local_falcon["checks"])
+    assert str(tmp_path) not in serialized
+    assert manifest_name not in serialized
+
+
+def test_local_falcon_manifest_validation_action_returns_sanitized_metadata_only(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["local_falcon"],
+        capabilities=[
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        ],
+    )
+    manifest_dir = ROOT / ".tmp"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest_name = f"manifest-{tmp_path.name}.json"
+    manifest_path = manifest_dir / manifest_name
+    _write_json(
+        manifest_path,
+        {
+            "profile": "demo-profile",
+            "reports": [{"source": "Google Maps", "keyword": "hidden keyword", "report_id": "report-1"}],
+            "planned_or_in_progress_sources": [{"source": "Google AI Overview", "keyword": "hidden prompt"}],
+        },
+    )
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "local_falcon": {"manifest_path": f".tmp/{manifest_name}", "api_key_env": "DEMO_LOCAL_FALCON_KEY"},
+                }
+            }
+        },
+    )
+    client = TestClient(create_app(registry_path=registry, env={}, local_profile_config_path=config_path))
+
+    try:
+        listed = client.get("/api/profiles/demo-profile/onboarding-actions")
+        response = client.post("/api/profiles/demo-profile/onboarding-actions/local_falcon.validate-manifest/run", json={})
+    finally:
+        manifest_path.unlink(missing_ok=True)
+
+    assert listed.status_code == 200
+    assert _action(listed.json(), "local_falcon.validate-manifest")["available"] is True
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] == "passed"
+    assert payload["result"]["report_count"] == 1
+    assert payload["result"]["google_ai_overview_pending_prompts"] == 1
+    assert payload["result"]["report_source_counts"] == {"Google Maps": 1}
+    assert payload["result"]["safe_to_process"] is True
+    assert "hidden keyword" not in serialized
+    assert "hidden prompt" not in serialized
+    assert "report-1" not in serialized
+    assert str(tmp_path) not in serialized
+    assert manifest_name not in serialized
 
 
 def test_onboarding_validation_action_runs_allowlisted_script_with_sanitized_failure(tmp_path):
