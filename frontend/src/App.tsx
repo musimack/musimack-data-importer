@@ -554,12 +554,14 @@ function App() {
   const [localConfigBusy, setLocalConfigBusy] = useState<boolean>(false);
   const [localConfigMessage, setLocalConfigMessage] = useState<string>('');
   const [localConfigConfirmed, setLocalConfigConfirmed] = useState<boolean>(false);
+  const [localConfigDirty, setLocalConfigDirty] = useState<boolean>(false);
   const [profileRegistryDraft, setProfileRegistryDraft] = useState<ProfileRegistryDraftResponse | null>(null);
   const [profileRegistryForm, setProfileRegistryForm] = useState<ProfileRegistryDraft | null>(null);
   const [profileRegistryPreview, setProfileRegistryPreview] = useState<ProfileRegistryPreview | null>(null);
   const [profileRegistryBusy, setProfileRegistryBusy] = useState<boolean>(false);
   const [profileRegistryMessage, setProfileRegistryMessage] = useState<string>('');
   const [profileRegistryConfirmed, setProfileRegistryConfirmed] = useState<boolean>(false);
+  const [profileRegistryDirty, setProfileRegistryDirty] = useState<boolean>(false);
   const [onboardingActions, setOnboardingActions] = useState<OnboardingActionsResponse | null>(null);
   const [onboardingActionMessage, setOnboardingActionMessage] = useState<string>('');
   const [onboardingActionBusyId, setOnboardingActionBusyId] = useState<string>('');
@@ -582,6 +584,7 @@ function App() {
       setProfileRegistryMessage,
       setProfileRegistryBusy,
       setProfileRegistryConfirmed,
+      setProfileRegistryDirty,
     );
   }, []);
 
@@ -621,6 +624,7 @@ function App() {
       setLocalConfigPreview(null);
       setLocalConfigMessage('');
       setLocalConfigConfirmed(false);
+      setLocalConfigDirty(false);
       setOnboardingActions(null);
       setOnboardingActionMessage('');
       setOnboardingActionBusyId('');
@@ -642,6 +646,7 @@ function App() {
     setLocalConfigPreview(null);
     setLocalConfigMessage('');
     setLocalConfigConfirmed(false);
+    setLocalConfigDirty(false);
     setOnboardingActions(null);
     setOnboardingActionMessage('');
     setOnboardingActionBusyId('');
@@ -669,6 +674,7 @@ function App() {
       setLocalConfigPreview,
       setLocalConfigMessage,
       setLocalConfigBusy,
+      setLocalConfigDirty,
     );
     refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage);
   }, [selectedSlug]);
@@ -724,10 +730,13 @@ function App() {
         confirmed={profileRegistryConfirmed}
         draft={profileRegistryDraft}
         form={profileRegistryForm}
-        message={profileRegistryMessage}
+        message={profileRegistryDirty && !profileRegistryMessage ? 'Unsaved tracked profile edits are in progress.' : profileRegistryMessage}
         preview={profileRegistryPreview}
         setConfirmed={setProfileRegistryConfirmed}
-        setForm={setProfileRegistryForm}
+        setForm={(nextForm) => {
+          setProfileRegistryForm(nextForm);
+          setProfileRegistryDirty(true);
+        }}
         onPreview={() =>
           previewProfileRegistry(
             profileRegistryForm,
@@ -745,8 +754,9 @@ function App() {
             setProfileRegistryMessage,
             setProfileRegistryBusy,
             setProfileRegistryConfirmed,
-            () => {
-              refreshProfiles(setProfiles, setSelectedSlug, setError);
+            (savedSlug) => {
+              setProfileRegistryDirty(false);
+              refreshProfiles(setProfiles, setSelectedSlug, setError, selectedSlug, savedSlug);
               refreshProfileRegistryDraft(
                 setProfileRegistryDraft,
                 setProfileRegistryForm,
@@ -754,6 +764,7 @@ function App() {
                 setProfileRegistryMessage,
                 setProfileRegistryBusy,
                 setProfileRegistryConfirmed,
+                setProfileRegistryDirty,
               );
             },
           )
@@ -926,10 +937,13 @@ function App() {
                 confirmed={localConfigConfirmed}
                 draft={localConfigDraft}
                 form={localConfigForm}
-                message={localConfigMessage}
+                message={localConfigDirty && !localConfigMessage ? 'Unsaved local config edits are in progress.' : localConfigMessage}
                 preview={localConfigPreview}
                 setConfirmed={setLocalConfigConfirmed}
-                setForm={setLocalConfigForm}
+                setForm={(nextForm) => {
+                  setLocalConfigForm(nextForm);
+                  setLocalConfigDirty(true);
+                }}
                 onPreview={() =>
                   previewLocalConfig(
                     detail.slug,
@@ -957,6 +971,7 @@ function App() {
                         setLocalConfigPreview,
                         setLocalConfigMessage,
                         setLocalConfigBusy,
+                        setLocalConfigDirty,
                       );
                       refreshSelectedProfile('Local profile config saved');
                     },
@@ -1105,7 +1120,7 @@ function RuntimeSafetyBanner({ status }: { status: RuntimeSafetyStatus | null })
         <span>
           {qaMode
             ? 'Disposable overrides are active. Raw paths are hidden.'
-            : 'Using default local paths. Profile shell saves write tracked registry metadata.'}
+            : 'Tracked profile saves update the registry, local config writes ignored files, vault actions affect the local encrypted vault, imports stay local-only, fixture copy requires confirmation, and portal publishing stays separate.'}
         </span>
       </div>
       <div className="runtime-safety-flags">
@@ -2484,6 +2499,7 @@ function ProviderSetupPanel({
   const copyStatus = item.dashboard_copy_readiness === 'Ready' ? 'Ready for fixture copy' : item.output_exists ? 'Not copied' : 'Output missing';
   const importStatus = providerImportStatusLabel(item, importAction);
   const configReady = readiness?.config_ready ?? (item.status === 'ready' || item.status === 'output_available');
+  const needs = providerNeeds(item, localConfigStatus, secretStatus, importStatus, validationStatus, copyStatus);
 
   return (
     <article className="provider-setup-panel">
@@ -2501,6 +2517,15 @@ function ProviderSetupPanel({
         <span className={statusBadgeClass(localConfigStatus)}>{localConfigStatus}</span>
         <span className={statusBadgeClass(secretStatus)}>{secretStatus}</span>
       </div>
+      {needs.length ? (
+        <div className="chip-row" aria-label={`${item.provider_label} setup needs`}>
+          {needs.map((need) => (
+            <span className="setup-chip" key={need}>{need}</span>
+          ))}
+        </div>
+      ) : (
+        <p className="provider-setup-note">All currently visible local setup gates for this provider are satisfied.</p>
+      )}
       <dl className="provider-setup-meta">
         <div>
           <dt>Import/input</dt>
@@ -2534,6 +2559,10 @@ function ProviderSetupPanel({
           </div>
         </div>
       ) : null}
+      <div className="mini-section">
+        <h5>Workflow</h5>
+        <p>{providerWorkflowNote(item.provider_key, secretStatus)}</p>
+      </div>
       <div className="planned-action-note">
         <strong>{readinessAction?.available ? 'Refresh available' : 'Planned live actions disabled'}</strong>
         <span>{providerPlannedActionNote(item.provider_key)}</span>
@@ -3215,7 +3244,7 @@ function providerImportStatusLabel(item: ProviderSetupChecklistItem, importActio
     return importAction?.available ? 'Date-only input ready' : 'Needs local input';
   }
   if (item.provider_key === 'google_ads_search') {
-    return 'Read-only reporting';
+    return 'Planned read-only reporting';
   }
   return 'Provider output workflow';
 }
@@ -3241,6 +3270,63 @@ function setupHeadline(item: ProviderSetupChecklistItem) {
   return 'Needs local config';
 }
 
+function providerNeeds(
+  item: ProviderSetupChecklistItem,
+  localConfigStatus: string,
+  secretStatus: string,
+  importStatus: string,
+  validationStatus: string,
+  copyStatus: string,
+) {
+  if (item.status === 'not_enabled') {
+    return [];
+  }
+  const needs: string[] = [];
+  if (localConfigStatus === 'Needs local config') {
+    needs.push('Needs local config');
+  }
+  if (secretStatus === 'Needs secret') {
+    needs.push('Needs secret');
+  }
+  if (secretStatus === 'Vault locked') {
+    needs.push('Vault unlock needed');
+  }
+  if (importStatus === 'Needs local input') {
+    needs.push('Needs local input file');
+  }
+  if (!item.output_exists && ['callrail', 'form_fills'].includes(item.provider_key)) {
+    needs.push('Needs local import');
+  }
+  if (item.output_exists && validationStatus !== 'Validation available') {
+    needs.push('Needs validation');
+  }
+  if (item.output_exists && copyStatus !== 'Ready for fixture copy') {
+    needs.push('Needs fixture copy preview');
+  }
+  if (item.provider_key === 'google_ads_search') {
+    needs.push('Live fetch stays planned');
+  }
+  return [...new Set(needs)];
+}
+
+function providerWorkflowNote(provider: string, secretStatus: string) {
+  if (provider === 'local_falcon') {
+    return secretStatus === 'Configured'
+      ? 'Local Falcon can use env or the local encrypted vault. The API key remains write-only in this UI.'
+      : 'Local Falcon supports env or the local encrypted vault. The API key is write-only and never shown after save.';
+  }
+  if (provider === 'google_ads_search') {
+    return 'Google Ads Search is planned as read-only reporting only. No campaign, bid, budget, keyword, ad, asset, conversion, or account mutation happens here.';
+  }
+  if (provider === 'ga4' || provider === 'gsc') {
+    return 'Use env var names and safe operational metadata only in local config. Live OAuth and provider pulls stay outside this panel.';
+  }
+  if (provider === 'callrail' || provider === 'form_fills') {
+    return 'This provider uses local input files only in this console. Raw rows and customer details stay out of the UI.';
+  }
+  return 'Local-only setup guidance. Live provider execution remains separate.';
+}
+
 function providerPlannedActionNote(provider: string) {
   if (provider === 'google_ads_search') {
     return 'Read-only reporting only; mutation workflows are not present.';
@@ -3259,9 +3345,12 @@ function RealProfileGuardrails({ detail }: { detail: ProfileDetail }) {
   const items = [
     `Profile slug confirmed: ${detail.slug}`,
     `Enabled providers: ${enabledProviders.length ? enabledProviders.join(', ') : 'none'}`,
+    'Tracked profile changes update the tracked registry only',
+    'Local config writes ignored local config files only',
+    'Vault actions affect the local encrypted vault only',
     'Local config stores env references and safe local filenames only',
     'Secrets stay in env or encrypted vault, never pasted into local config',
-    'Imports are local-only and provider execution is separately approved',
+    'Imports write ignored local output only and provider execution is separately approved',
     'Fixture copy requires preview, validation, and explicit confirmation',
     'Portal publishing remains separate',
   ];
@@ -3410,11 +3499,19 @@ function refreshProfiles(
   setProfiles: (profiles: ProfileSummary[]) => void,
   setSelectedSlug: (slug: string) => void,
   setError: (error: string) => void,
+  currentSelectedSlug = '',
+  preferredSlug = '',
 ) {
   fetchJson<{ profiles: ProfileSummary[] }>(`${API_BASE}/api/profiles`)
     .then((payload) => {
       setProfiles(payload.profiles);
-      setSelectedSlug(payload.profiles[0]?.slug ?? '');
+      const slugs = new Set(payload.profiles.map((profile) => profile.slug));
+      const nextSlug = preferredSlug && slugs.has(preferredSlug)
+        ? preferredSlug
+        : currentSelectedSlug && slugs.has(currentSelectedSlug)
+          ? currentSelectedSlug
+          : payload.profiles[0]?.slug ?? '';
+      setSelectedSlug(nextSlug);
     })
     .catch((fetchError: Error) => setError(fetchError.message));
 }
@@ -3426,6 +3523,7 @@ function refreshProfileRegistryDraft(
   setMessage: (message: string) => void,
   setBusy: (busy: boolean) => void,
   setConfirmed: (confirmed: boolean) => void,
+  setDirty: (dirty: boolean) => void,
 ) {
   setBusy(true);
   fetchJson<ProfileRegistryDraftResponse>(`${API_BASE}/api/profile-registry/new-draft`)
@@ -3435,6 +3533,7 @@ function refreshProfileRegistryDraft(
       setPreview(null);
       setMessage('');
       setConfirmed(false);
+      setDirty(false);
     })
     .catch((fetchError: Error) => setMessage(safeProfileRegistryErrorMessage(fetchError)))
     .finally(() => setBusy(false));
@@ -3479,7 +3578,7 @@ function saveProfileRegistry(
   setMessage: (message: string) => void,
   setBusy: (busy: boolean) => void,
   setConfirmed: (confirmed: boolean) => void,
-  onComplete: () => void,
+  onComplete: (savedSlug: string) => void,
 ) {
   if (!form) {
     setMessage('Tracked profile draft is still loading.');
@@ -3501,7 +3600,7 @@ function saveProfileRegistry(
       setPreview(payload);
       setConfirmed(false);
       setMessage('Tracked profile shell saved.');
-      onComplete();
+      onComplete(String(payload.profile.slug ?? ''));
     })
     .catch((fetchError: Error) => setMessage(safeProfileRegistryErrorMessage(fetchError)))
     .finally(() => setBusy(false));
@@ -3542,6 +3641,7 @@ function refreshLocalConfigDraft(
   setPreview: (preview: LocalConfigPreview | null) => void,
   setMessage: (message: string) => void,
   setBusy: (busy: boolean) => void,
+  setDirty: (dirty: boolean) => void,
 ) {
   setBusy(true);
   fetchJson<LocalConfigDraftResponse>(`${API_BASE}/api/profiles/${profileSlug}/local-config/draft`)
@@ -3550,6 +3650,7 @@ function refreshLocalConfigDraft(
       setForm(cloneLocalConfigDraft(payload.draft));
       setPreview(null);
       setMessage('');
+      setDirty(false);
     })
     .catch((fetchError: Error) => setMessage(safeLocalConfigErrorMessage(fetchError)))
     .finally(() => setBusy(false));

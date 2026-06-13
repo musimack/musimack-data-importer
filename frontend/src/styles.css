@@ -683,6 +683,12 @@ code {
   line-height: 1.4;
 }
 
+.provider-setup-note {
+  color: #556170;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .real-profile-guardrails {
   background: #f4fbf7;
   border: 1px solid #c8dfd1;

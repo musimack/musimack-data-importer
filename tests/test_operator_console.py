@@ -39,7 +39,8 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert "pinnacle-contractors" in slugs
     assert "musimack-marketing" in slugs
     assert "wc-land-renewal" in slugs
-    assert "steadfast-decks" in slugs
+    assert "steadfast-decks-and-fences" in slugs
+    assert "steadfast-decks" not in slugs
     assert "portland-tattoo-co" in slugs
     inn = profile_by_slug("inn-at-spanish-head", profiles)
     assert inn.display_name == "Spanish Head"
@@ -55,6 +56,7 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     pinnacle = profile_by_slug("pinnacle-contractors", profiles)
     musimack = profile_by_slug("musimack-marketing", profiles)
     wc = profile_by_slug("wc-land-renewal", profiles)
+    steadfast = profile_by_slug("steadfast-decks-and-fences", profiles)
     tattoo = profile_by_slug("portland-tattoo-co", profiles)
     assert lucy.domain == "lucyescobar.com"
     assert lucy.data_sources == ["ga4", "gsc"]
@@ -78,6 +80,16 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
         "callrail-summary.json",
         "form-fills-summary.json",
     ]
+    assert steadfast.display_name == "Steadfast Decks and Fences"
+    assert steadfast.domain == "steadfastdecks.com"
+    assert steadfast.data_sources == ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"]
+    assert steadfast.importer_output_folder.as_posix().endswith("exports/local-real/dashboard-lab/steadfast-decks-and-fences")
+    assert _capability(steadfast, "google_ads_search").status == "enabled"
+    assert _capability(steadfast, "google_ads_search").expected_output_file == "google-ads-summary.json"
+    assert _capability(steadfast, "callrail").status == "enabled"
+    assert _capability(steadfast, "callrail").expected_output_file == "callrail-summary.json"
+    assert _capability(steadfast, "form_fills").status == "enabled"
+    assert _capability(steadfast, "form_fills").expected_output_file == "form-fills-summary.json"
     assert tattoo.importer_output_folder.as_posix().endswith("exports/local-real/dashboard-lab/portland-tattoo-co")
     assert {profile.domain for profile in profiles} >= {
         "alumapdx.com",
