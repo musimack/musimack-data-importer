@@ -736,6 +736,15 @@ python -m uvicorn server.main:app --reload --port 8765
 
 `MUSIMACK_IMPORTER_VAULT_PATH` is for local dev/test only. Use fake passphrases and fake vault contents for manual QA, do not enter real provider secrets, do not screenshot or log passphrases, and delete the disposable test vault when finished. The Secret Vault panel only checks status and locks/unlocks the local encrypted vault; it does not run provider imports, add secret entries, or copy dashboard fixtures.
 
+To manually QA the local profile config editor without touching the real ignored `local-profile-configs/` directory, run the backend with a disposable local config directory override:
+
+```powershell
+$env:MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR = "$PWD\\.tmp\\local-profile-configs-qa"
+python -m uvicorn server.main:app --reload --port 8765
+```
+
+`MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR` is for local dev/test only. Use fake environment variable names and safe ignored path references only; do not paste secrets, OAuth JSON, API keys, raw provider rows, raw fixture payloads, or customer data. The local config editor only drafts, previews, and saves ignored per-profile config JSON; it does not run providers, start OAuth flows, or copy dashboard fixtures. Delete the disposable override directory when manual QA is finished.
+
 The frontend shows:
 
 - client/profile list for `aluma-seo-geo` and `inn-at-spanish-head`,

@@ -53,6 +53,7 @@ APP_NAME = "musimack-data-importer-local-api"
 DEFAULT_LOCAL_PROFILE_CONFIG = ROOT / "config" / "dashboard_lab_profiles.local.json"
 DEFAULT_AUDIT_LOG = ROOT / "logs" / "local-action-runs.jsonl"
 IMPORTER_VAULT_PATH_ENV = "MUSIMACK_IMPORTER_VAULT_PATH"
+LOCAL_CONFIG_DIR_ENV = "MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR"
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
@@ -159,7 +160,10 @@ def create_app(
         return os.environ if env is None else env
 
     def current_local_profile_config_dir() -> Path:
-        return local_profile_config_dir or DEFAULT_LOCAL_PROFILE_CONFIG_DIR
+        return resolve_local_profile_config_dir(
+            env=current_env(),
+            explicit_dir=local_profile_config_dir,
+        )
 
     def current_audit_log_path() -> Path:
         return audit_log_path or DEFAULT_AUDIT_LOG
@@ -534,6 +538,20 @@ def resolve_secret_vault_path(
     if override:
         return Path(override).expanduser()
     return DEFAULT_VAULT_PATH
+
+
+def resolve_local_profile_config_dir(
+    *,
+    env: Mapping[str, str] | None = None,
+    explicit_dir: Path | None = None,
+) -> Path:
+    if explicit_dir is not None:
+        return explicit_dir
+    source_env = os.environ if env is None else env
+    override = str(source_env.get(LOCAL_CONFIG_DIR_ENV) or "").strip()
+    if override:
+        return Path(override)
+    return DEFAULT_LOCAL_PROFILE_CONFIG_DIR
 
 
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:

@@ -437,6 +437,69 @@ def test_local_config_save_requires_confirmation_and_writes_temp_config_only(tmp
     assert str(config_dir) not in json.dumps(confirmed.json())
 
 
+def test_local_config_env_override_is_used_without_leaking_path_or_writing_default(tmp_path, monkeypatch):
+    disposable_cwd = tmp_path / "repo-cwd"
+    disposable_cwd.mkdir()
+    monkeypatch.chdir(disposable_cwd)
+    override_dir = tmp_path / "manual-qa-local-configs"
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={"MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR": str(override_dir)},
+        )
+    )
+    draft = {
+        "profile": "demo-profile",
+        "ga4": {"property_id_env": "DEMO_GA4_PROPERTY_ID"},
+        "gsc": {"site_url": "sc-domain:demo.example.test"},
+        "local_falcon": {"manifest_path": "local-falcon-manifests/demo-profile.json"},
+    }
+
+    missing = client.get("/api/profiles/demo-profile/local-config/draft")
+    preview = client.post("/api/profiles/demo-profile/local-config/preview", json={"draft": draft})
+
+    override_file = override_dir / "demo-profile.local.json"
+    default_relative_file = disposable_cwd / "local-profile-configs" / "demo-profile.local.json"
+    assert missing.status_code == 200
+    assert missing.json()["exists"] is False
+    assert preview.status_code == 200
+    assert not override_file.exists()
+
+    saved = client.post("/api/profiles/demo-profile/local-config", json={"draft": draft, "confirmed": True})
+
+    assert saved.status_code == 200
+    assert override_file.exists()
+    assert not default_relative_file.exists()
+    serialized = json.dumps({"missing": missing.json(), "preview": preview.json(), "saved": saved.json()})
+    assert str(override_dir) not in serialized
+    assert "manual-qa-local-configs" not in serialized
+
+
+def test_local_config_explicit_test_dir_takes_precedence_over_env_override(tmp_path):
+    explicit_dir = tmp_path / "explicit-local-configs"
+    ignored_override_dir = tmp_path / "ignored-local-configs"
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={"MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR": str(ignored_override_dir)},
+            local_profile_config_dir=explicit_dir,
+        )
+    )
+    draft = {
+        "profile": "demo-profile",
+        "ga4": {"property_id_env": "DEMO_GA4_PROPERTY_ID"},
+    }
+
+    response = client.post("/api/profiles/demo-profile/local-config", json={"draft": draft, "confirmed": True})
+
+    assert response.status_code == 200
+    assert (explicit_dir / "demo-profile.local.json").exists()
+    assert not (ignored_override_dir / "demo-profile.local.json").exists()
+    serialized = json.dumps(response.json())
+    assert str(explicit_dir) not in serialized
+    assert str(ignored_override_dir) not in serialized
+
+
 def test_local_config_api_rejects_disallowed_and_secret_like_fields(tmp_path):
     config_dir = tmp_path / "local-profile-configs"
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
