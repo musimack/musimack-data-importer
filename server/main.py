@@ -355,6 +355,45 @@ def create_app(
             audit_log_path=current_audit_log_path(),
         )
 
+    @app.get("/api/profiles/{profile_slug}/onboarding-actions")
+    def profile_onboarding_actions(profile_slug: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        return build_onboarding_actions(
+            profile,
+            safe_env=current_env(),
+            local_config=current_profile_config(profile),
+        )
+
+    @app.post("/api/profiles/{profile_slug}/onboarding-actions/{action_id}/preview")
+    def profile_onboarding_action_preview(profile_slug: str, action_id: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        return preview_onboarding_action(
+            profile,
+            action_id,
+            safe_env=current_env(),
+            local_config=current_profile_config(profile),
+        )
+
+    @app.post("/api/profiles/{profile_slug}/onboarding-actions/{action_id}/run")
+    def profile_onboarding_action_run(profile_slug: str, action_id: str, request: ConfirmedActionRequest) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        return run_onboarding_action(
+            profile,
+            action_id,
+            confirmed=request.confirmed,
+            safe_env=current_env(),
+            local_config=current_profile_config(profile),
+        )
+
     @app.get("/api/profiles/{profile_slug}/action-plan")
     def profile_action_plan(profile_slug: str) -> dict[str, Any]:
         try:
@@ -934,6 +973,279 @@ def _onboarding_vault_state(local_config: Mapping[str, Any]) -> dict[str, Any]:
         "state": state,
         "local_falcon_api_key_metadata": "configured" if configured else "not configured",
         "locked": locked,
+    }
+
+
+def build_onboarding_actions(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    actions = _onboarding_action_catalog(profile, safe_env=safe_env, local_config=local_config)
+    return {
+        "profile": profile.slug,
+        "actions": actions,
+        "groups": [
+            {
+                "provider": provider,
+                "label": PROVIDER_LABELS.get(provider, provider),
+                "actions": [action for action in actions if action["provider"] == provider],
+            }
+            for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills")
+        ],
+        "safety": _onboarding_action_safety(),
+    }
+
+
+def preview_onboarding_action(
+    profile: DashboardLabProfile,
+    action_id: str,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    action = _find_onboarding_action(
+        profile,
+        action_id,
+        safe_env=safe_env,
+        local_config=local_config,
+    )
+    return {
+        "profile": profile.slug,
+        "action": action,
+        "preview": {
+            "status": "available" if action["available"] else "unavailable",
+            "would_run": bool(action["available"] and not action["writes_files"]),
+            "message": "Ready to run read-only local check." if action["available"] else action["unavailable_reason"],
+        },
+        "safety": _onboarding_action_safety(),
+    }
+
+
+def run_onboarding_action(
+    profile: DashboardLabProfile,
+    action_id: str,
+    *,
+    confirmed: bool,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    action = _find_onboarding_action(
+        profile,
+        action_id,
+        safe_env=safe_env,
+        local_config=local_config,
+    )
+    if action["writes_files"] and not confirmed:
+        raise HTTPException(status_code=400, detail="onboarding action requires explicit confirmation")
+    if not action["available"]:
+        return {
+            "profile": profile.slug,
+            "action": action,
+            "result": {
+                "status": "unavailable",
+                "message": action["unavailable_reason"] or "This onboarding action is not available yet.",
+            },
+            "safety": _onboarding_action_safety(),
+        }
+    if action["kind"] == "readiness_check":
+        result = _run_onboarding_readiness_check(profile, action["provider"], safe_env=safe_env, local_config=local_config)
+    elif action["kind"] == "validate_existing_output":
+        result = _run_onboarding_output_check(profile, action["provider"])
+    else:
+        return {
+            "profile": profile.slug,
+            "action": action,
+            "result": {
+                "status": "unavailable",
+                "message": "This onboarding action is planned but not runnable in this milestone.",
+            },
+            "safety": _onboarding_action_safety(),
+        }
+    return {
+        "profile": profile.slug,
+        "action": action,
+        "result": result,
+        "safety": _onboarding_action_safety(),
+    }
+
+
+def _onboarding_action_catalog(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    status = build_onboarding_status(profile, safe_env=safe_env, local_config=local_config)
+    provider_status = {item["provider"]: item for item in status["providers"]}
+    actions: list[dict[str, Any]] = []
+    for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"):
+        current = provider_status[provider]
+        enabled = bool(current["enabled"])
+        output_exists = current["output_state"] == "Output exists"
+        actions.append(
+            _onboarding_action(
+                action_id=f"{provider}-check-readiness",
+                provider=provider,
+                kind="readiness_check",
+                label="Check readiness",
+                description="Refresh safe setup and output readiness metadata.",
+                available=enabled,
+                unavailable_reason="" if enabled else "Provider is not enabled for this profile.",
+                read_only=True,
+                writes_files=False,
+                external_api=False,
+                fixture_copy=False,
+                requires_confirmation=False,
+            )
+        )
+        actions.append(
+            _onboarding_action(
+                action_id=f"{provider}-validate-existing-output",
+                provider=provider,
+                kind="validate_existing_output",
+                label="Validate existing output",
+                description="Read safe metadata for the expected local summary file without returning file contents.",
+                available=enabled and output_exists,
+                unavailable_reason="" if enabled and output_exists else "Expected local summary output is missing.",
+                read_only=True,
+                writes_files=False,
+                external_api=False,
+                fixture_copy=False,
+                requires_confirmation=False,
+            )
+        )
+        actions.append(_future_onboarding_action(provider))
+    return actions
+
+
+def _onboarding_action(
+    *,
+    action_id: str,
+    provider: str,
+    kind: str,
+    label: str,
+    description: str,
+    available: bool,
+    unavailable_reason: str,
+    read_only: bool,
+    writes_files: bool,
+    external_api: bool,
+    fixture_copy: bool,
+    requires_confirmation: bool,
+) -> dict[str, Any]:
+    return {
+        "id": action_id,
+        "provider": provider,
+        "provider_label": PROVIDER_LABELS.get(provider, provider),
+        "kind": kind,
+        "label": label,
+        "description": description,
+        "status": "available" if available else "unavailable",
+        "available": available,
+        "unavailable_reason": unavailable_reason,
+        "requires_confirmation": requires_confirmation,
+        "read_only": read_only,
+        "local_only": not external_api,
+        "writes_files": writes_files,
+        "external_api": external_api,
+        "fixture_copy": fixture_copy,
+    }
+
+
+def _future_onboarding_action(provider: str) -> dict[str, Any]:
+    labels = {
+        "ga4": "Future: Pull GA4 data",
+        "gsc": "Future: Pull GSC data",
+        "local_falcon": "Future: Fetch Local Falcon scans",
+        "google_ads_search": "Future: Fetch read-only reporting",
+        "callrail": "Future: Import aggregate export",
+        "form_fills": "Future: Import date-only form fills",
+    }
+    return _onboarding_action(
+        action_id=f"{provider}-future-run",
+        provider=provider,
+        kind="future_provider_run",
+        label=labels.get(provider, "Future provider action"),
+        description="Planned provider execution is visible for sequencing but disabled in this milestone.",
+        available=False,
+        unavailable_reason="Not available yet. Future provider execution remains disabled.",
+        read_only=False,
+        writes_files=True,
+        external_api=provider in {"ga4", "gsc", "local_falcon", "google_ads_search"},
+        fixture_copy=False,
+        requires_confirmation=True,
+    )
+
+
+def _find_onboarding_action(
+    profile: DashboardLabProfile,
+    action_id: str,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    actions = _onboarding_action_catalog(profile, safe_env=safe_env, local_config=local_config)
+    for action in actions:
+        if action["id"] == action_id:
+            return action
+    raise HTTPException(status_code=404, detail="onboarding action not found")
+
+
+def _run_onboarding_readiness_check(
+    profile: DashboardLabProfile,
+    provider: str,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    status = build_onboarding_status(profile, safe_env=safe_env, local_config=local_config)
+    provider_status = next(item for item in status["providers"] if item["provider"] == provider)
+    return {
+        "status": "ok",
+        "message": "Readiness checked.",
+        "provider": provider,
+        "config_state": provider_status["config_state"],
+        "output_state": provider_status["output_state"],
+        "validation_state": provider_status["validation_state"],
+        "copy_state": provider_status["copy_state"],
+        "next_step": provider_status["next_step"],
+    }
+
+
+def _run_onboarding_output_check(profile: DashboardLabProfile, provider: str) -> dict[str, Any]:
+    expected_file = PROVIDER_OUTPUT_FILES.get(provider, "")
+    files = {item.file: item for item in validate_profile_output(profile).files}
+    status = files.get(expected_file)
+    if status is None:
+        return {
+            "status": "unavailable",
+            "message": "No expected summary file is registered for this provider.",
+            "provider": provider,
+            "file": expected_file,
+        }
+    return {
+        "status": "ok" if status.exists and status.json_valid is not False else "warning",
+        "message": "Existing output metadata checked." if status.exists else "Expected output is missing.",
+        "provider": provider,
+        "file": status.file,
+        "exists": status.exists,
+        "json_valid": status.json_valid,
+        "schema_version": status.schema_version,
+        "size": status.size,
+        "last_modified": status.last_modified,
+        "warning": status.warning,
+    }
+
+
+def _onboarding_action_safety() -> dict[str, bool]:
+    return {
+        "no_live_api_calls": True,
+        "no_provider_execution": True,
+        "no_fixture_copy": True,
+        "no_secret_values": True,
+        "no_file_contents": True,
     }
 
 

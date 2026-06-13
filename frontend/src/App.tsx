@@ -352,6 +352,44 @@ type OnboardingStatus = {
   };
 };
 
+type OnboardingAction = {
+  id: string;
+  provider: string;
+  provider_label: string;
+  kind: string;
+  label: string;
+  description: string;
+  status: string;
+  available: boolean;
+  unavailable_reason: string;
+  requires_confirmation: boolean;
+  read_only: boolean;
+  local_only: boolean;
+  writes_files: boolean;
+  external_api: boolean;
+  fixture_copy: boolean;
+};
+
+type OnboardingActionGroup = {
+  provider: string;
+  label: string;
+  actions: OnboardingAction[];
+};
+
+type OnboardingActionsResponse = {
+  profile: string;
+  actions: OnboardingAction[];
+  groups: OnboardingActionGroup[];
+  safety: Record<string, boolean>;
+};
+
+type OnboardingActionRunResult = {
+  profile: string;
+  action: OnboardingAction;
+  result: Record<string, boolean | number | string | null>;
+  safety: Record<string, boolean>;
+};
+
 type GuardedImportPhase = {
   phase: string;
   label: string;
@@ -431,6 +469,9 @@ function App() {
   const [profileRegistryBusy, setProfileRegistryBusy] = useState<boolean>(false);
   const [profileRegistryMessage, setProfileRegistryMessage] = useState<string>('');
   const [profileRegistryConfirmed, setProfileRegistryConfirmed] = useState<boolean>(false);
+  const [onboardingActions, setOnboardingActions] = useState<OnboardingActionsResponse | null>(null);
+  const [onboardingActionMessage, setOnboardingActionMessage] = useState<string>('');
+  const [onboardingActionBusyId, setOnboardingActionBusyId] = useState<string>('');
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
@@ -481,6 +522,9 @@ function App() {
       setLocalConfigPreview(null);
       setLocalConfigMessage('');
       setLocalConfigConfirmed(false);
+      setOnboardingActions(null);
+      setOnboardingActionMessage('');
+      setOnboardingActionBusyId('');
       return;
     }
     setValidationConfirmed(false);
@@ -494,6 +538,9 @@ function App() {
     setLocalConfigPreview(null);
     setLocalConfigMessage('');
     setLocalConfigConfirmed(false);
+    setOnboardingActions(null);
+    setOnboardingActionMessage('');
+    setOnboardingActionBusyId('');
     refreshProfileStatus(
       selectedSlug,
       setDetail,
@@ -511,6 +558,7 @@ function App() {
       setLocalConfigMessage,
       setLocalConfigBusy,
     );
+    refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage);
   }, [selectedSlug]);
 
   const refreshSelectedProfile = (message = 'Profile status refreshed') => {
@@ -527,6 +575,7 @@ function App() {
       setStatusMessage,
       message,
     );
+    refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage);
   };
 
   return (
@@ -629,6 +678,20 @@ function App() {
               <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
+
+              <OnboardingActionsPanel
+                actions={onboardingActions}
+                busyActionId={onboardingActionBusyId}
+                message={onboardingActionMessage}
+                onRun={(actionId) =>
+                  runOnboardingAction(
+                    detail.slug,
+                    actionId,
+                    setOnboardingActionBusyId,
+                    setOnboardingActionMessage,
+                  )
+                }
+              />
 
               <SecretVaultPanel
                 passphrase={vaultPassphrase}
@@ -966,6 +1029,88 @@ function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus })
       <span className={statusBadgeClass(provider.copy_state)} role="cell">{provider.copy_state}</span>
       <span role="cell">{provider.next_step}</span>
     </div>
+  );
+}
+
+function OnboardingActionsPanel({
+  actions,
+  busyActionId,
+  message,
+  onRun,
+}: {
+  actions: OnboardingActionsResponse | null;
+  busyActionId: string;
+  message: string;
+  onRun: (actionId: string) => void;
+}) {
+  return (
+    <section className="onboarding-actions-card" aria-label="Onboarding Actions">
+      <div className="onboarding-actions-heading">
+        <div>
+          <span className="eyebrow">Guarded local actions</span>
+          <h3>Onboarding Actions</h3>
+          <p>Safe read-only checks are runnable here. Provider pulls, imports, OAuth, and fixture copy remain disabled.</p>
+        </div>
+      </div>
+      {message ? <p className="vault-message">{message}</p> : null}
+      {actions ? (
+        <div className="onboarding-action-groups">
+          {actions.groups.map((group) => (
+            <section className="onboarding-action-group" key={group.provider} aria-label={`${group.label} onboarding actions`}>
+              <h4>{group.label}</h4>
+              <div className="onboarding-action-list">
+                {group.actions.map((action) => (
+                  <OnboardingActionCard
+                    action={action}
+                    busy={busyActionId === action.id}
+                    key={action.id}
+                    onRun={() => onRun(action.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <p className="vault-message">Loading onboarding actions...</p>
+      )}
+    </section>
+  );
+}
+
+function OnboardingActionCard({
+  action,
+  busy,
+  onRun,
+}: {
+  action: OnboardingAction;
+  busy: boolean;
+  onRun: () => void;
+}) {
+  const runnable = action.available && action.read_only && !action.writes_files && !action.external_api && !action.fixture_copy;
+  const stateLabel = action.available ? 'Available' : action.label.startsWith('Future:') ? 'Planned' : 'Unavailable';
+
+  return (
+    <article className="onboarding-action-card">
+      <div className="card-heading">
+        <div>
+          <h5>{action.label}</h5>
+          <p>{action.description}</p>
+        </div>
+        <span className={action.available ? 'badge ok' : 'badge neutral'}>{stateLabel}</span>
+      </div>
+      <div className="action-safety-row" aria-label={`${action.label} safety flags`}>
+        <span>{action.read_only ? 'Read-only' : 'Writes possible'}</span>
+        <span>{action.local_only ? 'Local-only' : 'External API'}</span>
+        <span>{action.fixture_copy ? 'Fixture copy' : 'No fixture copy'}</span>
+      </div>
+      {!action.available && action.unavailable_reason ? (
+        <p className="blocked-reason">{action.unavailable_reason}</p>
+      ) : null}
+      <button type="button" className="copy-button" disabled={!runnable || busy} onClick={onRun}>
+        {busy ? 'Running...' : runnable ? 'Run safe check' : 'Not runnable'}
+      </button>
+    </article>
   );
 }
 
@@ -2571,6 +2716,46 @@ function fetchJson<T>(url: string): Promise<T> {
   });
 }
 
+function refreshOnboardingActions(
+  profileSlug: string,
+  setActions: (actions: OnboardingActionsResponse | null) => void,
+  setMessage: (message: string) => void,
+) {
+  fetchJson<OnboardingActionsResponse>(`${API_BASE}/api/profiles/${profileSlug}/onboarding-actions`)
+    .then((payload) => {
+      setActions(payload);
+      setMessage('');
+    })
+    .catch((fetchError: Error) => setMessage(safeOnboardingActionErrorMessage(fetchError)));
+}
+
+function runOnboardingAction(
+  profileSlug: string,
+  actionId: string,
+  setBusyActionId: (actionId: string) => void,
+  setMessage: (message: string) => void,
+) {
+  setBusyActionId(actionId);
+  fetch(`${API_BASE}/api/profiles/${profileSlug}/onboarding-actions/${actionId}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirmed: false }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<OnboardingActionRunResult>;
+    })
+    .then((payload) => {
+      const status = String(payload.result.status ?? 'ok');
+      const message = String(payload.result.message ?? 'Action completed.');
+      setMessage(`${payload.action.provider_label}: ${status === 'ok' ? message : message}`);
+    })
+    .catch((fetchError: Error) => setMessage(safeOnboardingActionErrorMessage(fetchError)))
+    .finally(() => setBusyActionId(''));
+}
+
 function refreshVaultStatus(
   setVaultStatus: (status: SecretVaultStatus) => void,
   setVaultMessage: (message: string) => void,
@@ -2774,6 +2959,17 @@ function safeProfileRegistryErrorMessage(error: Error) {
     return 'Tracked profile request was rejected by safety validation.';
   }
   return status ? `Tracked profile request failed with status ${status}.` : 'Tracked profile request failed.';
+}
+
+function safeOnboardingActionErrorMessage(error: Error) {
+  const status = error.message.match(/\d{3}/)?.[0] ?? '';
+  if (status === '400') {
+    return 'Onboarding action was blocked by guardrails.';
+  }
+  if (status === '404') {
+    return 'Onboarding action or profile was not found.';
+  }
+  return status ? `Onboarding action failed with status ${status}.` : 'Onboarding action failed.';
 }
 
 function LastActionSummary({ lastActions }: { lastActions: LastActions }) {

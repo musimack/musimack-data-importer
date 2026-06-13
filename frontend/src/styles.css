@@ -195,6 +195,7 @@ code {
 
 .simple-summary-card,
 .onboarding-status-card,
+.onboarding-actions-card,
 .secret-vault-card,
 .profile-registry-card,
 .local-config-card,
@@ -307,6 +308,95 @@ code {
   font-size: 12px;
   margin-top: 2px;
   overflow-wrap: anywhere;
+}
+
+.onboarding-actions-card {
+  background: #ffffff;
+  border-color: #d5dde8;
+  display: grid;
+  gap: 14px;
+}
+
+.onboarding-actions-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.onboarding-actions-heading h3,
+.onboarding-actions-heading p,
+.onboarding-action-group h4,
+.onboarding-action-card h5,
+.onboarding-action-card p {
+  margin: 0;
+}
+
+.onboarding-actions-heading h3 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.onboarding-actions-heading p,
+.onboarding-action-card p {
+  color: #485160;
+  line-height: 1.5;
+}
+
+.onboarding-action-groups {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.onboarding-action-group {
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.onboarding-action-group h4 {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.onboarding-action-list {
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-action-card {
+  background: #f8fafb;
+  border: 1px solid #e3e8ee;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.onboarding-action-card h5 {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.action-safety-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.action-safety-row span {
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 999px;
+  color: #596575;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 7px;
 }
 
 .disabled-provider-summary {
@@ -1287,6 +1377,7 @@ pre {
   .section-heading,
   .simple-summary-main,
   .onboarding-status-heading,
+  .onboarding-actions-heading,
   .secret-vault-heading,
   .profile-registry-heading,
   .local-secret-heading,
@@ -1307,6 +1398,7 @@ pre {
   .provider-grid,
   .summary-counts,
   .onboarding-status-strip,
+  .onboarding-action-groups,
   .vault-status-grid,
   .vault-controls,
   .next-action-card,

@@ -1031,6 +1031,98 @@ def test_profile_detail_embeds_onboarding_status_without_raw_values(tmp_path):
     assert str(tmp_path) not in serialized
 
 
+def test_onboarding_actions_list_returns_safe_metadata_and_future_actions(tmp_path):
+    registry = _registry(tmp_path)
+    profile_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(profile_folder / "ga4-summary.json", {"schema_version": "ga4.v1", "hidden": "do-not-return"})
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={
+                "MUSIMACK_GA4_PROPERTY_ID": "property-123",
+                "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS": "C:/private/client-secret.json",
+                "MUSIMACK_GA4_OAUTH_TOKEN_FILE": "C:/private/token.json",
+            },
+            local_profile_config_path=_local_profile_config(tmp_path),
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-actions")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    actions = {item["id"]: item for item in payload["actions"]}
+    assert payload["safety"]["no_live_api_calls"] is True
+    assert actions["ga4-check-readiness"]["available"] is True
+    assert actions["ga4-check-readiness"]["read_only"] is True
+    assert actions["ga4-check-readiness"]["writes_files"] is False
+    assert actions["ga4-validate-existing-output"]["available"] is True
+    assert actions["ga4-future-run"]["available"] is False
+    assert actions["ga4-future-run"]["writes_files"] is True
+    assert actions["ga4-future-run"]["external_api"] is True
+    assert actions["google_ads_search-check-readiness"]["available"] is False
+    assert "do-not-return" not in serialized
+    assert "property-123" not in serialized
+    assert "C:/private" not in serialized
+    assert str(tmp_path) not in serialized
+
+
+def test_onboarding_actions_preview_and_run_safe_read_only_actions_without_writes(tmp_path):
+    registry = _registry(tmp_path)
+    profile_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(profile_folder / "ga4-summary.json", {"schema_version": "ga4.v1", "hidden": "do-not-return"})
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"LOCAL_FALCON_API_KEY": "real-api-key-value"},
+            local_profile_config_path=_local_profile_config(tmp_path),
+            secret_vault_path=tmp_path / "vault.local.json",
+        )
+    )
+    before_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+
+    preview = client.post("/api/profiles/demo-profile/onboarding-actions/ga4-check-readiness/preview", json={})
+    readiness = client.post("/api/profiles/demo-profile/onboarding-actions/ga4-check-readiness/run", json={})
+    output = client.post("/api/profiles/demo-profile/onboarding-actions/ga4-validate-existing-output/run", json={})
+
+    assert preview.status_code == 200
+    assert preview.json()["preview"]["would_run"] is True
+    assert readiness.status_code == 200
+    assert readiness.json()["result"]["status"] == "ok"
+    assert output.status_code == 200
+    output_payload = output.json()
+    serialized = json.dumps({"readiness": readiness.json(), "output": output_payload})
+    assert output_payload["result"]["file"] == "ga4-summary.json"
+    assert output_payload["result"]["schema_version"] == "ga4.v1"
+    assert "do-not-return" not in serialized
+    assert "real-api-key-value" not in serialized
+    assert str(tmp_path) not in serialized
+    after_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+    assert after_files == before_files
+
+
+def test_onboarding_actions_reject_unknown_and_guard_future_actions(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+
+    unknown = client.post("/api/profiles/demo-profile/onboarding-actions/not-real/run", json={})
+    future_without_confirmation = client.post("/api/profiles/demo-profile/onboarding-actions/ga4-future-run/run", json={})
+    future_confirmed = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/ga4-future-run/run",
+        json={"confirmed": True},
+    )
+
+    assert unknown.status_code == 404
+    assert unknown.json()["detail"] == "onboarding action not found"
+    assert future_without_confirmation.status_code == 400
+    assert future_without_confirmation.json()["detail"] == "onboarding action requires explicit confirmation"
+    assert future_confirmed.status_code == 200
+    assert future_confirmed.json()["result"]["status"] == "unavailable"
+    serialized = json.dumps(future_confirmed.json())
+    assert "not available yet" in serialized.lower()
+    assert str(tmp_path) not in serialized
+
+
 def test_profile_detail_setup_checklist_is_safe_and_profile_scoped(tmp_path):
     registry = _registry(tmp_path)
     client = TestClient(
