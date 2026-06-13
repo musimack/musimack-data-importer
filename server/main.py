@@ -43,6 +43,7 @@ from src.profile_local_config import DEFAULT_LOCAL_PROFILE_CONFIG_DIR, load_prof
 APP_NAME = "musimack-data-importer-local-api"
 DEFAULT_LOCAL_PROFILE_CONFIG = ROOT / "config" / "dashboard_lab_profiles.local.json"
 DEFAULT_AUDIT_LOG = ROOT / "logs" / "local-action-runs.jsonl"
+IMPORTER_VAULT_PATH_ENV = "MUSIMACK_IMPORTER_VAULT_PATH"
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
@@ -100,7 +101,9 @@ def create_app(
     if env is None:
         load_local_operator_config()
 
-    secret_vault_state = SecretVaultApiState(secret_vault_path or DEFAULT_VAULT_PATH)
+    secret_vault_state = SecretVaultApiState(
+        resolve_secret_vault_path(env=os.environ if env is None else env, explicit_path=secret_vault_path)
+    )
     app = FastAPI(title="Musimack Data Importer Local API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -338,6 +341,19 @@ class SecretVaultApiState:
             self._vault.lock()
         self._vault = None
         return self.status()
+
+
+def resolve_secret_vault_path(
+    *,
+    env: Mapping[str, str],
+    explicit_path: Path | None = None,
+) -> Path:
+    if explicit_path is not None:
+        return explicit_path
+    override = str(env.get(IMPORTER_VAULT_PATH_ENV, "")).strip()
+    if override:
+        return Path(override).expanduser()
+    return DEFAULT_VAULT_PATH
 
 
 def _secret_vault_status(

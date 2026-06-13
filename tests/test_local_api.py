@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from server.main import create_app
-from src.local_secret_vault import LocalSecretVault
+from src.local_secret_vault import DEFAULT_VAULT_PATH, LocalSecretVault
 from src.operator_console import EXPECTED_DASHBOARD_FILES
 
 
@@ -141,6 +141,60 @@ def test_secret_vault_corrupt_temp_vault_returns_safe_status_and_error(tmp_path)
     serialized = json.dumps({"status": status_payload, "unlock": unlock_response.json()})
     assert "raw corrupt vault contents" not in serialized
     assert "fake test passphrase" not in serialized
+
+
+def test_secret_vault_env_override_is_used_without_leaking_path_or_creating_default(tmp_path, monkeypatch):
+    disposable_cwd = tmp_path / "repo-cwd"
+    disposable_cwd.mkdir()
+    monkeypatch.chdir(disposable_cwd)
+    override_path = tmp_path / "manual-qa" / "vault.local.json"
+    passphrase = "fake test passphrase"
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={"MUSIMACK_IMPORTER_VAULT_PATH": str(override_path)},
+        )
+    )
+
+    missing = client.get("/api/secrets/status")
+    created = client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": passphrase, "create_if_missing": True},
+    )
+
+    assert missing.status_code == 200
+    assert missing.json()["exists"] is False
+    assert created.status_code == 200
+    assert created.json()["exists"] is True
+    assert created.json()["unlocked"] is True
+    assert override_path.exists()
+    assert not (disposable_cwd / DEFAULT_VAULT_PATH).exists()
+    serialized = json.dumps({"missing": missing.json(), "created": created.json()})
+    assert str(override_path) not in serialized
+    assert "manual-qa" not in serialized
+    assert passphrase not in serialized
+
+
+def test_secret_vault_explicit_test_path_takes_precedence_over_env_override(tmp_path):
+    explicit_path = tmp_path / "explicit" / "vault.local.json"
+    ignored_override_path = tmp_path / "ignored-override" / "vault.local.json"
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={"MUSIMACK_IMPORTER_VAULT_PATH": str(ignored_override_path)},
+            secret_vault_path=explicit_path,
+        )
+    )
+
+    response = client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase", "create_if_missing": True},
+    )
+
+    assert response.status_code == 200
+    assert explicit_path.exists()
+    assert not ignored_override_path.exists()
+    assert str(explicit_path) not in json.dumps(response.json())
 
 
 def test_profiles_endpoint_returns_safe_profile_metadata(tmp_path):

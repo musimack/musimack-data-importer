@@ -727,6 +727,15 @@ http://localhost:5274
 
 The importer frontend intentionally uses port `5274` so it can run at the same time as dashboard-lab, which commonly uses port `5174`.
 
+To manually QA the Secret Vault panel without touching the real default vault path, run the backend with a disposable vault path override:
+
+```powershell
+$env:MUSIMACK_IMPORTER_VAULT_PATH = "$PWD\\.tmp\\manual-vault.local.json"
+python -m uvicorn server.main:app --reload --port 8765
+```
+
+`MUSIMACK_IMPORTER_VAULT_PATH` is for local dev/test only. Use fake passphrases and fake vault contents for manual QA, do not enter real provider secrets, do not screenshot or log passphrases, and delete the disposable test vault when finished. The Secret Vault panel only checks status and locks/unlocks the local encrypted vault; it does not run provider imports, add secret entries, or copy dashboard fixtures.
+
 The frontend shows:
 
 - client/profile list for `aluma-seo-geo` and `inn-at-spanish-head`,
