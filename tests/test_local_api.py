@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from server.main import create_app
+from src.local_secret_vault import LocalSecretVault
 from src.operator_console import EXPECTED_DASHBOARD_FILES
 
 
@@ -16,6 +17,130 @@ def test_health_endpoint_returns_safe_status(tmp_path):
 
     assert response.status_code == 200
     assert response.json() == {"ok": True, "app": "musimack-data-importer-local-api"}
+
+
+def test_secret_vault_status_missing_temp_vault_does_not_create_file(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    response = client.get("/api/secrets/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["exists"] is False
+    assert payload["unlocked"] is False
+    assert payload["entries"] == []
+    assert payload["entry_count"] == 0
+    assert not vault_path.exists()
+
+
+def test_secret_vault_unlock_can_create_missing_temp_vault_without_returning_passphrase(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    passphrase = "fake test passphrase"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    response = client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": passphrase, "create_if_missing": True},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["exists"] is True
+    assert payload["unlocked"] is True
+    assert payload["entries"] == []
+    assert vault_path.exists()
+    assert passphrase not in json.dumps(payload)
+
+
+def test_secret_vault_lock_reports_locked_status(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+    client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase", "create_if_missing": True},
+    )
+
+    response = client.post("/api/secrets/lock")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["exists"] is True
+    assert payload["unlocked"] is False
+
+
+def test_secret_vault_unlock_wrong_passphrase_returns_controlled_error(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    LocalSecretVault.create(vault_path, passphrase="fake correct passphrase")
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    response = client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake wrong passphrase"},
+    )
+
+    assert response.status_code == 401
+    serialized = json.dumps(response.json())
+    assert "fake correct passphrase" not in serialized
+    assert "fake wrong passphrase" not in serialized
+    assert "invalid" in response.json()["detail"]
+
+
+def test_secret_vault_status_with_fake_secret_returns_safe_metadata_only(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    passphrase = "fake test passphrase"
+    fake_secret = "fake-secret-value"
+    vault = LocalSecretVault.create(vault_path, passphrase=passphrase)
+    vault.set_secret(
+        profile="demo-profile",
+        provider="local_falcon",
+        key="api_key",
+        value=fake_secret,
+    )
+    vault.lock()
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    status_response = client.get("/api/secrets/status")
+    unlock_response = client.post("/api/secrets/unlock", json={"passphrase": passphrase})
+
+    assert status_response.status_code == 200
+    assert unlock_response.status_code == 200
+    status_payload = status_response.json()
+    unlock_payload = unlock_response.json()
+    assert status_payload["exists"] is True
+    assert status_payload["unlocked"] is False
+    assert status_payload["entries"][0]["profile"] == "demo-profile"
+    assert status_payload["entries"][0]["provider"] == "local_falcon"
+    assert status_payload["entries"][0]["key"] == "api_key"
+    assert unlock_payload["unlocked"] is True
+    serialized = json.dumps({"status": status_payload, "unlock": unlock_payload})
+    assert fake_secret not in serialized
+    assert passphrase not in serialized
+    assert "ciphertext" not in serialized
+    assert '"value_returned": false' in serialized
+
+
+def test_secret_vault_corrupt_temp_vault_returns_safe_status_and_error(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    vault_path.write_text("{raw corrupt vault contents", encoding="utf-8")
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    status_response = client.get("/api/secrets/status")
+    unlock_response = client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase"},
+    )
+
+    assert status_response.status_code == 200
+    status_payload = status_response.json()
+    assert status_payload["exists"] is True
+    assert status_payload["unlocked"] is False
+    assert status_payload["status"] == "error"
+    assert status_payload["entries"] == []
+    assert unlock_response.status_code == 400
+    serialized = json.dumps({"status": status_payload, "unlock": unlock_response.json()})
+    assert "raw corrupt vault contents" not in serialized
+    assert "fake test passphrase" not in serialized
 
 
 def test_profiles_endpoint_returns_safe_profile_metadata(tmp_path):

@@ -18,6 +18,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.local_config import load_local_operator_config
+from src.local_secret_vault import (
+    DEFAULT_VAULT_PATH,
+    CorruptVaultError,
+    InvalidPassphraseError,
+    LocalSecretVault,
+    LocalSecretVaultError,
+)
 from src.operator_console import (
     DashboardLabProfile,
     OperatorConsoleError,
@@ -63,6 +70,15 @@ class ConfirmedActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     confirmed: bool = False
+
+
+class SecretVaultUnlockRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    passphrase: str
+    create_if_missing: bool = False
+
+
 PROVIDER_LABELS = {
     "ga4": "GA4",
     "gsc": "GSC",
@@ -79,10 +95,12 @@ def create_app(
     env: Mapping[str, str] | None = None,
     local_profile_config_path: Path | None = None,
     audit_log_path: Path | None = None,
+    secret_vault_path: Path | None = None,
 ) -> FastAPI:
     if env is None:
         load_local_operator_config()
 
+    secret_vault_state = SecretVaultApiState(secret_vault_path or DEFAULT_VAULT_PATH)
     app = FastAPI(title="Musimack Data Importer Local API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -116,6 +134,28 @@ def create_app(
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         return {"ok": True, "app": APP_NAME}
+
+    @app.get("/api/secrets/status")
+    def secret_vault_status() -> dict[str, Any]:
+        return secret_vault_state.status()
+
+    @app.post("/api/secrets/unlock")
+    def secret_vault_unlock(request: SecretVaultUnlockRequest) -> dict[str, Any]:
+        try:
+            return secret_vault_state.unlock(
+                passphrase=request.passphrase,
+                create_if_missing=request.create_if_missing,
+            )
+        except InvalidPassphraseError as exc:
+            raise HTTPException(status_code=401, detail="vault passphrase is invalid") from exc
+        except CorruptVaultError as exc:
+            raise HTTPException(status_code=400, detail="vault could not be read") from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="vault file is missing") from exc
+
+    @app.post("/api/secrets/lock")
+    def secret_vault_lock() -> dict[str, Any]:
+        return secret_vault_state.lock()
 
     @app.get("/api/action-runs")
     def action_runs(
@@ -249,6 +289,73 @@ def create_app(
         raise HTTPException(status_code=400, detail="action is not implemented")
 
     return app
+
+
+class SecretVaultApiState:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._vault: LocalSecretVault | None = None
+
+    def status(self) -> dict[str, Any]:
+        if not self.path.exists() or not self.path.is_file():
+            self._vault = None
+            return _secret_vault_status(
+                exists=False,
+                unlocked=False,
+                entries=[],
+            )
+        try:
+            vault = self._vault if self._vault is not None else LocalSecretVault.load(self.path)
+            return _secret_vault_status(
+                exists=True,
+                unlocked=not vault.locked,
+                entries=[item.as_safe_dict() for item in vault.list_status()],
+            )
+        except LocalSecretVaultError:
+            self._vault = None
+            return _secret_vault_status(
+                exists=True,
+                unlocked=False,
+                entries=[],
+                status="error",
+                error="vault could not be read",
+            )
+
+    def unlock(self, *, passphrase: str, create_if_missing: bool = False) -> dict[str, Any]:
+        if not self.path.exists() or not self.path.is_file():
+            if not create_if_missing:
+                self._vault = None
+                raise FileNotFoundError("vault file is missing")
+            self._vault = LocalSecretVault.create(self.path, passphrase=passphrase)
+            return self.status()
+        vault = LocalSecretVault.load(self.path)
+        vault.unlock(passphrase)
+        self._vault = vault
+        return self.status()
+
+    def lock(self) -> dict[str, Any]:
+        if self._vault is not None:
+            self._vault.lock()
+        self._vault = None
+        return self.status()
+
+
+def _secret_vault_status(
+    *,
+    exists: bool,
+    unlocked: bool,
+    entries: list[dict[str, Any]],
+    status: str = "ok",
+    error: str = "",
+) -> dict[str, Any]:
+    return {
+        "exists": exists,
+        "unlocked": unlocked,
+        "status": status,
+        "error": error,
+        "entries": entries,
+        "entry_count": len(entries),
+    }
 
 
 def serialize_profile_summary(
