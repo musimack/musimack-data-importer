@@ -381,6 +381,41 @@ code {
   gap: 8px;
 }
 
+.local-secret-manager {
+  border-top: 1px solid #dfe3ea;
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+}
+
+.local-secret-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.local-secret-heading h4,
+.local-secret-heading p {
+  margin: 0;
+}
+
+.local-secret-heading h4 {
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.local-secret-heading p {
+  color: #485160;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.local-secret-confirmation {
+  align-items: center;
+  padding: 7px 9px;
+}
+
 .secondary-next-action {
   background: #f8fafb;
   border: 1px solid #dfe3ea;
@@ -978,6 +1013,7 @@ pre {
   .section-heading,
   .simple-summary-main,
   .secret-vault-heading,
+  .local-secret-heading,
   .safe-copy-heading {
     display: block;
   }

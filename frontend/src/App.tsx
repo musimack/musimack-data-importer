@@ -151,6 +151,18 @@ type SecretVaultStatus = {
   entry_count: number;
 };
 
+type SecretMetadata = {
+  configured: boolean;
+  profile: string;
+  provider: string;
+  key: string;
+  classification: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
+  value_returned: boolean;
+};
+
 type LastActions = {
   last_action: ActionRunEntry | null;
   last_validation: ActionRunEntry | null;
@@ -257,6 +269,10 @@ function App() {
   const [vaultPassphrase, setVaultPassphrase] = useState<string>('');
   const [vaultBusy, setVaultBusy] = useState<boolean>(false);
   const [vaultMessage, setVaultMessage] = useState<string>('');
+  const [localFalconSecretStatus, setLocalFalconSecretStatus] = useState<SecretMetadata | null>(null);
+  const [localFalconApiKey, setLocalFalconApiKey] = useState<string>('');
+  const [localFalconSecretBusy, setLocalFalconSecretBusy] = useState<boolean>(false);
+  const [localFalconSecretMessage, setLocalFalconSecretMessage] = useState<string>('');
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
@@ -280,6 +296,21 @@ function App() {
   useEffect(() => {
     refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
   }, []);
+
+  useEffect(() => {
+    setLocalFalconApiKey('');
+    setLocalFalconSecretMessage('');
+    if (!selectedSlug || !vaultStatus?.unlocked) {
+      setLocalFalconSecretStatus(null);
+      return;
+    }
+    refreshProfileSecrets(
+      selectedSlug,
+      setLocalFalconSecretStatus,
+      setLocalFalconSecretMessage,
+      setLocalFalconSecretBusy,
+    );
+  }, [selectedSlug, vaultStatus?.unlocked]);
 
   useEffect(() => {
     if (!selectedSlug) {
@@ -387,8 +418,14 @@ function App() {
                 passphrase={vaultPassphrase}
                 setPassphrase={setVaultPassphrase}
                 status={vaultStatus}
+                profileSlug={detail.slug}
                 message={vaultMessage}
                 busy={vaultBusy}
+                localFalconStatus={localFalconSecretStatus}
+                localFalconApiKey={localFalconApiKey}
+                localFalconBusy={localFalconSecretBusy}
+                localFalconMessage={localFalconSecretMessage}
+                setLocalFalconApiKey={setLocalFalconApiKey}
                 onRefresh={() => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy, 'Vault status refreshed')}
                 onUnlock={(createIfMissing) =>
                   unlockVault(
@@ -401,6 +438,26 @@ function App() {
                   )
                 }
                 onLock={() => lockVault(setVaultStatus, setVaultMessage, setVaultBusy)}
+                onSaveLocalFalconKey={() =>
+                  saveLocalFalconApiKey(
+                    detail.slug,
+                    localFalconApiKey,
+                    setLocalFalconSecretStatus,
+                    setLocalFalconSecretMessage,
+                    setLocalFalconSecretBusy,
+                    setLocalFalconApiKey,
+                    () => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy),
+                  )
+                }
+                onDeleteLocalFalconKey={() =>
+                  deleteLocalFalconApiKey(
+                    detail.slug,
+                    setLocalFalconSecretStatus,
+                    setLocalFalconSecretMessage,
+                    setLocalFalconSecretBusy,
+                    () => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy),
+                  )
+                }
               />
 
               <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
@@ -572,22 +629,38 @@ function MetricPill({ label, value }: { label: string; value: string | number })
 
 function SecretVaultPanel({
   status,
+  profileSlug,
   passphrase,
   setPassphrase,
   message,
   busy,
+  localFalconStatus,
+  localFalconApiKey,
+  localFalconBusy,
+  localFalconMessage,
+  setLocalFalconApiKey,
   onRefresh,
   onUnlock,
   onLock,
+  onSaveLocalFalconKey,
+  onDeleteLocalFalconKey,
 }: {
   status: SecretVaultStatus | null;
+  profileSlug: string;
   passphrase: string;
   setPassphrase: (value: string) => void;
   message: string;
   busy: boolean;
+  localFalconStatus: SecretMetadata | null;
+  localFalconApiKey: string;
+  localFalconBusy: boolean;
+  localFalconMessage: string;
+  setLocalFalconApiKey: (value: string) => void;
   onRefresh: () => void;
   onUnlock: (createIfMissing: boolean) => void;
   onLock: () => void;
+  onSaveLocalFalconKey: () => void;
+  onDeleteLocalFalconKey: () => void;
 }) {
   const vaultExists = status?.exists === true;
   const isUnlocked = status?.unlocked === true;
@@ -660,6 +733,104 @@ function SecretVaultPanel({
           </button>
         </div>
       </div>
+
+      <LocalFalconApiKeyManager
+        apiKey={localFalconApiKey}
+        busy={localFalconBusy}
+        isUnlocked={isUnlocked}
+        message={localFalconMessage}
+        profileSlug={profileSlug}
+        setApiKey={setLocalFalconApiKey}
+        status={localFalconStatus}
+        onDelete={onDeleteLocalFalconKey}
+        onSave={onSaveLocalFalconKey}
+      />
+    </section>
+  );
+}
+
+function LocalFalconApiKeyManager({
+  apiKey,
+  busy,
+  isUnlocked,
+  message,
+  profileSlug,
+  setApiKey,
+  status,
+  onDelete,
+  onSave,
+}: {
+  apiKey: string;
+  busy: boolean;
+  isUnlocked: boolean;
+  message: string;
+  profileSlug: string;
+  setApiKey: (value: string) => void;
+  status: SecretMetadata | null;
+  onDelete: () => void;
+  onSave: () => void;
+}) {
+  const [deleteConfirmed, setDeleteConfirmed] = useState<boolean>(false);
+  const configured = status?.configured === true;
+  const canSave = isUnlocked && apiKey.trim().length > 0 && !busy;
+
+  return (
+    <section className="local-secret-manager" aria-label="Local Falcon API key vault management">
+      <div className="local-secret-heading">
+        <div>
+          <h4>Local Falcon API key</h4>
+          <p>Saved keys stay encrypted in the local vault. This does not run a Local Falcon pull.</p>
+        </div>
+        <span className={configured ? 'badge ok' : 'badge warn'}>{configured ? 'Configured' : 'Missing'}</span>
+      </div>
+      {!isUnlocked ? (
+        <p className="vault-message">Unlock the vault to manage Local Falcon API key.</p>
+      ) : (
+        <>
+          <label className="vault-passphrase-field">
+            <span>Local Falcon API key</span>
+            <input
+              type="password"
+              value={apiKey}
+              autoComplete="off"
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder={configured ? 'Enter replacement key' : 'Enter API key'}
+            />
+          </label>
+          <div className="vault-button-row">
+            <button type="button" className="primary-button" disabled={!canSave} onClick={onSave}>
+              {configured ? 'Replace key' : 'Save key'}
+            </button>
+            {configured ? (
+              <>
+                <label className="confirmation-row compact-confirmation local-secret-confirmation">
+                  <input
+                    type="checkbox"
+                    checked={deleteConfirmed}
+                    onChange={(event) => setDeleteConfirmed(event.target.checked)}
+                  />
+                  <span>Confirm deletion of the saved Local Falcon API key.</span>
+                </label>
+                <button
+                  type="button"
+                  className="copy-button"
+                  disabled={busy || !deleteConfirmed}
+                  onClick={() => {
+                    onDelete();
+                    setDeleteConfirmed(false);
+                  }}
+                >
+                  Delete key
+                </button>
+              </>
+            ) : null}
+          </div>
+          <p className="safe-copy-footnote">
+            Managing this key is scoped to <code>{profileSlug}</code>. The value is write-only and is never shown after saving.
+          </p>
+        </>
+      )}
+      {message ? <p className="vault-message">{message}</p> : null}
     </section>
   );
 }
@@ -1461,6 +1632,89 @@ function lockVault(
     .finally(() => setVaultBusy(false));
 }
 
+function refreshProfileSecrets(
+  profileSlug: string,
+  setLocalFalconSecretStatus: (status: SecretMetadata | null) => void,
+  setLocalFalconSecretMessage: (message: string) => void,
+  setLocalFalconSecretBusy: (busy: boolean) => void,
+  successMessage = '',
+) {
+  setLocalFalconSecretBusy(true);
+  fetchJson<{ profile: string; secrets: SecretMetadata[] }>(`${API_BASE}/api/profiles/${profileSlug}/secrets`)
+    .then((payload) => {
+      setLocalFalconSecretStatus(
+        payload.secrets.find((secret) => secret.provider === 'local_falcon' && secret.key === 'api_key') ?? null,
+      );
+      setLocalFalconSecretMessage(successMessage);
+    })
+    .catch((fetchError: Error) => setLocalFalconSecretMessage(safeSecretErrorMessage(fetchError)))
+    .finally(() => setLocalFalconSecretBusy(false));
+}
+
+function saveLocalFalconApiKey(
+  profileSlug: string,
+  apiKey: string,
+  setLocalFalconSecretStatus: (status: SecretMetadata | null) => void,
+  setLocalFalconSecretMessage: (message: string) => void,
+  setLocalFalconSecretBusy: (busy: boolean) => void,
+  setLocalFalconApiKey: (value: string) => void,
+  onComplete: () => void,
+) {
+  if (!apiKey.trim()) {
+    setLocalFalconSecretMessage('Enter a Local Falcon API key before saving.');
+    return;
+  }
+  setLocalFalconSecretBusy(true);
+  fetch(`${API_BASE}/api/profiles/${profileSlug}/secrets/local_falcon/api_key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: apiKey }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<{ profile: string; secret: SecretMetadata }>;
+    })
+    .then((payload) => {
+      setLocalFalconSecretStatus(payload.secret);
+      setLocalFalconSecretMessage('Local Falcon API key saved in the encrypted vault.');
+      setLocalFalconApiKey('');
+      onComplete();
+    })
+    .catch((fetchError: Error) => {
+      setLocalFalconApiKey('');
+      setLocalFalconSecretMessage(safeSecretErrorMessage(fetchError));
+    })
+    .finally(() => setLocalFalconSecretBusy(false));
+}
+
+function deleteLocalFalconApiKey(
+  profileSlug: string,
+  setLocalFalconSecretStatus: (status: SecretMetadata | null) => void,
+  setLocalFalconSecretMessage: (message: string) => void,
+  setLocalFalconSecretBusy: (busy: boolean) => void,
+  onComplete: () => void,
+) {
+  setLocalFalconSecretBusy(true);
+  fetch(`${API_BASE}/api/profiles/${profileSlug}/secrets/local_falcon/api_key`, {
+    method: 'DELETE',
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<{ profile: string; secret: SecretMetadata }>;
+    })
+    .then((payload) => {
+      setLocalFalconSecretStatus(payload.secret);
+      setLocalFalconSecretMessage('Local Falcon API key deleted from the encrypted vault.');
+      onComplete();
+    })
+    .catch((fetchError: Error) => setLocalFalconSecretMessage(safeSecretErrorMessage(fetchError)))
+    .finally(() => setLocalFalconSecretBusy(false));
+}
+
 function safeVaultErrorMessage(error: Error) {
   const status = error.message.match(/\d{3}/)?.[0] ?? '';
   if (status === '401') {
@@ -1473,6 +1727,20 @@ function safeVaultErrorMessage(error: Error) {
     return 'Vault is missing. Create it only when you are ready to initialize a local vault.';
   }
   return status ? `Vault request failed with status ${status}.` : 'Vault request failed.';
+}
+
+function safeSecretErrorMessage(error: Error) {
+  const status = error.message.match(/\d{3}/)?.[0] ?? '';
+  if (status === '423') {
+    return 'Unlock the vault to manage Local Falcon API key.';
+  }
+  if (status === '400') {
+    return 'Local Falcon API key could not be saved safely.';
+  }
+  if (status === '404') {
+    return 'Profile or secret setting was not found.';
+  }
+  return status ? `Secret request failed with status ${status}.` : 'Secret request failed.';
 }
 
 function LastActionSummary({ lastActions }: { lastActions: LastActions }) {

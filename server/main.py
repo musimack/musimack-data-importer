@@ -24,6 +24,9 @@ from src.local_secret_vault import (
     InvalidPassphraseError,
     LocalSecretVault,
     LocalSecretVaultError,
+    MissingSecretError,
+    SecretStatus,
+    VaultLockedError,
 )
 from src.operator_console import (
     DashboardLabProfile,
@@ -80,6 +83,12 @@ class SecretVaultUnlockRequest(BaseModel):
     create_if_missing: bool = False
 
 
+class SecretValueRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: str
+
+
 PROVIDER_LABELS = {
     "ga4": "GA4",
     "gsc": "GSC",
@@ -88,6 +97,7 @@ PROVIDER_LABELS = {
     "callrail": "CallRail",
     "form_fills": "Form Fills",
 }
+ALLOWED_VAULT_SECRET_KEYS = {("local_falcon", "api_key")}
 
 
 def create_app(
@@ -109,7 +119,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=["http://localhost:5274", "http://127.0.0.1:5274"],
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_methods=["DELETE", "GET", "POST"],
         allow_headers=["*"],
     )
 
@@ -159,6 +169,63 @@ def create_app(
     @app.post("/api/secrets/lock")
     def secret_vault_lock() -> dict[str, Any]:
         return secret_vault_state.lock()
+
+    @app.get("/api/profiles/{profile_slug}/secrets")
+    def profile_secret_status(profile_slug: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+            return {
+                "profile": profile.slug,
+                "secrets": secret_vault_state.profile_secret_status(profile.slug),
+            }
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        except CorruptVaultError as exc:
+            raise HTTPException(status_code=400, detail="vault could not be read") from exc
+
+    @app.post("/api/profiles/{profile_slug}/secrets/{provider}/{key}")
+    def set_profile_secret(profile_slug: str, provider: str, key: str, request: SecretValueRequest) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+            _require_allowed_vault_secret(provider=provider, key=key)
+            secret_value = request.value.strip()
+            if not secret_value:
+                raise HTTPException(status_code=400, detail="secret value is required")
+            return {
+                "profile": profile.slug,
+                "secret": secret_vault_state.set_secret(
+                    profile=profile.slug,
+                    provider=provider,
+                    key=key,
+                    value=secret_value,
+                ),
+            }
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        except VaultLockedError as exc:
+            raise HTTPException(status_code=423, detail="vault is locked") from exc
+        except CorruptVaultError as exc:
+            raise HTTPException(status_code=400, detail="vault could not be read") from exc
+
+    @app.delete("/api/profiles/{profile_slug}/secrets/{provider}/{key}")
+    def delete_profile_secret(profile_slug: str, provider: str, key: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+            _require_allowed_vault_secret(provider=provider, key=key)
+            return {
+                "profile": profile.slug,
+                "secret": secret_vault_state.delete_secret(
+                    profile=profile.slug,
+                    provider=provider,
+                    key=key,
+                ),
+            }
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        except VaultLockedError as exc:
+            raise HTTPException(status_code=423, detail="vault is locked") from exc
+        except CorruptVaultError as exc:
+            raise HTTPException(status_code=400, detail="vault could not be read") from exc
 
     @app.get("/api/action-runs")
     def action_runs(
@@ -342,6 +409,50 @@ class SecretVaultApiState:
         self._vault = None
         return self.status()
 
+    def profile_secret_status(self, profile: str) -> list[dict[str, Any]]:
+        return [
+            self.secret_status(profile=profile, provider=provider, key=key)
+            for provider, key in sorted(ALLOWED_VAULT_SECRET_KEYS)
+        ]
+
+    def secret_status(self, *, profile: str, provider: str, key: str) -> dict[str, Any]:
+        if not self.path.exists() or not self.path.is_file():
+            return SecretStatus(
+                configured=False,
+                profile=profile,
+                provider=provider,
+                key=key,
+            ).as_safe_dict()
+        vault = self._vault if self._vault is not None else LocalSecretVault.load(self.path)
+        return vault.status(profile=profile, provider=provider, key=key).as_safe_dict()
+
+    def set_secret(self, *, profile: str, provider: str, key: str, value: str) -> dict[str, Any]:
+        vault = self._require_unlocked_vault()
+        return vault.set_secret(
+            profile=profile,
+            provider=provider,
+            key=key,
+            value=value,
+            classification="secret",
+        ).as_safe_dict()
+
+    def delete_secret(self, *, profile: str, provider: str, key: str) -> dict[str, Any]:
+        vault = self._require_unlocked_vault()
+        try:
+            return vault.delete_secret(profile=profile, provider=provider, key=key).as_safe_dict()
+        except MissingSecretError:
+            return SecretStatus(
+                configured=False,
+                profile=profile,
+                provider=provider,
+                key=key,
+            ).as_safe_dict()
+
+    def _require_unlocked_vault(self) -> LocalSecretVault:
+        if self._vault is None or self._vault.locked:
+            raise VaultLockedError("vault is locked")
+        return self._vault
+
 
 def resolve_secret_vault_path(
     *,
@@ -354,6 +465,11 @@ def resolve_secret_vault_path(
     if override:
         return Path(override).expanduser()
     return DEFAULT_VAULT_PATH
+
+
+def _require_allowed_vault_secret(*, provider: str, key: str) -> None:
+    if (provider, key) not in ALLOWED_VAULT_SECRET_KEYS:
+        raise HTTPException(status_code=400, detail="secret key is not allowed")
 
 
 def _secret_vault_status(

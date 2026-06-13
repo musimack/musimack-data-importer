@@ -197,6 +197,170 @@ def test_secret_vault_explicit_test_path_takes_precedence_over_env_override(tmp_
     assert str(explicit_path) not in json.dumps(response.json())
 
 
+def test_profile_local_falcon_api_key_can_be_saved_to_unlocked_temp_vault_safely(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    fake_key = "fake-local-falcon-api-key"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+    client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase", "create_if_missing": True},
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/secrets/local_falcon/api_key",
+        json={"value": fake_key},
+    )
+    status = client.get("/api/profiles/demo-profile/secrets")
+
+    assert response.status_code == 200
+    assert status.status_code == 200
+    secret = response.json()["secret"]
+    assert secret["configured"] is True
+    assert secret["profile"] == "demo-profile"
+    assert secret["provider"] == "local_falcon"
+    assert secret["key"] == "api_key"
+    assert secret["classification"] == "secret"
+    assert secret["source"] == "vault"
+    assert secret["value_returned"] is False
+    listed = status.json()["secrets"][0]
+    assert listed["configured"] is True
+    serialized = json.dumps({"response": response.json(), "status": status.json()})
+    assert fake_key not in serialized
+    assert "ciphertext" not in serialized
+
+
+def test_profile_local_falcon_api_key_delete_removes_configured_status(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+    client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase", "create_if_missing": True},
+    )
+    client.post(
+        "/api/profiles/demo-profile/secrets/local_falcon/api_key",
+        json={"value": "fake-local-falcon-api-key"},
+    )
+
+    response = client.delete("/api/profiles/demo-profile/secrets/local_falcon/api_key")
+    status = client.get("/api/profiles/demo-profile/secrets")
+
+    assert response.status_code == 200
+    assert response.json()["secret"]["configured"] is False
+    assert status.json()["secrets"][0]["configured"] is False
+
+
+def test_profile_local_falcon_api_key_delete_allows_local_frontend_preflight(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=tmp_path / "vault.local.json"))
+
+    response = client.options(
+        "/api/profiles/demo-profile/secrets/local_falcon/api_key",
+        headers={
+            "Origin": "http://127.0.0.1:5274",
+            "Access-Control-Request-Method": "DELETE",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "DELETE" in response.headers["access-control-allow-methods"]
+
+
+def test_profile_local_falcon_api_key_save_and_delete_require_unlocked_vault(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    LocalSecretVault.create(vault_path, passphrase="fake test passphrase").lock()
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    save = client.post(
+        "/api/profiles/demo-profile/secrets/local_falcon/api_key",
+        json={"value": "fake-local-falcon-api-key"},
+    )
+    delete = client.delete("/api/profiles/demo-profile/secrets/local_falcon/api_key")
+
+    assert save.status_code == 423
+    assert delete.status_code == 423
+    serialized = json.dumps({"save": save.json(), "delete": delete.json()})
+    assert "fake-local-falcon-api-key" not in serialized
+    assert "ciphertext" not in serialized
+
+
+def test_profile_secret_disallowed_provider_or_key_is_rejected(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+    client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase", "create_if_missing": True},
+    )
+
+    wrong_provider = client.post(
+        "/api/profiles/demo-profile/secrets/google_ads_search/developer_token",
+        json={"value": "fake-disallowed-secret"},
+    )
+    wrong_key = client.delete("/api/profiles/demo-profile/secrets/local_falcon/report_id")
+
+    assert wrong_provider.status_code == 400
+    assert wrong_key.status_code == 400
+    serialized = json.dumps({"wrong_provider": wrong_provider.json(), "wrong_key": wrong_key.json()})
+    assert "fake-disallowed-secret" not in serialized
+
+
+def test_profile_secret_invalid_profile_is_rejected(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    status = client.get("/api/profiles/missing-profile/secrets")
+    save = client.post(
+        "/api/profiles/missing-profile/secrets/local_falcon/api_key",
+        json={"value": "fake-local-falcon-api-key"},
+    )
+
+    assert status.status_code == 404
+    assert save.status_code == 404
+    assert "fake-local-falcon-api-key" not in json.dumps(save.json())
+
+
+def test_profile_secret_wrong_passphrase_response_does_not_include_fake_key(tmp_path):
+    vault_path = tmp_path / "vault.local.json"
+    fake_key = "fake-local-falcon-api-key"
+    vault = LocalSecretVault.create(vault_path, passphrase="fake correct passphrase")
+    vault.set_secret(profile="demo-profile", provider="local_falcon", key="api_key", value=fake_key)
+    vault.lock()
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
+
+    response = client.post("/api/secrets/unlock", json={"passphrase": "fake wrong passphrase"})
+
+    assert response.status_code == 401
+    serialized = json.dumps(response.json())
+    assert fake_key not in serialized
+    assert "ciphertext" not in serialized
+
+
+def test_profile_secret_env_override_does_not_create_default_vault_path(tmp_path, monkeypatch):
+    disposable_cwd = tmp_path / "repo-cwd"
+    disposable_cwd.mkdir()
+    monkeypatch.chdir(disposable_cwd)
+    override_path = tmp_path / "override" / "vault.local.json"
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={"MUSIMACK_IMPORTER_VAULT_PATH": str(override_path)},
+        )
+    )
+    client.post(
+        "/api/secrets/unlock",
+        json={"passphrase": "fake test passphrase", "create_if_missing": True},
+    )
+    response = client.post(
+        "/api/profiles/demo-profile/secrets/local_falcon/api_key",
+        json={"value": "fake-local-falcon-api-key"},
+    )
+
+    assert response.status_code == 200
+    assert override_path.exists()
+    assert not (disposable_cwd / DEFAULT_VAULT_PATH).exists()
+    serialized = json.dumps(response.json())
+    assert str(override_path) not in serialized
+    assert "fake-local-falcon-api-key" not in serialized
+
+
 def test_profiles_endpoint_returns_safe_profile_metadata(tmp_path):
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
 
