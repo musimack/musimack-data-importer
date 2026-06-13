@@ -194,6 +194,7 @@ code {
 }
 
 .simple-summary-card,
+.secret-vault-card,
 .next-action-card,
 .safe-copy-card,
 .provider-checklist,
@@ -300,6 +301,84 @@ code {
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 0.4fr);
+}
+
+.secret-vault-card {
+  background: #ffffff;
+  border-color: #cbd6e3;
+  display: grid;
+  gap: 14px;
+}
+
+.secret-vault-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.secret-vault-heading h3,
+.secret-vault-heading p,
+.vault-message {
+  margin: 0;
+}
+
+.secret-vault-heading h3 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.secret-vault-heading p,
+.vault-message {
+  color: #485160;
+  line-height: 1.5;
+}
+
+.vault-status-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.vault-message {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.vault-controls {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 0.4fr) minmax(0, 1fr);
+}
+
+.vault-passphrase-field {
+  display: grid;
+  gap: 6px;
+}
+
+.vault-passphrase-field span {
+  color: #687181;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.vault-passphrase-field input {
+  border: 1px solid #bac4d1;
+  border-radius: 6px;
+  color: #253043;
+  font: inherit;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.vault-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .secondary-next-action {
@@ -898,6 +977,7 @@ pre {
   .topbar,
   .section-heading,
   .simple-summary-main,
+  .secret-vault-heading,
   .safe-copy-heading {
     display: block;
   }
@@ -912,6 +992,8 @@ pre {
   .readiness-grid,
   .provider-grid,
   .summary-counts,
+  .vault-status-grid,
+  .vault-controls,
   .next-action-card,
   .guarded-actions,
   .action-grid,

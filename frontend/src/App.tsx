@@ -142,6 +142,15 @@ type ActionRunHistory = {
   skipped_malformed: number;
 };
 
+type SecretVaultStatus = {
+  exists: boolean;
+  unlocked: boolean;
+  status: string;
+  error: string;
+  entries: unknown[];
+  entry_count: number;
+};
+
 type LastActions = {
   last_action: ActionRunEntry | null;
   last_validation: ActionRunEntry | null;
@@ -244,6 +253,10 @@ function App() {
   const [actionHistory, setActionHistory] = useState<ActionRunHistory | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [vaultStatus, setVaultStatus] = useState<SecretVaultStatus | null>(null);
+  const [vaultPassphrase, setVaultPassphrase] = useState<string>('');
+  const [vaultBusy, setVaultBusy] = useState<boolean>(false);
+  const [vaultMessage, setVaultMessage] = useState<string>('');
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
@@ -262,6 +275,10 @@ function App() {
         setSelectedSlug(payload.profiles[0]?.slug ?? '');
       })
       .catch((fetchError: Error) => setError(fetchError.message));
+  }, []);
+
+  useEffect(() => {
+    refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
   }, []);
 
   useEffect(() => {
@@ -365,6 +382,26 @@ function App() {
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
               <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
+
+              <SecretVaultPanel
+                passphrase={vaultPassphrase}
+                setPassphrase={setVaultPassphrase}
+                status={vaultStatus}
+                message={vaultMessage}
+                busy={vaultBusy}
+                onRefresh={() => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy, 'Vault status refreshed')}
+                onUnlock={(createIfMissing) =>
+                  unlockVault(
+                    vaultPassphrase,
+                    createIfMissing,
+                    setVaultStatus,
+                    setVaultMessage,
+                    setVaultBusy,
+                    setVaultPassphrase,
+                  )
+                }
+                onLock={() => lockVault(setVaultStatus, setVaultMessage, setVaultBusy)}
+              />
 
               <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
 
@@ -530,6 +567,100 @@ function MetricPill({ label, value }: { label: string; value: string | number })
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function SecretVaultPanel({
+  status,
+  passphrase,
+  setPassphrase,
+  message,
+  busy,
+  onRefresh,
+  onUnlock,
+  onLock,
+}: {
+  status: SecretVaultStatus | null;
+  passphrase: string;
+  setPassphrase: (value: string) => void;
+  message: string;
+  busy: boolean;
+  onRefresh: () => void;
+  onUnlock: (createIfMissing: boolean) => void;
+  onLock: () => void;
+}) {
+  const vaultExists = status?.exists === true;
+  const isUnlocked = status?.unlocked === true;
+  const isMissing = status?.exists === false;
+  const hasPassphrase = passphrase.trim().length > 0;
+  const statusText = status ? (isUnlocked ? 'Unlocked' : 'Locked') : 'Unknown';
+  const existsText = status ? (vaultExists ? 'Exists' : 'Missing') : 'Checking';
+  const entryCount = status?.entry_count ?? 0;
+  const safeMessage = message || (status?.status === 'error' ? 'Vault status needs attention.' : '');
+
+  return (
+    <section className="secret-vault-card" aria-label="Secret Vault status">
+      <div className="secret-vault-heading">
+        <div>
+          <span className="eyebrow">Security settings</span>
+          <h3>Secret Vault</h3>
+          <p>
+            Unlocks the local encrypted vault for this backend session only. This panel does not run provider imports,
+            store new secrets, or copy fixtures.
+          </p>
+        </div>
+        <span className={isUnlocked ? 'badge ok' : vaultExists ? 'badge neutral' : 'badge warn'}>
+          {statusText}
+        </span>
+      </div>
+
+      <div className="vault-status-grid" aria-label="Vault safe status">
+        <MetricPill label="Vault file" value={existsText} />
+        <MetricPill label="Session" value={statusText} />
+        <MetricPill label="Entries" value={entryCount} />
+      </div>
+
+      {safeMessage ? <p className="vault-message">{safeMessage}</p> : null}
+
+      <div className="vault-controls">
+        <label className="vault-passphrase-field">
+          <span>Passphrase</span>
+          <input
+            type="password"
+            value={passphrase}
+            autoComplete="off"
+            onChange={(event) => setPassphrase(event.target.value)}
+            placeholder="Enter local vault passphrase"
+          />
+        </label>
+        <div className="vault-button-row">
+          <button type="button" className="copy-button" disabled={busy} onClick={onRefresh}>
+            Refresh vault status
+          </button>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={busy || !hasPassphrase || !vaultExists}
+            onClick={() => onUnlock(false)}
+          >
+            Unlock vault
+          </button>
+          {isMissing ? (
+            <button
+              type="button"
+              className="copy-button"
+              disabled={busy || !hasPassphrase}
+              onClick={() => onUnlock(true)}
+            >
+              Create vault and unlock
+            </button>
+          ) : null}
+          <button type="button" className="copy-button" disabled={busy || !isUnlocked} onClick={onLock}>
+            Lock vault
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1253,6 +1384,95 @@ function fetchJson<T>(url: string): Promise<T> {
     }
     return response.json() as Promise<T>;
   });
+}
+
+function refreshVaultStatus(
+  setVaultStatus: (status: SecretVaultStatus) => void,
+  setVaultMessage: (message: string) => void,
+  setVaultBusy: (busy: boolean) => void,
+  successMessage = '',
+) {
+  setVaultBusy(true);
+  fetchJson<SecretVaultStatus>(`${API_BASE}/api/secrets/status`)
+    .then((payload) => {
+      setVaultStatus(payload);
+      setVaultMessage(payload.status === 'error' ? 'Vault status could not be read safely.' : successMessage);
+    })
+    .catch((fetchError: Error) => setVaultMessage(safeVaultErrorMessage(fetchError)))
+    .finally(() => setVaultBusy(false));
+}
+
+function unlockVault(
+  passphrase: string,
+  createIfMissing: boolean,
+  setVaultStatus: (status: SecretVaultStatus) => void,
+  setVaultMessage: (message: string) => void,
+  setVaultBusy: (busy: boolean) => void,
+  setVaultPassphrase: (value: string) => void,
+) {
+  if (!passphrase.trim()) {
+    setVaultMessage('Enter a local vault passphrase before continuing.');
+    return;
+  }
+  setVaultBusy(true);
+  fetch(`${API_BASE}/api/secrets/unlock`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ passphrase, create_if_missing: createIfMissing }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<SecretVaultStatus>;
+    })
+    .then((payload) => {
+      setVaultStatus(payload);
+      setVaultPassphrase('');
+      setVaultMessage(createIfMissing ? 'Vault created and unlocked for this local session.' : 'Vault unlocked for this local session.');
+    })
+    .catch((fetchError: Error) => {
+      setVaultPassphrase('');
+      setVaultMessage(safeVaultErrorMessage(fetchError));
+    })
+    .finally(() => setVaultBusy(false));
+}
+
+function lockVault(
+  setVaultStatus: (status: SecretVaultStatus) => void,
+  setVaultMessage: (message: string) => void,
+  setVaultBusy: (busy: boolean) => void,
+) {
+  setVaultBusy(true);
+  fetch(`${API_BASE}/api/secrets/lock`, {
+    method: 'POST',
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<SecretVaultStatus>;
+    })
+    .then((payload) => {
+      setVaultStatus(payload);
+      setVaultMessage('Vault locked for this local session.');
+    })
+    .catch((fetchError: Error) => setVaultMessage(safeVaultErrorMessage(fetchError)))
+    .finally(() => setVaultBusy(false));
+}
+
+function safeVaultErrorMessage(error: Error) {
+  const status = error.message.match(/\d{3}/)?.[0] ?? '';
+  if (status === '401') {
+    return 'Vault unlock failed. Check the passphrase and try again.';
+  }
+  if (status === '400') {
+    return 'Vault could not be read safely.';
+  }
+  if (status === '404') {
+    return 'Vault is missing. Create it only when you are ready to initialize a local vault.';
+  }
+  return status ? `Vault request failed with status ${status}.` : 'Vault request failed.';
 }
 
 function LastActionSummary({ lastActions }: { lastActions: LastActions }) {
