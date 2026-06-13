@@ -2114,11 +2114,18 @@ def _google_ads_action(
     enabled = "google_ads_search" in profile.data_sources
     customer_present = _present(safe_env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
         local_config,
-        ("customer_id", "google_ads_customer_id", "customer_id_configured"),
+        ("customer_id", "google_ads_customer_id", "customer_id_env_present", "customer_id_configured"),
     )
     auth_present = _any_present(
         local_config,
-        ("oauth_client_secrets", "oauth_token_file", "credentials_configured"),
+        (
+            "oauth_client_secrets",
+            "oauth_token_file",
+            "credentials_configured",
+            "developer_token_env_present",
+            "oauth_client_secrets_env_present",
+            "oauth_token_file_env_present",
+        ),
     ) or (
         _present(safe_env.get("GOOGLE_ADS_DEVELOPER_TOKEN"))
         and _present(safe_env.get("GOOGLE_ADS_OAUTH_CLIENT_SECRETS"))
@@ -2178,7 +2185,7 @@ def _callrail_action(
     enabled = "callrail" in profile.data_sources
     input_present = _any_present(
         local_config,
-        ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path"),
+        ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path", "local_input_filename"),
     )
     missing = []
     if not enabled:
@@ -2232,7 +2239,7 @@ def _form_fills_action(
     enabled = "form_fills" in profile.data_sources
     input_present = _any_present(
         local_config,
-        ("input_csv", "forms_csv", "form_fills_csv", "source_csv", "input_path"),
+        ("input_csv", "input_json", "forms_csv", "form_fills_csv", "source_csv", "input_path", "local_input_filename"),
     )
     missing = []
     if not enabled:
@@ -3062,6 +3069,50 @@ def _provider_readiness_flags(
                 "api_key_vault_locked": vault_locked,
             }
         )
+        return readiness
+    if provider == "google_ads_search":
+        customer_present = _present(safe_env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
+            local_config,
+            ("customer_id", "google_ads_customer_id", "customer_id_env_present", "customer_id_configured"),
+        )
+        credential_present = (
+            _present(safe_env.get("GOOGLE_ADS_DEVELOPER_TOKEN"))
+            and _present(safe_env.get("GOOGLE_ADS_OAUTH_CLIENT_SECRETS"))
+            and _present(safe_env.get("GOOGLE_ADS_OAUTH_TOKEN_FILE"))
+        ) or _any_present(
+            local_config,
+            (
+                "oauth_client_secrets",
+                "oauth_token_file",
+                "credentials_configured",
+                "developer_token_env_present",
+                "oauth_client_secrets_env_present",
+                "oauth_token_file_env_present",
+            ),
+        )
+        readiness = _readiness(customer_present, credential_present)
+        readiness["readiness"].update(
+            {
+                "developer_token_configured": bool(local_config.get("developer_token_env_present")),
+                "read_only_exporter_available": True,
+            }
+        )
+        return readiness
+    if provider == "callrail":
+        input_present = _any_present(
+            local_config,
+            ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path", "local_input_filename"),
+        )
+        readiness = _readiness(input_present, True)
+        readiness["readiness"]["aggregate_importer_available"] = True
+        return readiness
+    if provider == "form_fills":
+        input_present = _any_present(
+            local_config,
+            ("input_csv", "input_json", "forms_csv", "form_fills_csv", "source_csv", "input_path", "local_input_filename"),
+        )
+        readiness = _readiness(input_present, True)
+        readiness["readiness"]["date_only_importer_available"] = True
         return readiness
     return _readiness(False, False)
 

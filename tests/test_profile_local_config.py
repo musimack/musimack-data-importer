@@ -74,6 +74,40 @@ def test_local_config_writer_preview_normalizes_allowed_fields_without_writing(t
     assert not (tmp_path / "inn-at-spanish-head.local.json").exists()
 
 
+def test_local_config_writer_accepts_expanded_safe_provider_metadata(tmp_path):
+    preview = preview_local_config_update(
+        "demo-profile",
+        {
+            "profile": "demo-profile",
+            "google_ads_search": {
+                "status": "planned",
+                "customer_id_env": "DEMO_GOOGLE_ADS_CUSTOMER_ID",
+                "developer_token_env": "DEMO_GOOGLE_ADS_DEVELOPER_TOKEN",
+                "oauth_client_secrets_env": "DEMO_GOOGLE_ADS_CLIENT",
+                "oauth_token_file_env": "DEMO_GOOGLE_ADS_TOKEN",
+                "login_customer_id_env": "DEMO_GOOGLE_ADS_LOGIN_CUSTOMER_ID",
+            },
+            "callrail": {
+                "local_input_filename": "calls.csv",
+                "account_id_env": "DEMO_CALLRAIL_ACCOUNT_ID",
+                "company_id_env": "DEMO_CALLRAIL_COMPANY_ID",
+            },
+            "form_fills": {"local_input_filename": "form-fills.json"},
+        },
+        config_dir=tmp_path,
+    )
+
+    payload = preview.as_safe_dict()
+    serialized = json.dumps(payload)
+    assert preview.blocked is False
+    assert payload["normalized_config"]["google_ads_search"]["customer_id_env"] == "DEMO_GOOGLE_ADS_CUSTOMER_ID"
+    assert payload["normalized_config"]["callrail"]["local_input_filename"] == "calls.csv"
+    assert payload["normalized_config"]["form_fills"]["local_input_filename"] == "form-fills.json"
+    assert "9999999999" not in serialized
+    assert "developer-token-secret" not in serialized
+    assert not (tmp_path / "demo-profile.local.json").exists()
+
+
 def test_local_config_writer_rejects_invalid_env_secret_markers_and_raw_payloads(tmp_path):
     preview = preview_local_config_update(
         "inn-at-spanish-head",
@@ -99,6 +133,32 @@ def test_local_config_writer_rejects_invalid_env_secret_markers_and_raw_payloads
     assert '{"client_secret":"value"}' not in serialized
     assert "test@example.test" not in serialized
     assert not (tmp_path / "inn-at-spanish-head.local.json").exists()
+
+
+def test_local_config_writer_rejects_raw_ids_pii_and_path_traversal_for_new_fields(tmp_path):
+    preview = preview_local_config_update(
+        "demo-profile",
+        {
+            "profile": "demo-profile",
+            "google_ads_search": {
+                "customer_id_env": "1234567890",
+                "developer_token_env": '{"developer_token":"value"}',
+            },
+            "callrail": {"local_input_filename": "../calls.csv"},
+            "form_fills": {"local_input_filename": "name,email,message.csv"},
+        },
+        config_dir=tmp_path,
+    )
+
+    serialized = json.dumps(preview.as_safe_dict())
+    assert preview.blocked is True
+    assert "must be an uppercase environment variable name" in serialized
+    assert "must be a simple filename" in serialized
+    assert "looks like raw provider/customer data" in serialized
+    assert "1234567890" not in serialized
+    assert '{"developer_token":"value"}' not in serialized
+    assert "name,email,message.csv" not in serialized
+    assert not (tmp_path / "demo-profile.local.json").exists()
 
 
 def test_local_config_writer_save_requires_confirmation_and_writes_temp_dir_only(tmp_path):
@@ -209,7 +269,15 @@ def test_profile_local_config_checks_env_presence_and_file_existence(tmp_path):
                     "manifest_path": str(manifest),
                     "api_key_env": "INN_LOCAL_FALCON_API_KEY",
                 },
-                "google_ads_search": {"status": "planned"},
+                "google_ads_search": {
+                    "status": "planned",
+                    "customer_id_env": "INN_GOOGLE_ADS_CUSTOMER_ID",
+                    "developer_token_env": "INN_GOOGLE_ADS_DEVELOPER_TOKEN",
+                    "oauth_client_secrets_env": "INN_GOOGLE_ADS_CLIENT",
+                    "oauth_token_file_env": "INN_GOOGLE_ADS_TOKEN",
+                },
+                "callrail": {"local_input_filename": "calls.csv"},
+                "form_fills": {"local_input_filename": "form-fills.csv"},
             }
         ),
         encoding="utf-8",
@@ -225,12 +293,19 @@ def test_profile_local_config_checks_env_presence_and_file_existence(tmp_path):
             "INN_GSC_CLIENT": str(client),
             "INN_GSC_TOKEN": str(token),
             "INN_LOCAL_FALCON_API_KEY": "secret-api-key",
+            "INN_GOOGLE_ADS_CUSTOMER_ID": "secret-customer-id",
+            "INN_GOOGLE_ADS_DEVELOPER_TOKEN": "secret-developer-token",
+            "INN_GOOGLE_ADS_CLIENT": str(client),
+            "INN_GOOGLE_ADS_TOKEN": str(token),
         },
     )
 
     ga4 = config.provider("ga4")
     gsc = config.provider("gsc")
     local_falcon = config.provider("local_falcon")
+    google_ads = config.provider("google_ads_search")
+    callrail = config.provider("callrail")
+    form_fills = config.provider("form_fills")
     serialized = json.dumps(config.as_safe_dict())
     assert ga4["property_id_env_present"] is True
     assert ga4["oauth_client_secrets_file_exists"] is True
@@ -238,8 +313,15 @@ def test_profile_local_config_checks_env_presence_and_file_existence(tmp_path):
     assert gsc["site_url_configured"] is True
     assert local_falcon["manifest_exists"] is True
     assert local_falcon["api_key_env_present"] is True
+    assert google_ads["customer_id_env_present"] is True
+    assert google_ads["developer_token_env_present"] is True
+    assert google_ads["credentials_configured"] is True
+    assert callrail["input_path"] is True
+    assert form_fills["input_csv"] is True
     assert "secret-property-id" not in serialized
     assert "secret-api-key" not in serialized
+    assert "secret-customer-id" not in serialized
+    assert "secret-developer-token" not in serialized
     assert str(client) not in serialized
     assert str(token) not in serialized
 

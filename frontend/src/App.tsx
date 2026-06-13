@@ -201,6 +201,8 @@ type LocalConfigDraft = {
   gsc: Record<string, string>;
   local_falcon: Record<string, string>;
   google_ads_search: Record<string, string>;
+  callrail: Record<string, string>;
+  form_fills: Record<string, string>;
 };
 
 type LocalConfigDraftResponse = {
@@ -718,6 +720,12 @@ function App() {
               <OnboardingStatusDashboard status={detail.onboarding_status} />
 
               <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
+
+              <ProviderSetupWorkbench
+                detail={detail}
+                actions={onboardingActions}
+                runtimeSafetyStatus={runtimeSafetyStatus}
+              />
 
               <OnboardingActionsPanel
                 actions={onboardingActions}
@@ -2001,16 +2009,32 @@ function LocalConfigEditor({
             setForm={setForm}
           />
           <LocalConfigProviderSection
-            description="Google Ads remains read-only reporting and planned-only in this local config editor."
+            description="Env var names only. Customer IDs, developer tokens, and OAuth paths stay outside the browser and outside git."
             fields={fields.filter((field) => field.provider === 'google_ads_search')}
             form={form}
             provider="google_ads_search"
             title="Google Ads Search"
             setForm={setForm}
           />
+          <LocalConfigProviderSection
+            description="Use a simple ignored local input filename only. No caller names, phone numbers, recordings, transcripts, or raw rows."
+            fields={fields.filter((field) => field.provider === 'callrail')}
+            form={form}
+            provider="callrail"
+            title="CallRail"
+            setForm={setForm}
+          />
+          <LocalConfigProviderSection
+            description="Use a simple ignored date-only CSV or JSON filename only. Do not paste form payloads or customer data."
+            fields={fields.filter((field) => field.provider === 'form_fills')}
+            form={form}
+            provider="form_fills"
+            title="Form Fills"
+            setForm={setForm}
+          />
           <div className="local-config-disabled">
-            <strong>Not editable in v1:</strong> CallRail and Form Fills path references stay manual until their
-            per-profile schema is added.
+            <strong>Save boundary:</strong> this writes ignored local config only. It does not update the tracked
+            profile registry, store secrets, run providers, copy fixtures, or publish dashboard-lab output.
           </div>
         </div>
       ) : null}
@@ -2146,6 +2170,128 @@ function PrimaryNextAction({
   );
 }
 
+function ProviderSetupWorkbench({
+  detail,
+  actions,
+  runtimeSafetyStatus,
+}: {
+  detail: ProfileDetail;
+  actions: OnboardingActionsResponse | null;
+  runtimeSafetyStatus: RuntimeSafetyStatus | null;
+}) {
+  const providerReadiness = new Map(detail.provider_readiness.map((provider) => [provider.provider, provider]));
+  const checklist = providerSetupItems(detail);
+  const actionMap = new Map((actions?.actions ?? []).map((action) => [action.id, action]));
+  const inputOverrideLabels = providerInputOverrideLabels(runtimeSafetyStatus);
+
+  return (
+    <section className="provider-setup-workbench" aria-label="Provider setup panels">
+      <div className="provider-setup-heading">
+        <div>
+          <span className="eyebrow">Provider setup</span>
+          <h3>Provider setup panels</h3>
+          <p>
+            Safe status only: env references, local input labels, output presence, validation, and fixture-copy readiness.
+            Planned live provider actions stay disabled until explicitly approved.
+          </p>
+        </div>
+      </div>
+      <div className="provider-setup-grid">
+        {checklist.map((item) => (
+          <ProviderSetupPanel
+            key={item.provider_key}
+            item={item}
+            readiness={providerReadiness.get(item.provider_key)}
+            readinessAction={actionMap.get(`${item.provider_key}-check-readiness`)}
+            importAction={actionMap.get(`${item.provider_key}.import-local`)}
+            inputOverrideLabel={inputOverrideLabels[item.provider_key] ?? ''}
+          />
+        ))}
+      </div>
+      <RealProfileGuardrails detail={detail} />
+    </section>
+  );
+}
+
+function ProviderSetupPanel({
+  item,
+  readiness,
+  readinessAction,
+  importAction,
+  inputOverrideLabel,
+}: {
+  item: ProviderSetupChecklistItem;
+  readiness: ProviderReadiness | undefined;
+  readinessAction: OnboardingAction | undefined;
+  importAction: OnboardingAction | undefined;
+  inputOverrideLabel: string;
+}) {
+  const enabled = item.status !== 'not_enabled';
+  const localConfigStatus = localConfigStatusLabel(item);
+  const secretStatus = providerSecretStatusLabel(item);
+  const outputStatus = item.output_exists ? 'Output exists' : enabled ? 'Output missing' : 'Not enabled';
+  const validationStatus = item.validate_readiness === 'Ready' ? 'Validation available' : 'Validation unknown';
+  const copyStatus = item.dashboard_copy_readiness === 'Ready' ? 'Ready for fixture copy' : item.output_exists ? 'Not copied' : 'Output missing';
+  const importStatus = providerImportStatusLabel(item, importAction);
+  const configReady = readiness?.config_ready ?? (item.status === 'ready' || item.status === 'output_available');
+
+  return (
+    <article className="provider-setup-panel">
+      <div className="card-heading">
+        <div>
+          <h4>{item.provider_label}</h4>
+          <p>{PROVIDER_SAFETY_NOTES[item.provider_key] ?? 'Safe provider metadata only.'}</p>
+        </div>
+        <span className={enabled ? statusBadgeClass(checklistStatusLabel(item.status)) : 'badge neutral'}>
+          {enabled ? checklistStatusLabel(item.status) : 'Not enabled'}
+        </span>
+      </div>
+      <div className="setup-status-row">
+        <span className={configReady ? 'badge ok' : 'badge warn'}>{enabled ? item.safe_next_action ? setupHeadline(item) : 'Configured' : 'Not enabled'}</span>
+        <span className={statusBadgeClass(localConfigStatus)}>{localConfigStatus}</span>
+        <span className={statusBadgeClass(secretStatus)}>{secretStatus}</span>
+      </div>
+      <dl className="provider-setup-meta">
+        <div>
+          <dt>Import/input</dt>
+          <dd>
+            {importStatus}
+            {inputOverrideLabel ? <small>{inputOverrideLabel}</small> : null}
+          </dd>
+        </div>
+        <div>
+          <dt>Output</dt>
+          <dd>{outputStatus}</dd>
+        </div>
+        <div>
+          <dt>Validation</dt>
+          <dd>{validationStatus}</dd>
+        </div>
+        <div>
+          <dt>Fixture copy</dt>
+          <dd>{copyStatus}</dd>
+        </div>
+      </dl>
+      {item.missing_config_details.length ? (
+        <div className="mini-section">
+          <h5>Needs</h5>
+          <div className="chip-row">
+            {item.missing_config_details.slice(0, 4).map((missing) => (
+              <span className="setup-chip" key={missing}>
+                {missing}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <div className="planned-action-note">
+        <strong>{readinessAction?.available ? 'Refresh available' : 'Planned live actions disabled'}</strong>
+        <span>{providerPlannedActionNote(item.provider_key)}</span>
+      </div>
+    </article>
+  );
+}
+
 function SafeCopyReadiness({
   detail,
   copyPreview,
@@ -2251,9 +2397,10 @@ function SafeCopyReadiness({
 
 function ProviderChecklist({ detail }: { detail: ProfileDetail }) {
   const providerReadiness = new Map(detail.provider_readiness.map((provider) => [provider.provider, provider]));
-  const sourceChecklist = detail.provider_setup_checklist.length
+  const sourceChecklist = (detail.provider_setup_checklist.length
     ? detail.provider_setup_checklist
-    : detail.provider_readiness.map(readinessToChecklistItem);
+    : detail.provider_readiness.map(readinessToChecklistItem)
+  ).filter((item) => STANDARD_PROVIDER_KEYS.includes(item.provider_key));
   const seenProviders = new Set(sourceChecklist.map((item) => item.provider_key));
   const catalogFallbacks = STANDARD_PROVIDER_KEYS.filter((provider) => !seenProviders.has(provider)).map((provider) =>
     disabledProviderChecklistItem(provider),
@@ -2698,15 +2845,53 @@ function onboardingSummary(detail: ProfileDetail, copyPreview: CopyPreview | nul
 
 function recommendedNextActions(detail: ProfileDetail, copyPreview: CopyPreview | null) {
   const enabledItems = activeProviderItems(detail);
+  const missingShell = !detail.slug || !detail.dashboard_lab_route;
   const missingConfig = enabledItems.find((item) => item.blocked_reason && !item.output_exists);
+  const localFalconKey = enabledItems.find(
+    (item) =>
+      item.provider_key === 'local_falcon' &&
+      (item.config_state.api_key_vault_locked || item.credential_source === 'Missing'),
+  );
+  const importReady = enabledItems.find(
+    (item) =>
+      ['callrail', 'form_fills'].includes(item.provider_key) &&
+      item.status === 'ready_to_fetch' &&
+      !item.output_exists,
+  );
   const missingOutput = enabledItems.find((item) => !item.output_exists);
   const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.every((item) => item.source_exists);
 
+  if (missingShell) {
+    return [
+      {
+        title: 'Finish profile shell',
+        description: 'Complete the tracked profile shell before adding local-only provider setup.',
+      },
+    ];
+  }
+  if (localFalconKey) {
+    return [
+      {
+        title: 'Add Local Falcon key',
+        description: localFalconKey.config_state.api_key_vault_locked
+          ? 'Unlock the local vault to check the saved Local Falcon key metadata.'
+          : 'Add the Local Falcon key to env or the local encrypted vault before fetching report metadata.',
+      },
+    ];
+  }
   if (missingConfig) {
     return [
       {
-        title: `Finish ${missingConfig.provider_label} setup`,
+        title: `Add ${missingConfig.provider_label} local config`,
         description: missingConfig.blocked_reason || missingConfig.safe_next_action,
+      },
+    ];
+  }
+  if (importReady) {
+    return [
+      {
+        title: importReady.provider_key === 'form_fills' ? 'Import Form Fills' : 'Import CallRail',
+        description: importReady.safe_next_action,
       },
     ];
   }
@@ -2721,11 +2906,11 @@ function recommendedNextActions(detail: ProfileDetail, copyPreview: CopyPreview 
   if (!detail.last_actions.last_validation) {
     return [
       {
-        title: 'Validate local-real outputs',
+        title: 'Validate existing output',
         description: 'Run the guarded validation check before copying summaries into dashboard-lab.',
       },
       {
-        title: 'Review copy readiness',
+        title: 'Preview fixture copy',
         description: 'The copy step remains disabled until you confirm the safety checkbox.',
       },
     ];
@@ -2733,7 +2918,7 @@ function recommendedNextActions(detail: ProfileDetail, copyPreview: CopyPreview 
   if (copyReady && !detail.last_actions.last_copy) {
     return [
       {
-        title: 'Copy summaries to dashboard-lab',
+        title: 'Copy validated fixtures',
         description: 'Use the guarded copy action to update ignored dashboard-lab local fixtures.',
       },
     ];
@@ -2744,6 +2929,131 @@ function recommendedNextActions(detail: ProfileDetail, copyPreview: CopyPreview 
       description: 'The local provider summaries are available. Use advanced diagnostics only when you need commands or file-level detail.',
     },
   ];
+}
+
+function providerSetupItems(detail: ProfileDetail) {
+  const providerReadiness = new Map(detail.provider_readiness.map((provider) => [provider.provider, provider]));
+  const sourceChecklist = (detail.provider_setup_checklist.length
+    ? detail.provider_setup_checklist
+    : detail.provider_readiness.map(readinessToChecklistItem)
+  ).filter((item) => STANDARD_PROVIDER_KEYS.includes(item.provider_key));
+  const seenProviders = new Set(sourceChecklist.map((item) => item.provider_key));
+  const catalogFallbacks = STANDARD_PROVIDER_KEYS.filter((provider) => !seenProviders.has(provider)).map((provider) =>
+    disabledProviderChecklistItem(provider),
+  );
+  return [...sourceChecklist, ...catalogFallbacks].sort(
+    (a, b) => providerSortIndex(a.provider_key) - providerSortIndex(b.provider_key),
+  ).map((item) => ({
+    ...item,
+    provider_label: item.provider_label || providerReadiness.get(item.provider_key)?.label || providerLabel(item.provider_key),
+  }));
+}
+
+function localConfigStatusLabel(item: ProviderSetupChecklistItem) {
+  if (item.status === 'not_enabled') {
+    return 'Not enabled';
+  }
+  if (!item.local_config_file_present) {
+    return 'Needs local config';
+  }
+  if (!item.local_config_valid) {
+    return 'Needs local config';
+  }
+  return item.config_visible || Object.values(item.config_state).some(Boolean) ? 'Configured' : 'Needs local config';
+}
+
+function providerSecretStatusLabel(item: ProviderSetupChecklistItem) {
+  if (item.status === 'not_enabled') {
+    return 'Not enabled';
+  }
+  if (item.provider_key === 'local_falcon') {
+    if (item.config_state.api_key_vault_configured || item.config_state.api_key_env_present || item.config_state.api_key_visible) {
+      return 'Configured';
+    }
+    if (item.config_state.api_key_vault_locked) {
+      return 'Vault locked';
+    }
+    return 'Needs secret';
+  }
+  if (['ga4', 'gsc', 'google_ads_search'].includes(item.provider_key)) {
+    return item.config_state.auth_configured || item.config_state.oauth_configured || item.config_state.developer_token_configured
+      ? 'Configured'
+      : 'Needs secret';
+  }
+  return 'Not applicable';
+}
+
+function providerImportStatusLabel(item: ProviderSetupChecklistItem, importAction: OnboardingAction | undefined) {
+  if (item.status === 'not_enabled') {
+    return 'Not enabled';
+  }
+  if (item.provider_key === 'callrail') {
+    return importAction?.available ? 'Local input ready' : 'Needs local input';
+  }
+  if (item.provider_key === 'form_fills') {
+    return importAction?.available ? 'Date-only input ready' : 'Needs local input';
+  }
+  if (item.provider_key === 'google_ads_search') {
+    return 'Read-only reporting';
+  }
+  return 'Provider output workflow';
+}
+
+function providerInputOverrideLabels(status: RuntimeSafetyStatus | null) {
+  const labels: Record<string, string> = {
+    callrail: status?.overrides.callrail_input_override_active ? 'Disposable input override active' : '',
+    form_fills: status?.overrides.form_fills_input_override_active ? 'Disposable input override active' : '',
+  };
+  return labels;
+}
+
+function setupHeadline(item: ProviderSetupChecklistItem) {
+  if (item.status === 'ready' || item.status === 'ready_to_fetch') {
+    return 'Configured';
+  }
+  if (item.status === 'output_available') {
+    return 'Output exists';
+  }
+  if (item.status === 'planned') {
+    return 'Planned';
+  }
+  return 'Needs local config';
+}
+
+function providerPlannedActionNote(provider: string) {
+  if (provider === 'google_ads_search') {
+    return 'Read-only reporting only; mutation workflows are not present.';
+  }
+  if (provider === 'callrail') {
+    return 'Local CSV import only; no CallRail API call from this panel.';
+  }
+  if (provider === 'form_fills') {
+    return 'Date-only local import only; no pasted form payloads.';
+  }
+  return 'Live provider pulls require separate operator approval outside this panel.';
+}
+
+function RealProfileGuardrails({ detail }: { detail: ProfileDetail }) {
+  const enabledProviders = activeProviderItems(detail).map((item) => item.provider_label);
+  const items = [
+    `Profile slug confirmed: ${detail.slug}`,
+    `Enabled providers: ${enabledProviders.length ? enabledProviders.join(', ') : 'none'}`,
+    'Local config stores env references and safe local filenames only',
+    'Secrets stay in env or encrypted vault, never pasted into local config',
+    'Imports are local-only and provider execution is separately approved',
+    'Fixture copy requires preview, validation, and explicit confirmation',
+    'Portal publishing remains separate',
+  ];
+  return (
+    <div className="real-profile-guardrails" aria-label="Real profile readiness guardrails">
+      <h4>Real-profile-ready guardrails</h4>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function activeProviderItems(detail: ProfileDetail) {
@@ -2983,6 +3293,9 @@ function fieldPlaceholder(field: LocalConfigField) {
   if (field.kind === 'site_url') {
     return 'sc-domain:example.com';
   }
+  if (field.kind === 'local_input_filename') {
+    return field.provider === 'form_fills' ? 'form-fills.csv' : 'calls.csv';
+  }
   if (field.kind === 'path_reference') {
     return 'local-falcon-manifests/profile.local.json';
   }
@@ -2996,6 +3309,8 @@ function cloneLocalConfigDraft(draft: LocalConfigDraft): LocalConfigDraft {
     gsc: { ...draft.gsc },
     local_falcon: { ...draft.local_falcon },
     google_ads_search: { ...draft.google_ads_search },
+    callrail: { ...draft.callrail },
+    form_fills: { ...draft.form_fills },
   };
 }
 

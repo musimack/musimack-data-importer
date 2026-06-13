@@ -17,6 +17,7 @@ from .profile_local_config import (
 
 ENV_VAR_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 SITE_URL_RE = re.compile(r"^(https?://[^\s{}]+|sc-domain:[A-Za-z0-9.-]+)$")
+LOCAL_INPUT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.(csv|json)$")
 SECRET_MARKERS = (
     "refresh_token",
     "client_secret",
@@ -28,7 +29,23 @@ SECRET_MARKERS = (
     "password",
 )
 RAW_MARKERS = ("name,email", "phone", "message", "form payload", "recording", "transcript")
-WARNING_TEXT = "This writes only ignored local config. Do not enter secret values, OAuth JSON, API keys, raw CSV rows, or customer data."
+PII_MARKERS = (
+    "caller",
+    "call recording",
+    "recording url",
+    "transcription",
+    "first_name",
+    "last_name",
+    "email",
+    "phone_number",
+    "utm_",
+    "ip_address",
+    "user_agent",
+)
+WARNING_TEXT = (
+    "This writes only ignored local config metadata. Do not enter secret values, OAuth JSON, API keys, "
+    "customer IDs, phone numbers, raw CSV rows, form payloads, or customer data."
+)
 
 FIELD_DEFINITIONS = [
     {
@@ -103,6 +120,78 @@ FIELD_DEFINITIONS = [
         "required": False,
         "secret_value_allowed": False,
     },
+    {
+        "provider": "google_ads_search",
+        "key": "customer_id_env",
+        "label": "Google Ads customer ID env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "google_ads_search",
+        "key": "developer_token_env",
+        "label": "Google Ads developer token env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "google_ads_search",
+        "key": "oauth_client_secrets_env",
+        "label": "Google Ads OAuth client secrets env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "google_ads_search",
+        "key": "oauth_token_file_env",
+        "label": "Google Ads OAuth token file env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "google_ads_search",
+        "key": "login_customer_id_env",
+        "label": "Google Ads login customer ID env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "callrail",
+        "key": "local_input_filename",
+        "label": "CallRail local input filename",
+        "kind": "local_input_filename",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "callrail",
+        "key": "account_id_env",
+        "label": "CallRail account ID env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "callrail",
+        "key": "company_id_env",
+        "label": "CallRail company ID env var",
+        "kind": "env_var_name",
+        "required": False,
+        "secret_value_allowed": False,
+    },
+    {
+        "provider": "form_fills",
+        "key": "local_input_filename",
+        "label": "Form Fills local input filename",
+        "kind": "local_input_filename",
+        "required": False,
+        "secret_value_allowed": False,
+    },
 ]
 
 ALLOWED_FIELDS = {(item["provider"], item["key"]): item for item in FIELD_DEFINITIONS}
@@ -111,6 +200,8 @@ DEFAULT_DRAFT = {
     "gsc": {},
     "local_falcon": {},
     "google_ads_search": {"status": "planned"},
+    "callrail": {},
+    "form_fills": {},
 }
 
 
@@ -284,7 +375,7 @@ def _normalize_config(profile_slug: str, draft: Mapping[str, Any]) -> tuple[dict
         if normalized_provider:
             normalized[provider] = normalized_provider
     if "google_ads_search" in normalized:
-        normalized["google_ads_search"] = {"status": "planned"}
+        normalized["google_ads_search"]["status"] = "planned"
     return normalized, errors
 
 
@@ -348,6 +439,9 @@ def _validate_field(field: Mapping[str, Any], value: str) -> list[str]:
     if kind == "path_reference":
         errors.extend(_reject_secret_like(value))
         errors.extend(_validate_path_reference(value))
+    if kind == "local_input_filename":
+        errors.extend(_reject_secret_like(value))
+        errors.extend(_validate_local_input_filename(value))
     if kind == "planned_status" and value != "planned":
         errors.extend(_reject_secret_like(value))
         errors.append("must remain planned in v1")
@@ -370,6 +464,20 @@ def _validate_path_reference(value: str) -> list[str]:
     return errors
 
 
+def _validate_local_input_filename(value: str) -> list[str]:
+    errors: list[str] = []
+    path = Path(value)
+    if path.name != value or path.is_absolute() or path.drive:
+        errors.append("must be a simple filename under the provider input folder")
+    if any(part == ".." for part in path.parts):
+        errors.append("must not traverse parent directories")
+    if not LOCAL_INPUT_FILENAME_RE.match(value):
+        errors.append("must be a .csv or .json filename using letters, numbers, dots, dashes, or underscores")
+    if len(value) > 120:
+        errors.append("looks too long for a local input filename")
+    return errors
+
+
 def _reject_secret_like(value: str) -> list[str]:
     lowered = value.lower()
     errors: list[str] = []
@@ -377,6 +485,8 @@ def _reject_secret_like(value: str) -> list[str]:
         errors.append("looks like a secret value; use an env var name or path reference instead")
     if any(marker in lowered for marker in RAW_MARKERS):
         errors.append("looks like raw provider/customer data")
+    if any(marker in lowered for marker in PII_MARKERS):
+        errors.append("looks like raw PII or provider payload metadata")
     if any(token in value for token in ("{", "}", "\n", "\r")):
         errors.append("must not contain JSON, OAuth payloads, or multiline content")
     return errors
@@ -389,7 +499,7 @@ def _clean_text(value: Any) -> str:
 def _safe_value(provider: str, key: str, value: str) -> str:
     if not value:
         return ""
-    if ALLOWED_FIELDS[(provider, key)]["kind"] == "path_reference":
+    if ALLOWED_FIELDS[(provider, key)]["kind"] in {"path_reference", "local_input_filename"}:
         return safe_path_label(Path(value))
     return value
 

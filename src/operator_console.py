@@ -1056,22 +1056,38 @@ def _safe_config_state(
             state["api_key_vault_locked"] = bool(local_config.get("api_key_vault_locked"))
         return state
     if provider == "google_ads_search":
+        customer_configured = _present(env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
+            local_config,
+            ("customer_id", "google_ads_customer_id", "customer_id_env_present", "customer_id_configured"),
+        )
+        developer_configured = _present(env.get("GOOGLE_ADS_DEVELOPER_TOKEN")) or _any_present(
+            local_config,
+            ("developer_token_env_present",),
+        )
+        oauth_configured = (
+            _present(env.get("GOOGLE_ADS_OAUTH_CLIENT_SECRETS"))
+            and _present(env.get("GOOGLE_ADS_OAUTH_TOKEN_FILE"))
+        ) or _any_present(
+            local_config,
+            (
+                "oauth_client_secrets",
+                "oauth_token_file",
+                "credentials_configured",
+                "oauth_client_secrets_env_present",
+                "oauth_token_file_env_present",
+            ),
+        )
         return {
-            "customer_id_configured": _present(env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
-                local_config,
-                ("customer_id", "google_ads_customer_id", "customer_id_configured"),
-            ),
-            "oauth_configured": _any_present(
-                local_config,
-                ("oauth_client_secrets", "oauth_token_file", "credentials_configured"),
-            ),
+            "customer_id_configured": customer_configured,
+            "developer_token_configured": developer_configured,
+            "oauth_configured": oauth_configured,
             "importer_implemented": True,
         }
     if provider == "callrail":
         return {
             "ignored_calls_csv_configured": _any_present(
                 local_config,
-                ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path"),
+                ("input_csv", "calls_csv", "source_csv", "callrail_export_csv", "input_path", "local_input_filename"),
             ),
             "aggregate_importer_available": True,
         }
@@ -1079,7 +1095,7 @@ def _safe_config_state(
         return {
             "date_only_input_configured": _any_present(
                 local_config,
-                ("input_csv", "forms_csv", "form_fills_csv", "source_csv", "input_path"),
+                ("input_csv", "input_json", "forms_csv", "form_fills_csv", "source_csv", "input_path", "local_input_filename"),
             ),
             "date_only_importer_available": True,
         }

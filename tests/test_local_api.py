@@ -714,6 +714,97 @@ def test_local_config_api_rejects_disallowed_and_secret_like_fields(tmp_path):
     assert not (config_dir / "demo-profile.local.json").exists()
 
 
+def test_local_config_api_accepts_expanded_provider_fields_and_profile_status_is_safe(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    registry = _registry(
+        tmp_path,
+        data_sources=["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"],
+        capabilities=[
+            {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+            {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+            {"key": "google_ads_search", "label": "Google Ads Search", "status": "enabled", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-summary.json"},
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json"},
+        ],
+    )
+    client = TestClient(create_app(registry_path=registry, env={}, local_profile_config_dir=config_dir))
+    draft = {
+        "profile": "demo-profile",
+        "google_ads_search": {
+            "status": "planned",
+            "customer_id_env": "DEMO_GOOGLE_ADS_CUSTOMER_ID",
+            "developer_token_env": "DEMO_GOOGLE_ADS_DEVELOPER_TOKEN",
+            "oauth_client_secrets_env": "DEMO_GOOGLE_ADS_CLIENT",
+            "oauth_token_file_env": "DEMO_GOOGLE_ADS_TOKEN",
+            "login_customer_id_env": "DEMO_GOOGLE_ADS_LOGIN_CUSTOMER_ID",
+        },
+        "callrail": {
+            "local_input_filename": "calls.csv",
+            "account_id_env": "DEMO_CALLRAIL_ACCOUNT_ID",
+            "company_id_env": "DEMO_CALLRAIL_COMPANY_ID",
+        },
+        "form_fills": {"local_input_filename": "form-fills.csv"},
+    }
+
+    preview = client.post("/api/profiles/demo-profile/local-config/preview", json={"draft": draft})
+    saved = client.post("/api/profiles/demo-profile/local-config", json={"draft": draft, "confirmed": True})
+    detail = client.get("/api/profiles/demo-profile")
+
+    assert preview.status_code == 200
+    assert preview.json()["blocked"] is False
+    assert saved.status_code == 200
+    assert detail.status_code == 200
+    ads = next(item for item in detail.json()["provider_setup_checklist"] if item["provider_key"] == "google_ads_search")
+    callrail = next(item for item in detail.json()["provider_setup_checklist"] if item["provider_key"] == "callrail")
+    form_fills = next(item for item in detail.json()["provider_setup_checklist"] if item["provider_key"] == "form_fills")
+    assert ads["config_state"]["customer_id_configured"] is False
+    assert ads["config_state"]["developer_token_configured"] is False
+    assert callrail["config_state"]["ignored_calls_csv_configured"] is True
+    assert form_fills["config_state"]["date_only_input_configured"] is True
+    serialized = json.dumps(
+        {
+            "preview": preview.json(),
+            "saved": saved.json(),
+            "provider_setup_checklist": detail.json()["provider_setup_checklist"],
+            "provider_readiness": detail.json()["provider_readiness"],
+        }
+    )
+    assert str(config_dir) not in serialized
+    assert "developer-token-value" not in serialized
+    assert "customer-id-value" not in serialized
+    assert "phone_number" not in serialized
+
+
+def test_local_config_api_rejects_raw_new_provider_values_without_echo(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
+
+    response = client.post(
+        "/api/profiles/demo-profile/local-config/preview",
+        json={
+            "draft": {
+                "profile": "demo-profile",
+                "google_ads_search": {
+                    "customer_id_env": "9999999999",
+                    "oauth_client_secrets_env": '{"client_secret":"value"}',
+                },
+                "callrail": {"local_input_filename": "../calls.csv"},
+                "form_fills": {"local_input_filename": "date,email,message.csv"},
+            }
+        },
+    )
+
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert response.status_code == 200
+    assert payload["blocked"] is True
+    assert "9999999999" not in serialized
+    assert '{"client_secret":"value"}' not in serialized
+    assert "date,email,message.csv" not in serialized
+    assert not (config_dir / "demo-profile.local.json").exists()
+
+
 def test_local_config_api_does_not_echo_dangerous_disallowed_field_names(tmp_path):
     config_dir = tmp_path / "local-profile-configs"
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))

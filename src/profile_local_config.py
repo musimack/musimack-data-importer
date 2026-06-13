@@ -122,7 +122,9 @@ def load_profile_local_config(
         "ga4": _ga4_state(_provider_payload(payload, "ga4"), source_env),
         "gsc": _gsc_state(_provider_payload(payload, "gsc"), source_env),
         "local_falcon": _local_falcon_state(_provider_payload(payload, "local_falcon"), source_env),
-        "google_ads_search": _planned_state(_provider_payload(payload, "google_ads_search")),
+        "google_ads_search": _google_ads_state(_provider_payload(payload, "google_ads_search"), source_env),
+        "callrail": _callrail_state(_provider_payload(payload, "callrail"), source_env),
+        "form_fills": _form_fills_state(_provider_payload(payload, "form_fills")),
     }
     metadata = _metadata(profile_slug, path, found=True, valid=True, error="")
     for provider_state in providers.values():
@@ -182,7 +184,7 @@ def _empty_provider_states(profile_slug: str, path: Path) -> dict[str, dict[str,
     )
     return {
         provider: {"_local_profile_config": metadata}
-        for provider in ("ga4", "gsc", "local_falcon", "google_ads_search")
+        for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills")
     }
 
 
@@ -309,6 +311,94 @@ def _planned_state(config: dict[str, Any]) -> dict[str, Any]:
         "status": _text(config.get("status")) or "planned",
         "importer_implemented": False,
         "_missing_config_items": ["future read-only Google Ads Search importer implementation"],
+    }
+
+
+def _google_ads_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]:
+    customer_env = _text(config.get("customer_id_env"))
+    developer_token_env = _text(config.get("developer_token_env"))
+    client_env = _text(config.get("oauth_client_secrets_env"))
+    token_env = _text(config.get("oauth_token_file_env"))
+    login_customer_env = _text(config.get("login_customer_id_env"))
+    customer_present = _env_present(env, customer_env)
+    developer_token_present = _env_present(env, developer_token_env)
+    client_present = _env_present(env, client_env)
+    token_present = _env_present(env, token_env)
+    client_file_exists = _env_path_exists(env, client_env)
+    token_file_exists = _env_path_exists(env, token_env)
+    missing = []
+    if not customer_env:
+        missing.append("Google Ads customer ID env var name")
+    elif not customer_present:
+        missing.append(f"{customer_env} value")
+    if not developer_token_env:
+        missing.append("Google Ads developer token env var name")
+    elif not developer_token_present:
+        missing.append(f"{developer_token_env} value")
+    if not client_env:
+        missing.append("Google Ads OAuth client secrets env var name")
+    elif not client_present:
+        missing.append(f"{client_env} value")
+    elif not client_file_exists:
+        missing.append(f"{client_env} referenced file")
+    if not token_env:
+        missing.append("Google Ads OAuth token file env var name")
+    elif not token_present:
+        missing.append(f"{token_env} value")
+    elif not token_file_exists:
+        missing.append(f"{token_env} referenced file")
+    return {
+        "status": _text(config.get("status")) or "planned",
+        "customer_id_env": customer_env,
+        "customer_id_env_present": customer_present,
+        "customer_id_configured": customer_present,
+        "developer_token_env": developer_token_env,
+        "developer_token_env_present": developer_token_present,
+        "oauth_client_secrets_env": client_env,
+        "oauth_client_secrets_env_present": client_present,
+        "oauth_client_secrets_file_exists": client_file_exists,
+        "oauth_token_file_env": token_env,
+        "oauth_token_file_env_present": token_present,
+        "oauth_token_file_exists": token_file_exists,
+        "login_customer_id_env": login_customer_env,
+        "login_customer_id_env_present": _env_present(env, login_customer_env),
+        "credentials_configured": developer_token_present and client_present and token_present and client_file_exists and token_file_exists,
+        "importer_implemented": True,
+        "_missing_config_items": missing,
+    }
+
+
+def _callrail_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]:
+    filename = _text(config.get("local_input_filename"))
+    account_env = _text(config.get("account_id_env"))
+    company_env = _text(config.get("company_id_env"))
+    missing = []
+    if not filename:
+        missing.append("CallRail local input filename")
+    return {
+        "local_input_filename": filename,
+        "input_path": bool(filename),
+        "input_csv": bool(filename and filename.lower().endswith(".csv")),
+        "account_id_env": account_env,
+        "account_id_env_present": _env_present(env, account_env),
+        "company_id_env": company_env,
+        "company_id_env_present": _env_present(env, company_env),
+        "_missing_config_items": missing,
+    }
+
+
+def _form_fills_state(config: dict[str, Any]) -> dict[str, Any]:
+    filename = _text(config.get("local_input_filename"))
+    missing = []
+    if not filename:
+        missing.append("Form Fills local input filename")
+    return {
+        "local_input_filename": filename,
+        "input_path": bool(filename),
+        "input_csv": bool(filename and filename.lower().endswith(".csv")),
+        "input_json": bool(filename and filename.lower().endswith(".json")),
+        "date_only_policy": "date-only local input; no names, emails, phone numbers, messages, IPs, or payloads",
+        "_missing_config_items": missing,
     }
 
 

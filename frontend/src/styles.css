@@ -204,6 +204,7 @@ code {
 .profile-registry-card,
 .local-config-card,
 .next-action-card,
+.provider-setup-workbench,
 .safe-copy-card,
 .provider-checklist,
 .action-plan-panel,
@@ -493,6 +494,120 @@ code {
   border-color: #d5dde8;
   display: grid;
   gap: 14px;
+}
+
+.provider-setup-workbench {
+  background: #ffffff;
+  border-color: #d5dde8;
+  display: grid;
+  gap: 14px;
+}
+
+.provider-setup-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.provider-setup-heading h3,
+.provider-setup-heading p,
+.provider-setup-panel h4,
+.provider-setup-panel p,
+.real-profile-guardrails h4 {
+  margin: 0;
+}
+
+.provider-setup-heading p,
+.provider-setup-panel p {
+  color: #485160;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.provider-setup-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.provider-setup-panel {
+  background: #f8fafb;
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.setup-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.provider-setup-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.provider-setup-meta div {
+  background: #ffffff;
+  border: 1px solid #e3e8ee;
+  border-radius: 8px;
+  min-width: 0;
+  padding: 9px;
+}
+
+.provider-setup-meta dt {
+  color: #687181;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+
+.provider-setup-meta dd {
+  color: #253043;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.provider-setup-meta small {
+  color: #687181;
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.planned-action-note {
+  background: #fff9ed;
+  border: 1px solid #ecd7a8;
+  border-radius: 8px;
+  color: #4f4329;
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+}
+
+.planned-action-note span {
+  line-height: 1.4;
+}
+
+.real-profile-guardrails {
+  background: #f4fbf7;
+  border: 1px solid #c8dfd1;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.real-profile-guardrails ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 18px;
 }
 
 .onboarding-actions-heading {
@@ -1663,9 +1778,10 @@ pre {
   .onboarding-actions-heading,
   .session-history-heading,
   .secret-vault-heading,
-  .profile-registry-heading,
-  .local-secret-heading,
-  .safe-copy-heading {
+    .profile-registry-heading,
+    .provider-setup-heading,
+    .local-secret-heading,
+    .safe-copy-heading {
     display: block;
   }
 
@@ -1684,10 +1800,12 @@ pre {
   .summary-counts,
   .onboarding-flow-steps,
   .onboarding-status-strip,
-  .onboarding-action-groups,
-  .session-history-item,
-  .vault-status-grid,
-  .vault-controls,
+    .onboarding-action-groups,
+    .provider-setup-grid,
+    .provider-setup-meta,
+    .session-history-item,
+    .vault-status-grid,
+    .vault-controls,
   .next-action-card,
   .guarded-actions,
   .action-grid,
@@ -1703,5 +1821,38 @@ pre {
 
   .heading-actions {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .detail-panel,
+  .client-list,
+  .simple-summary-card,
+  .runtime-safety-banner,
+  .new-onboarding-card,
+  .onboarding-flow-card,
+  .onboarding-status-card,
+  .onboarding-actions-card,
+  .session-history-card,
+  .secret-vault-card,
+  .profile-registry-card,
+  .local-config-card,
+  .next-action-card,
+  .provider-setup-workbench,
+  .safe-copy-card,
+  .provider-checklist,
+  .action-plan-panel,
+  .expected-files-panel {
+    padding: 12px;
+  }
+
+  .status-pill,
+  .badge,
+  .route-label {
+    white-space: normal;
   }
 }

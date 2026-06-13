@@ -236,12 +236,25 @@ Example shape:
     "api_key_env": "LOCAL_FALCON_API_KEY"
   },
   "google_ads_search": {
-    "status": "planned"
+    "status": "planned",
+    "customer_id_env": "SPANISH_HEAD_GOOGLE_ADS_CUSTOMER_ID",
+    "developer_token_env": "SPANISH_HEAD_GOOGLE_ADS_DEVELOPER_TOKEN",
+    "oauth_client_secrets_env": "SPANISH_HEAD_GOOGLE_ADS_OAUTH_CLIENT_SECRETS",
+    "oauth_token_file_env": "SPANISH_HEAD_GOOGLE_ADS_OAUTH_TOKEN_FILE",
+    "login_customer_id_env": "SPANISH_HEAD_GOOGLE_ADS_LOGIN_CUSTOMER_ID"
+  },
+  "callrail": {
+    "local_input_filename": "calls.csv",
+    "account_id_env": "SPANISH_HEAD_CALLRAIL_ACCOUNT_ID",
+    "company_id_env": "SPANISH_HEAD_CALLRAIL_COMPANY_ID"
+  },
+  "form_fills": {
+    "local_input_filename": "form-fills.csv"
   }
 }
 ```
 
-The loader validates JSON shape, confirms the file profile matches the selected slug, checks whether named env vars are present, checks whether referenced OAuth/token files exist, and checks whether the Local Falcon manifest exists. It returns only safe metadata: yes/no readiness flags, missing item labels, and redacted path labels. It does not read credential contents, token contents, API key values, raw provider output, or report IDs.
+The loader validates JSON shape, confirms the file profile matches the selected slug, checks whether named env vars are present, checks whether referenced OAuth/token files exist, and checks whether the Local Falcon manifest exists. CallRail and Form Fills accept only simple ignored input filenames, not pasted rows. It returns only safe metadata: yes/no readiness flags, missing item labels, and redacted path labels. It does not read credential contents, token contents, API key values, customer IDs, phone numbers, form payloads, raw provider output, or report IDs.
 
 To configure Spanish Head locally:
 
@@ -270,9 +283,34 @@ python scripts/fetch_local_falcon_api.py --profile inn-at-spanish-head --transpo
 Remaining migration limits:
 
 - Some legacy GA4/import scripts still use shared env var names unless updated in a future milestone.
-- The Streamlit and FastAPI consoles expose provider readiness and command shapes, but they do not run live provider fetches from the browser.
-- Google Ads Search remains planned-only and has no importer command.
+- The Streamlit and FastAPI consoles expose provider readiness, local config preview/save, and command shapes, but they do not run live provider fetches from the browser.
+- Google Ads Search setup captures read-only reporting env var names only. Do not paste raw customer IDs, developer tokens, OAuth JSON, or token paths into the GUI.
 - The older aggregate `config/dashboard_lab_profiles.local.json` compatibility remains for tests/local experiments, but new per-profile config should use `local-profile-configs/{profile}.local.json`.
+
+### Fast Local Onboarding Workflow
+
+The importer console supports a safe browser workflow for new dashboard-lab profile setup:
+
+1. Create the tracked profile shell with fake-safe metadata reviewed in preview first.
+2. Add ignored local config using env var names and simple local input filenames only.
+3. Store secrets outside the GUI, either in the local shell or the encrypted local vault.
+4. Place local-only CallRail/Form Fills inputs under ignored input roots; do not paste rows into the browser.
+5. Run provider pulls/imports only after separate operator approval and only from local commands designed for that provider.
+6. Validate existing local-real output.
+7. Preview fixture copy, then copy only allowlisted validated summaries into dashboard-lab local fixtures.
+
+Disposable QA mode should use overrides such as:
+
+```powershell
+$env:MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH=".tmp/dashboard_lab_profiles.qa.json"
+$env:MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR=".tmp/local-profile-configs-qa"
+$env:MUSIMACK_IMPORTER_VAULT_PATH=".tmp/importer-vault-qa.local.json"
+$env:MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR=".tmp/inputs/form-fills"
+$env:MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR=".tmp/inputs/callrail"
+python -m uvicorn server.main:app --host 127.0.0.1 --port 8765
+```
+
+Use fake profile metadata, fake env var names, and disposable input filenames in QA. Do not paste real secrets, OAuth JSON, API keys, developer tokens, customer IDs, caller details, phone numbers, form messages, raw provider rows, raw fixture payloads, or customer data. The console does not commit local config, run providers, start OAuth, copy fixtures, publish portal reports, or mutate Google Ads campaigns, bids, budgets, keywords, ads, assets, conversions, or account settings.
 
 ## Local Falcon CSV Importer
 
