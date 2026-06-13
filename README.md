@@ -745,6 +745,17 @@ python -m uvicorn server.main:app --reload --port 8765
 
 `MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR` is for local dev/test only. Use fake environment variable names and safe ignored path references only; do not paste secrets, OAuth JSON, API keys, raw provider rows, raw fixture payloads, or customer data. The local config editor only drafts, previews, and saves ignored per-profile config JSON; it does not run providers, start OAuth flows, or copy dashboard fixtures. Delete the disposable override directory when manual QA is finished.
 
+To manually QA the tracked profile shell creation flow without writing the real tracked profile registry, copy `config/dashboard_lab_profiles.json` to a disposable `.tmp` registry and run the backend with a profile registry override:
+
+```powershell
+New-Item -ItemType Directory -Force .tmp | Out-Null
+Copy-Item config\dashboard_lab_profiles.json .tmp\dashboard_lab_profiles.qa.json
+$env:MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH = "$PWD\\.tmp\\dashboard_lab_profiles.qa.json"
+python -m uvicorn server.main:app --reload --port 8765
+```
+
+`MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH` is for local dev/test only. Use fake client/profile metadata only, do not create real client registry entries during QA, and delete the disposable `.tmp` registry when finished. The profile shell workflow only drafts, previews, and saves tracked-safe profile metadata in the selected registry file; it does not create dashboard-lab routes, local config, fixtures, provider output, OAuth flows, or provider imports.
+
 The frontend shows:
 
 - client/profile list for `aluma-seo-geo` and `inn-at-spanish-head`,

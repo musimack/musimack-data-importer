@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from server.main import create_app
 from src.local_secret_vault import DEFAULT_VAULT_PATH, LocalSecretVault
-from src.operator_console import EXPECTED_DASHBOARD_FILES
+from src.operator_console import DEFAULT_PROFILE_REGISTRY, EXPECTED_DASHBOARD_FILES
 
 
 def test_health_endpoint_returns_safe_status(tmp_path):
@@ -98,6 +98,60 @@ def test_profile_registry_api_rejects_unsafe_drafts_without_echoing_values(tmp_p
     assert "capability status must be enabled or planned" in serialized
     assert '{"client_secret":"value"}' not in serialized
     assert "/lab/not-allowed" not in serialized
+
+
+def test_profile_registry_env_override_preview_and_save_use_disposable_registry(tmp_path):
+    seed_registry = _registry(tmp_path)
+    override_registry = tmp_path / "override" / "dashboard_lab_profiles.qa.json"
+    override_registry.parent.mkdir()
+    override_registry.write_text(seed_registry.read_text(encoding="utf-8"), encoding="utf-8")
+    default_before = DEFAULT_PROFILE_REGISTRY.read_text(encoding="utf-8")
+    client = TestClient(
+        create_app(
+            env={"MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH": str(override_registry)},
+        )
+    )
+    draft = _new_profile_draft()
+
+    preview = client.post("/api/profile-registry/preview", json={"draft": draft})
+    preview_payload = preview.json()
+    after_preview = json.loads(override_registry.read_text(encoding="utf-8"))
+    saved = client.post("/api/profile-registry", json={"draft": draft, "confirmed": True})
+    saved_payload = saved.json()
+    after_save = json.loads(override_registry.read_text(encoding="utf-8"))
+
+    assert preview.status_code == 200
+    assert saved.status_code == 200
+    assert preview_payload["registry_path_label"] == "dashboard_lab_profiles.qa.json"
+    assert saved_payload["registry_path_label"] == "dashboard_lab_profiles.qa.json"
+    assert "new-client" not in json.dumps(after_preview)
+    assert [item["slug"] for item in after_save["profiles"]] == ["demo-profile", "new-client"]
+    assert DEFAULT_PROFILE_REGISTRY.read_text(encoding="utf-8") == default_before
+    serialized = json.dumps({"preview": preview_payload, "saved": saved_payload})
+    assert str(override_registry) not in serialized
+    assert str(override_registry.parent) not in serialized
+
+
+def test_profile_registry_explicit_injection_beats_env_override(tmp_path):
+    explicit_registry = _registry(tmp_path)
+    env_registry = tmp_path / "override" / "dashboard_lab_profiles.qa.json"
+    env_registry.parent.mkdir()
+    env_registry.write_text(explicit_registry.read_text(encoding="utf-8"), encoding="utf-8")
+    client = TestClient(
+        create_app(
+            registry_path=explicit_registry,
+            env={"MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH": str(env_registry)},
+        )
+    )
+    draft = _new_profile_draft()
+
+    response = client.post("/api/profile-registry", json={"draft": draft, "confirmed": True})
+
+    assert response.status_code == 200
+    explicit_payload = json.loads(explicit_registry.read_text(encoding="utf-8"))
+    env_payload = json.loads(env_registry.read_text(encoding="utf-8"))
+    assert [item["slug"] for item in explicit_payload["profiles"]] == ["demo-profile", "new-client"]
+    assert [item["slug"] for item in env_payload["profiles"]] == ["demo-profile"]
 
 
 def test_secret_vault_status_missing_temp_vault_does_not_create_file(tmp_path):

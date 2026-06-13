@@ -61,6 +61,7 @@ DEFAULT_LOCAL_PROFILE_CONFIG = ROOT / "config" / "dashboard_lab_profiles.local.j
 DEFAULT_AUDIT_LOG = ROOT / "logs" / "local-action-runs.jsonl"
 IMPORTER_VAULT_PATH_ENV = "MUSIMACK_IMPORTER_VAULT_PATH"
 LOCAL_CONFIG_DIR_ENV = "MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR"
+PROFILE_REGISTRY_PATH_ENV = "MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH"
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
@@ -152,9 +153,15 @@ def create_app(
         allow_headers=["*"],
     )
 
+    def current_registry_path() -> Path:
+        return resolve_profile_registry_path(
+            env=current_env(),
+            explicit_path=registry_path,
+        )
+
     def current_profiles() -> list[DashboardLabProfile]:
         try:
-            return load_dashboard_lab_profiles(registry_path)
+            return load_dashboard_lab_profiles(current_registry_path())
         except OperatorConsoleError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -306,7 +313,7 @@ def create_app(
         try:
             return preview_profile_registry_update(
                 request.draft,
-                registry_path=registry_path or DEFAULT_PROFILE_REGISTRY,
+                registry_path=current_registry_path(),
             ).as_safe_dict()
         except ProfileRegistryWriteError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -317,7 +324,7 @@ def create_app(
             return write_profile_registry_update(
                 request.draft,
                 confirmed=request.confirmed,
-                registry_path=registry_path or DEFAULT_PROFILE_REGISTRY,
+                registry_path=current_registry_path(),
             )
         except ProfileRegistryWriteError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -591,6 +598,20 @@ def resolve_local_profile_config_dir(
     if override:
         return Path(override)
     return DEFAULT_LOCAL_PROFILE_CONFIG_DIR
+
+
+def resolve_profile_registry_path(
+    *,
+    env: Mapping[str, str] | None = None,
+    explicit_path: Path | None = None,
+) -> Path:
+    if explicit_path is not None:
+        return explicit_path
+    source_env = os.environ if env is None else env
+    override = str(source_env.get(PROFILE_REGISTRY_PATH_ENV) or "").strip()
+    if override:
+        return Path(override)
+    return DEFAULT_PROFILE_REGISTRY
 
 
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:
