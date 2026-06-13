@@ -399,6 +399,29 @@ code {
   padding: 4px 7px;
 }
 
+.onboarding-import-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-import-controls label:not(.confirmation-row) {
+  color: #323b49;
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 5px;
+}
+
+.onboarding-import-controls input[type='text'] {
+  background: #ffffff;
+  border: 1px solid #cfd7e3;
+  border-radius: 8px;
+  color: #17202e;
+  font: inherit;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
 .disabled-provider-summary {
   align-items: center;
   display: flex;

@@ -472,6 +472,8 @@ function App() {
   const [onboardingActions, setOnboardingActions] = useState<OnboardingActionsResponse | null>(null);
   const [onboardingActionMessage, setOnboardingActionMessage] = useState<string>('');
   const [onboardingActionBusyId, setOnboardingActionBusyId] = useState<string>('');
+  const [onboardingActionInputs, setOnboardingActionInputs] = useState<Record<string, string>>({});
+  const [onboardingActionConfirmations, setOnboardingActionConfirmations] = useState<Record<string, boolean>>({});
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
@@ -525,6 +527,8 @@ function App() {
       setOnboardingActions(null);
       setOnboardingActionMessage('');
       setOnboardingActionBusyId('');
+      setOnboardingActionInputs({});
+      setOnboardingActionConfirmations({});
       return;
     }
     setValidationConfirmed(false);
@@ -541,6 +545,8 @@ function App() {
     setOnboardingActions(null);
     setOnboardingActionMessage('');
     setOnboardingActionBusyId('');
+    setOnboardingActionInputs({});
+    setOnboardingActionConfirmations({});
     refreshProfileStatus(
       selectedSlug,
       setDetail,
@@ -561,7 +567,7 @@ function App() {
     refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage);
   }, [selectedSlug]);
 
-  const refreshSelectedProfile = (message = 'Profile status refreshed') => {
+  const refreshSelectedProfile = (message = 'Profile status refreshed', clearOnboardingMessage = true) => {
     if (!selectedSlug) {
       return;
     }
@@ -575,7 +581,7 @@ function App() {
       setStatusMessage,
       message,
     );
-    refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage);
+    refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage, clearOnboardingMessage);
   };
 
   return (
@@ -681,14 +687,27 @@ function App() {
 
               <OnboardingActionsPanel
                 actions={onboardingActions}
+                actionInputs={onboardingActionInputs}
+                actionConfirmations={onboardingActionConfirmations}
                 busyActionId={onboardingActionBusyId}
                 message={onboardingActionMessage}
+                onInputChange={(actionId, value) =>
+                  setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }))
+                }
+                onConfirmationChange={(actionId, confirmed) =>
+                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
+                }
                 onRun={(actionId) =>
                   runOnboardingAction(
                     detail.slug,
                     actionId,
+                    {
+                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
+                      inputFile: onboardingActionInputs[actionId] ?? '',
+                    },
                     setOnboardingActionBusyId,
                     setOnboardingActionMessage,
+                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
                   )
                 }
               />
@@ -1034,13 +1053,21 @@ function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus })
 
 function OnboardingActionsPanel({
   actions,
+  actionInputs,
+  actionConfirmations,
   busyActionId,
   message,
+  onInputChange,
+  onConfirmationChange,
   onRun,
 }: {
   actions: OnboardingActionsResponse | null;
+  actionInputs: Record<string, string>;
+  actionConfirmations: Record<string, boolean>;
   busyActionId: string;
   message: string;
+  onInputChange: (actionId: string, value: string) => void;
+  onConfirmationChange: (actionId: string, confirmed: boolean) => void;
   onRun: (actionId: string) => void;
 }) {
   return (
@@ -1049,7 +1076,7 @@ function OnboardingActionsPanel({
         <div>
           <span className="eyebrow">Guarded local actions</span>
           <h3>Onboarding Actions</h3>
-          <p>Safe read-only checks are runnable here. Provider pulls, imports, OAuth, and fixture copy remain disabled.</p>
+          <p>Safe checks and confirmed Form Fills date-only import are runnable here. Provider pulls, OAuth, and fixture copy remain disabled.</p>
         </div>
       </div>
       {message ? <p className="vault-message">{message}</p> : null}
@@ -1062,8 +1089,12 @@ function OnboardingActionsPanel({
                 {group.actions.map((action) => (
                   <OnboardingActionCard
                     action={action}
+                    inputValue={actionInputs[action.id] ?? ''}
+                    confirmed={Boolean(actionConfirmations[action.id])}
                     busy={busyActionId === action.id}
                     key={action.id}
+                    onInputChange={(value) => onInputChange(action.id, value)}
+                    onConfirmationChange={(confirmed) => onConfirmationChange(action.id, confirmed)}
                     onRun={() => onRun(action.id)}
                   />
                 ))}
@@ -1080,14 +1111,26 @@ function OnboardingActionsPanel({
 
 function OnboardingActionCard({
   action,
+  inputValue,
+  confirmed,
   busy,
+  onInputChange,
+  onConfirmationChange,
   onRun,
 }: {
   action: OnboardingAction;
+  inputValue: string;
+  confirmed: boolean;
   busy: boolean;
+  onInputChange: (value: string) => void;
+  onConfirmationChange: (confirmed: boolean) => void;
   onRun: () => void;
 }) {
-  const runnable = action.available && action.read_only && !action.writes_files && !action.external_api && !action.fixture_copy;
+  const isFormFillsImport = action.id === 'form_fills.import-local';
+  const runnable = action.available && !action.external_api && !action.fixture_copy && (
+    (action.read_only && !action.writes_files) ||
+    (isFormFillsImport && action.writes_files && confirmed && inputValue.trim().length > 0)
+  );
   const stateLabel = action.available ? 'Available' : action.label.startsWith('Future:') ? 'Planned' : 'Unavailable';
 
   return (
@@ -1107,8 +1150,32 @@ function OnboardingActionCard({
       {!action.available && action.unavailable_reason ? (
         <p className="blocked-reason">{action.unavailable_reason}</p>
       ) : null}
+      {isFormFillsImport ? (
+        <div className="onboarding-import-controls">
+          <label>
+            <span>Local input file</span>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(event) => onInputChange(event.target.value)}
+              placeholder="qa-form-fills.csv"
+              disabled={busy || !action.available}
+            />
+          </label>
+          <label className="confirmation-row compact-confirmation">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => onConfirmationChange(event.target.checked)}
+              disabled={busy || !action.available}
+            />
+            <span>I confirm this uses date-only local input and writes ignored local output only.</span>
+          </label>
+          <p className="safe-copy-footnote">No pasted form data, raw rows, PII, provider calls, OAuth, or fixture copy.</p>
+        </div>
+      ) : null}
       <button type="button" className="copy-button" disabled={!runnable || busy} onClick={onRun}>
-        {busy ? 'Running...' : runnable ? 'Run safe check' : 'Not runnable'}
+        {busy ? 'Running...' : runnable ? (isFormFillsImport ? 'Import date-only file' : 'Run safe check') : 'Not runnable'}
       </button>
     </article>
   );
@@ -2720,11 +2787,14 @@ function refreshOnboardingActions(
   profileSlug: string,
   setActions: (actions: OnboardingActionsResponse | null) => void,
   setMessage: (message: string) => void,
+  clearMessage = true,
 ) {
   fetchJson<OnboardingActionsResponse>(`${API_BASE}/api/profiles/${profileSlug}/onboarding-actions`)
     .then((payload) => {
       setActions(payload);
-      setMessage('');
+      if (clearMessage) {
+        setMessage('');
+      }
     })
     .catch((fetchError: Error) => setMessage(safeOnboardingActionErrorMessage(fetchError)));
 }
@@ -2732,14 +2802,19 @@ function refreshOnboardingActions(
 function runOnboardingAction(
   profileSlug: string,
   actionId: string,
+  options: { confirmed: boolean; inputFile: string },
   setBusyActionId: (actionId: string) => void,
   setMessage: (message: string) => void,
+  onComplete?: () => void,
 ) {
   setBusyActionId(actionId);
   fetch(`${API_BASE}/api/profiles/${profileSlug}/onboarding-actions/${actionId}/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ confirmed: false }),
+    body: JSON.stringify({
+      confirmed: options.confirmed,
+      input_file: options.inputFile.trim() || undefined,
+    }),
   })
     .then((response) => {
       if (!response.ok) {
@@ -2750,10 +2825,29 @@ function runOnboardingAction(
     .then((payload) => {
       const status = String(payload.result.status ?? 'ok');
       const message = String(payload.result.message ?? 'Action completed.');
-      setMessage(`${payload.action.provider_label}: ${status === 'ok' ? message : message}`);
+      setMessage(`${payload.action.provider_label}: ${safeOnboardingActionResultMessage(status, message)}`);
+      if (payload.action.id === 'form_fills.import-local' && status === 'ok') {
+        onComplete?.();
+      }
     })
     .catch((fetchError: Error) => setMessage(safeOnboardingActionErrorMessage(fetchError)))
     .finally(() => setBusyActionId(''));
+}
+
+function safeOnboardingActionResultMessage(status: string, message: string) {
+  if (status === 'input_missing') {
+    return 'Input missing.';
+  }
+  if (status === 'rejected') {
+    return 'Unsafe input rejected.';
+  }
+  if (status === 'failed') {
+    return message.includes('Validation failed') ? 'Validation failed.' : 'Import failed.';
+  }
+  if (status === 'passed') {
+    return 'Validation passed.';
+  }
+  return message;
 }
 
 function refreshVaultStatus(

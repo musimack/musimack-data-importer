@@ -1177,6 +1177,170 @@ def test_onboarding_validation_action_is_unavailable_when_validation_input_is_mi
     assert str(tmp_path) not in json.dumps(output.json())
 
 
+def test_form_fills_import_action_appears_only_when_provider_is_enabled(tmp_path):
+    disabled_client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+    enabled_client = TestClient(
+        create_app(
+            registry_path=_registry(
+                tmp_path / "enabled",
+                data_sources=["form_fills"],
+                capabilities=[
+                    {
+                        "key": "form_fills",
+                        "label": "Form Fills",
+                        "status": "enabled",
+                        "kind": "lead_provider",
+                        "provider": "form_fills",
+                        "expected_output_file": "form-fills-summary.json",
+                    }
+                ],
+            ),
+            env={},
+            form_fills_input_dir=tmp_path / "inputs",
+        )
+    )
+
+    disabled = _action(disabled_client.get("/api/profiles/demo-profile/onboarding-actions").json(), "form_fills.import-local")
+    enabled = _action(enabled_client.get("/api/profiles/demo-profile/onboarding-actions").json(), "form_fills.import-local")
+
+    assert disabled["available"] is False
+    assert enabled["available"] is True
+    assert enabled["writes_files"] is True
+    assert enabled["requires_confirmation"] is True
+    assert enabled["external_api"] is False
+    assert enabled["fixture_copy"] is False
+
+
+def test_form_fills_import_requires_confirmation_and_enabled_provider(tmp_path):
+    input_dir = tmp_path / "inputs"
+    _write_text(input_dir / "safe.csv", "date\n2026-04-11\n")
+    enabled_client = TestClient(
+        create_app(
+            registry_path=_form_fills_registry(tmp_path),
+            env={},
+            form_fills_input_dir=input_dir,
+        )
+    )
+    disabled_client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path / "disabled"),
+            env={},
+            form_fills_input_dir=input_dir,
+        )
+    )
+
+    missing_confirmation = enabled_client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"input_file": "safe.csv"},
+    )
+    disabled = disabled_client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"confirmed": True, "input_file": "safe.csv"},
+    )
+
+    assert missing_confirmation.status_code == 400
+    assert missing_confirmation.json()["detail"] == "onboarding action requires explicit confirmation"
+    assert disabled.status_code == 200
+    assert disabled.json()["result"]["status"] == "unavailable"
+    assert str(tmp_path) not in json.dumps(disabled.json())
+
+
+def test_form_fills_import_rejects_missing_and_traversal_inputs_safely(tmp_path):
+    client = TestClient(
+        create_app(
+            registry_path=_form_fills_registry(tmp_path),
+            env={},
+            form_fills_input_dir=tmp_path / "inputs",
+        )
+    )
+
+    missing = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"confirmed": True, "input_file": "missing.csv"},
+    )
+    traversal = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"confirmed": True, "input_file": "../outside.csv"},
+    )
+
+    assert missing.status_code == 200
+    assert missing.json()["result"]["status"] == "input_missing"
+    assert missing.json()["result"]["message"] == "Input missing."
+    assert traversal.status_code == 400
+    assert traversal.json()["detail"] == "form fills input must stay under the allowed local input folder"
+    serialized = json.dumps({"missing": missing.json(), "traversal": traversal.json()})
+    assert str(tmp_path) not in serialized
+
+
+def test_form_fills_import_rejects_pii_input_without_echoing_contents(tmp_path):
+    input_dir = tmp_path / "inputs"
+    raw_contents = "date,email\n2026-04-11,person@example.test\n"
+    _write_text(input_dir / "unsafe.csv", raw_contents)
+    client = TestClient(
+        create_app(
+            registry_path=_form_fills_registry(tmp_path),
+            env={},
+            form_fills_input_dir=input_dir,
+        )
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"confirmed": True, "input_file": "unsafe.csv"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] == "rejected"
+    assert payload["result"]["message"] == "Unsafe input rejected."
+    assert "person@example.test" not in serialized
+    assert "date,email" not in serialized
+    assert str(tmp_path) not in serialized
+
+
+def test_form_fills_import_writes_temp_summary_and_validates_without_raw_content(tmp_path):
+    input_dir = tmp_path / "inputs"
+    output_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_text(
+        input_dir / "safe" / "form-fills.csv",
+        "date\n2026-04-11\n2026-04-11\n2026-05-12\n",
+    )
+    client = TestClient(
+        create_app(
+            registry_path=_form_fills_registry(tmp_path, importer_output_folder=output_folder),
+            env={},
+            form_fills_input_dir=input_dir,
+        )
+    )
+    expected_output = output_folder / "form-fills-summary.json"
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"confirmed": True, "input_file": "safe/form-fills.csv"},
+    )
+    validation = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills-validate-existing-output/run",
+        json={},
+    )
+
+    assert response.status_code == 200
+    assert expected_output.exists()
+    payload = response.json()
+    serialized = json.dumps({"import": payload, "validation": validation.json()})
+    assert payload["result"]["status"] == "ok"
+    assert payload["result"]["message"] == "Form Fills import completed. Validation passed."
+    assert payload["result"]["input_file"] == "safe/form-fills.csv"
+    assert payload["result"]["output_file"] == "form-fills-summary.json"
+    assert payload["result"]["total_form_fills"] == 3
+    assert payload["result"]["date_count"] == 2
+    assert validation.status_code == 200
+    assert validation.json()["result"]["status"] == "passed"
+    assert "2026-04-11\n2026-04-11" not in serialized
+    assert "person@example.test" not in serialized
+    assert str(tmp_path) not in serialized
+
+
 def test_onboarding_actions_reject_unknown_and_guard_future_actions(tmp_path):
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
 
@@ -2099,6 +2263,7 @@ def _registry(
     local_fixture_folder: Path | None = None,
 ) -> Path:
     registry = tmp_path / "profiles.json"
+    registry.parent.mkdir(parents=True, exist_ok=True)
     registry.write_text(
         json.dumps(
             {
@@ -2132,6 +2297,24 @@ def _registry(
         encoding="utf-8",
     )
     return registry
+
+
+def _form_fills_registry(tmp_path: Path, *, importer_output_folder: Path | None = None) -> Path:
+    return _registry(
+        tmp_path,
+        data_sources=["form_fills"],
+        capabilities=[
+            {
+                "key": "form_fills",
+                "label": "Form Fills",
+                "status": "enabled",
+                "kind": "lead_provider",
+                "provider": "form_fills",
+                "expected_output_file": "form-fills-summary.json",
+            }
+        ],
+        importer_output_folder=importer_output_folder,
+    )
 
 
 def _local_profile_config(tmp_path: Path) -> Path:
@@ -2245,6 +2428,11 @@ def _ga4_snapshot_payload(*, hidden: str = "safe-extra-value") -> dict:
 def _write_json(path: Path, payload: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_text(path: Path, value: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(value, encoding="utf-8")
 
 
 def _write_audit(path: Path, payload: dict) -> None:

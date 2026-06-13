@@ -63,6 +63,7 @@ DEFAULT_AUDIT_LOG = ROOT / "logs" / "local-action-runs.jsonl"
 IMPORTER_VAULT_PATH_ENV = "MUSIMACK_IMPORTER_VAULT_PATH"
 LOCAL_CONFIG_DIR_ENV = "MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR"
 PROFILE_REGISTRY_PATH_ENV = "MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH"
+FORM_FILLS_INPUT_DIR_ENV = "MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR"
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
@@ -99,6 +100,7 @@ PROVIDER_VALIDATION_TARGETS = {
     },
 }
 LOCAL_VALIDATION_TIMEOUT_SECONDS = 20
+LOCAL_IMPORT_TIMEOUT_SECONDS = 30
 BASE_REQUIRED_DASHBOARD_FILES = [
     "client-profile.json",
     "combined-dashboard-summary.json",
@@ -118,6 +120,7 @@ class ConfirmedActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     confirmed: bool = False
+    input_file: str | None = None
 
 
 class SecretVaultUnlockRequest(BaseModel):
@@ -166,6 +169,7 @@ def create_app(
     local_profile_config_dir: Path | None = None,
     audit_log_path: Path | None = None,
     secret_vault_path: Path | None = None,
+    form_fills_input_dir: Path | None = None,
 ) -> FastAPI:
     if env is None:
         load_local_operator_config()
@@ -217,6 +221,12 @@ def create_app(
 
     def current_audit_log_path() -> Path:
         return audit_log_path or DEFAULT_AUDIT_LOG
+
+    def current_form_fills_input_dir() -> Path:
+        return resolve_form_fills_input_dir(
+            env=current_env(),
+            explicit_dir=form_fills_input_dir,
+        )
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
@@ -419,8 +429,10 @@ def create_app(
             profile,
             action_id,
             confirmed=request.confirmed,
+            input_file=request.input_file,
             safe_env=current_env(),
             local_config=current_profile_config(profile),
+            form_fills_input_dir=current_form_fills_input_dir(),
         )
 
     @app.get("/api/profiles/{profile_slug}/action-plan")
@@ -693,6 +705,20 @@ def resolve_profile_registry_path(
     if override:
         return Path(override)
     return DEFAULT_PROFILE_REGISTRY
+
+
+def resolve_form_fills_input_dir(
+    *,
+    env: Mapping[str, str] | None = None,
+    explicit_dir: Path | None = None,
+) -> Path:
+    if explicit_dir is not None:
+        return explicit_dir
+    source_env = os.environ if env is None else env
+    override = str(source_env.get(FORM_FILLS_INPUT_DIR_ENV) or "").strip()
+    if override:
+        return Path(override)
+    return ROOT / "inputs" / "local-real" / "form-fills"
 
 
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:
@@ -1057,8 +1083,10 @@ def run_onboarding_action(
     action_id: str,
     *,
     confirmed: bool,
+    input_file: str | None = None,
     safe_env: Mapping[str, str],
     local_config: Mapping[str, Any],
+    form_fills_input_dir: Path | None = None,
 ) -> dict[str, Any]:
     action = _find_onboarding_action(
         profile,
@@ -1086,6 +1114,12 @@ def run_onboarding_action(
         result = _run_onboarding_readiness_check(profile, action["provider"], safe_env=safe_env, local_config=local_config)
     elif action["kind"] == "validate_existing_output":
         result = _run_onboarding_output_check(profile, action["provider"])
+    elif action["kind"] == "form_fills_import_local":
+        result = _run_form_fills_import_action(
+            profile,
+            input_file=input_file,
+            input_root=form_fills_input_dir or resolve_form_fills_input_dir(env=safe_env),
+        )
     else:
         return {
             "profile": profile.slug,
@@ -1153,6 +1187,23 @@ def _onboarding_action_catalog(
                 requires_confirmation=False,
             )
         )
+        if provider == "form_fills":
+            actions.append(
+                _onboarding_action(
+                    action_id="form_fills.import-local",
+                    provider=provider,
+                    kind="form_fills_import_local",
+                    label="Import local date-only form fills",
+                    description="Import an existing date-only CSV or JSON from the allowed local Form Fills input folder.",
+                    available=enabled,
+                    unavailable_reason="" if enabled else "Provider is not enabled for this profile.",
+                    read_only=False,
+                    writes_files=True,
+                    external_api=False,
+                    fixture_copy=False,
+                    requires_confirmation=True,
+                )
+            )
         actions.append(_future_onboarding_action(provider))
     return actions
 
@@ -1368,6 +1419,165 @@ def _safe_local_file_metadata(path: Path, file_label: str) -> dict[str, Any]:
     if isinstance(payload, dict) and isinstance(payload.get("schema_version"), str):
         metadata["schema_version"] = payload["schema_version"]
     return metadata
+
+
+def _run_form_fills_import_action(
+    profile: DashboardLabProfile,
+    *,
+    input_file: str | None,
+    input_root: Path,
+) -> dict[str, Any]:
+    resolved_input = _resolve_form_fills_input_file(input_root=input_root, input_file=input_file)
+    if not resolved_input["path"].is_file():
+        return {
+            "status": "input_missing",
+            "message": "Input missing.",
+            "provider": "form_fills",
+            "input_file": resolved_input["label"],
+            "output_file": "form-fills-summary.json",
+            "error": "input_missing",
+        }
+
+    output_target = _form_fills_output_target(profile)
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    command = [
+        sys.executable,
+        str(ROOT / "scripts" / "import_form_fills.py"),
+        "--profile",
+        profile.slug,
+        "--input",
+        str(resolved_input["path"]),
+        "--output-root",
+        output_target["argument"],
+    ]
+    if output_target["real_output"]:
+        command.append("--real-output")
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=LOCAL_IMPORT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "failed",
+            "message": "Import timed out.",
+            "provider": "form_fills",
+            "input_file": resolved_input["label"],
+            "output_file": "form-fills-summary.json",
+            "error": "import_timeout",
+        }
+    if completed.returncode != 0:
+        return {
+            "status": "rejected",
+            "message": "Unsafe input rejected." if resolved_input["path"].is_file() else "Input missing.",
+            "provider": "form_fills",
+            "input_file": resolved_input["label"],
+            "output_file": "form-fills-summary.json",
+            "error": "import_failed",
+            "return_code": completed.returncode,
+        }
+
+    validation = _run_onboarding_output_check(profile, "form_fills")
+    summary = _safe_form_fills_summary(output_target["output_path"])
+    validation_passed = validation.get("status") == "passed"
+    return {
+        "status": "ok" if validation_passed else "failed",
+        "message": "Form Fills import completed. Validation passed." if validation_passed else "Form Fills import completed. Validation failed.",
+        "provider": "form_fills",
+        "input_file": resolved_input["label"],
+        "output_file": "form-fills-summary.json",
+        "validation_status": validation.get("status"),
+        "validation_message": validation.get("message"),
+        **summary,
+    }
+
+
+def _resolve_form_fills_input_file(*, input_root: Path, input_file: str | None) -> dict[str, Any]:
+    raw = str(input_file or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="form fills input file is required")
+    candidate = Path(raw)
+    root = _absolute_path(input_root)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    resolved = resolved.resolve(strict=False)
+    try:
+        label = resolved.relative_to(root.resolve(strict=False)).as_posix()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="form fills input must stay under the allowed local input folder") from exc
+    if not label or label.startswith("../") or "/../" in label:
+        raise HTTPException(status_code=400, detail="form fills input must stay under the allowed local input folder")
+    if resolved.suffix.lower() not in {".csv", ".json"}:
+        raise HTTPException(status_code=400, detail="form fills input must be a CSV or JSON file")
+    return {"path": resolved, "label": label}
+
+
+def _form_fills_output_target(profile: DashboardLabProfile) -> dict[str, Any]:
+    output_folder = _absolute_path(profile.importer_output_folder)
+    if output_folder.name != profile.slug:
+        raise HTTPException(status_code=400, detail="form fills output folder must match the selected profile")
+    output_root = output_folder.parent.resolve(strict=False)
+    output_posix = output_root.as_posix()
+    if "/public/fixtures/" in output_posix or output_posix.endswith("/public/fixtures"):
+        raise HTTPException(status_code=400, detail="form fills output must not target committed dashboard-lab fixtures")
+    if "/public/local-fixtures/" in output_posix or output_posix.endswith("/public/local-fixtures"):
+        raise HTTPException(status_code=400, detail="form fills import does not write dashboard-lab local fixtures")
+
+    real_root = (ROOT / "exports" / "local-real" / "dashboard-lab").resolve(strict=False)
+    real_output = _is_relative_to(output_root, real_root)
+    argument = output_root
+    if real_output:
+        argument = Path(os.path.relpath(output_root, ROOT))
+    return {
+        "argument": str(argument),
+        "real_output": real_output,
+        "output_path": output_folder / "form-fills-summary.json",
+    }
+
+
+def _safe_form_fills_summary(path: Path) -> dict[str, Any]:
+    metadata = _safe_local_file_metadata(path, "form-fills-summary.json")
+    summary: dict[str, Any] = {
+        "total_form_fills": None,
+        "date_count": None,
+        "date_range_start": None,
+        "date_range_end": None,
+        **metadata,
+    }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return summary
+    if not isinstance(payload, dict):
+        return summary
+    payload_summary = payload.get("summary")
+    if isinstance(payload_summary, dict):
+        summary["total_form_fills"] = payload_summary.get("total_form_fills")
+    time_series = payload.get("time_series")
+    if isinstance(time_series, list):
+        summary["date_count"] = len(time_series)
+    date_range = payload.get("date_range")
+    if isinstance(date_range, dict):
+        summary["date_range_start"] = date_range.get("start_date")
+        summary["date_range_end"] = date_range.get("end_date")
+    return summary
+
+
+def _absolute_path(path: Path) -> Path:
+    return path.resolve(strict=False) if path.is_absolute() else (ROOT / path).resolve(strict=False)
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(parent.resolve(strict=False))
+        return True
+    except ValueError:
+        return False
 
 
 def _onboarding_action_safety() -> dict[str, bool]:
