@@ -19,6 +19,87 @@ def test_health_endpoint_returns_safe_status(tmp_path):
     assert response.json() == {"ok": True, "app": "musimack-data-importer-local-api"}
 
 
+def test_profile_registry_new_draft_returns_safe_options(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+
+    response = client.get("/api/profile-registry/new-draft")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "ga4" in payload["draft"]["data_sources"]
+    assert any(item["key"] == "google_ads_search" for item in payload["provider_options"])
+    assert any(item["key"] == "content" for item in payload["capability_options"])
+    assert "Do not enter secrets" in payload["warnings"][0]
+
+
+def test_profile_registry_preview_returns_safe_profile_without_writing(tmp_path):
+    registry = _registry(tmp_path)
+    client = TestClient(create_app(registry_path=registry, env={}))
+    draft = _new_profile_draft()
+
+    response = client.post("/api/profile-registry/preview", json={"draft": draft})
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["blocked"] is False
+    assert payload["profile"]["slug"] == "new-client"
+    assert payload["profile"]["dashboard_lab_route"] == "/lab/new-client"
+    assert "google-ads-summary.json" in payload["expected_files"]
+    assert "ga4-snapshot.json" not in payload["expected_files"]
+    assert "new-client" not in json.dumps(json.loads(registry.read_text(encoding="utf-8")))
+    assert str(registry.parent) not in serialized
+
+
+def test_profile_registry_save_requires_confirmation_and_writes_temp_registry_only(tmp_path):
+    registry = _registry(tmp_path)
+    client = TestClient(create_app(registry_path=registry, env={}))
+    draft = _new_profile_draft()
+
+    unconfirmed = client.post("/api/profile-registry", json={"draft": draft})
+    confirmed = client.post("/api/profile-registry", json={"draft": draft, "confirmed": True})
+
+    assert unconfirmed.status_code == 400
+    assert confirmed.status_code == 200
+    payload = confirmed.json()
+    assert payload["saved"] is True
+    registry_payload = json.loads(registry.read_text(encoding="utf-8"))
+    assert [item["slug"] for item in registry_payload["profiles"]] == ["demo-profile", "new-client"]
+    assert str(registry.parent) not in json.dumps(payload)
+
+
+def test_profile_registry_api_rejects_unsafe_drafts_without_echoing_values(tmp_path):
+    registry = _registry(tmp_path)
+    client = TestClient(create_app(registry_path=registry, env={}))
+
+    response = client.post(
+        "/api/profile-registry/preview",
+        json={
+            "draft": {
+                "slug": "demo-profile",
+                "display_name": '{"client_secret":"value"}',
+                "domain": "example.com",
+                "vertical": "local service",
+                "service_model": "SEO/GEO",
+                "data_sources": ["ga4", "not_allowed"],
+                "capabilities": [{"key": "content", "status": "active"}, {"key": "not_allowed", "status": "enabled"}],
+                "dashboard_lab_route": "/lab/not-allowed",
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["blocked"] is True
+    assert "slug already exists" in serialized
+    assert "not allowed" in serialized
+    assert "not editable" in serialized
+    assert "capability status must be enabled or planned" in serialized
+    assert '{"client_secret":"value"}' not in serialized
+    assert "/lab/not-allowed" not in serialized
+
+
 def test_secret_vault_status_missing_temp_vault_does_not_create_file(tmp_path):
     vault_path = tmp_path / "vault.local.json"
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, secret_vault_path=vault_path))
@@ -1656,6 +1737,25 @@ def test_copy_action_does_not_use_shell_or_subprocess():
     assert "subprocess." not in text
     assert "os.system" not in text
     assert "shell=True" not in text
+
+
+def _new_profile_draft() -> dict:
+    return {
+        "slug": "new-client",
+        "display_name": "New Client",
+        "domain": "example.com",
+        "vertical": "local service",
+        "service_model": "SEO/GEO",
+        "data_sources": ["ga4", "gsc", "local_falcon", "google_ads_search"],
+        "capabilities": [
+            {"key": "content", "status": "enabled"},
+            {"key": "strategy", "status": "enabled"},
+            {"key": "reports", "status": "enabled"},
+            {"key": "support", "status": "enabled"},
+            {"key": "operator_profile", "status": "enabled"},
+            {"key": "local_falcon_ai", "status": "planned"},
+        ],
+    }
 
 
 def _registry(

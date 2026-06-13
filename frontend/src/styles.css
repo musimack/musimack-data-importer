@@ -195,6 +195,7 @@ code {
 
 .simple-summary-card,
 .secret-vault-card,
+.profile-registry-card,
 .local-config-card,
 .next-action-card,
 .safe-copy-card,
@@ -415,6 +416,57 @@ code {
 .local-secret-confirmation {
   align-items: center;
   padding: 7px 9px;
+}
+
+.profile-registry-card {
+  background: #ffffff;
+  border-color: #cdd8e4;
+  display: grid;
+  gap: 14px;
+}
+
+.profile-registry-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.profile-registry-heading h3,
+.profile-registry-heading p,
+.profile-registry-option-group h4,
+.profile-registry-option-group p {
+  margin: 0;
+}
+
+.profile-registry-heading h3 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.profile-registry-heading p,
+.profile-registry-option-group p {
+  color: #485160;
+  line-height: 1.5;
+}
+
+.profile-registry-fields,
+.profile-registry-options {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.profile-registry-option-group {
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
 }
 
 .local-config-card {
@@ -1122,6 +1174,7 @@ pre {
   .section-heading,
   .simple-summary-main,
   .secret-vault-heading,
+  .profile-registry-heading,
   .local-secret-heading,
   .safe-copy-heading {
     display: block;
@@ -1134,6 +1187,8 @@ pre {
 
   .workspace,
   .profile-grid,
+  .profile-registry-fields,
+  .profile-registry-options,
   .readiness-grid,
   .provider-grid,
   .summary-counts,

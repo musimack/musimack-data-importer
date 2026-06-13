@@ -21,6 +21,12 @@ from src.operator_console import (
     readiness_matrix,
     validate_profile_output,
 )
+from src.profile_registry_writer import (
+    ProfileRegistryWriteError,
+    build_profile_registry_draft,
+    preview_profile_registry_update,
+    write_profile_registry_update,
+)
 
 
 def test_dashboard_lab_profile_registry_loads_safe_profiles():
@@ -115,6 +121,125 @@ def test_registry_rejects_local_fixture_path_pointing_to_committed_fixtures(tmp_
 
     with pytest.raises(OperatorConsoleError, match="public/fixtures"):
         load_dashboard_lab_profiles(registry)
+
+
+def test_profile_registry_writer_builds_safe_draft():
+    draft = build_profile_registry_draft()
+
+    assert "ga4" in draft["draft"]["data_sources"]
+    assert "local_falcon" in draft["draft"]["data_sources"]
+    assert any(item["key"] == "content" for item in draft["capability_options"])
+    assert any(item["key"] == "google_ads_search" for item in draft["provider_options"])
+    assert "Do not enter secrets" in draft["warnings"][0]
+
+
+def test_profile_registry_writer_preview_generates_paths_without_writing(tmp_path):
+    registry = _registry(tmp_path)
+    preview = preview_profile_registry_update(
+        {
+            "slug": "new-client",
+            "display_name": "New Client",
+            "domain": "example.com",
+            "vertical": "local service",
+            "service_model": "SEO/GEO",
+            "data_sources": ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"],
+            "capabilities": [
+                {"key": "content", "status": "enabled"},
+                {"key": "strategy", "status": "enabled"},
+                {"key": "reports", "status": "enabled"},
+                {"key": "support", "status": "enabled"},
+                {"key": "operator_profile", "status": "enabled"},
+                {"key": "local_falcon_ai", "status": "planned"},
+            ],
+        },
+        registry_path=registry,
+    )
+
+    payload = preview.as_safe_dict()
+    assert preview.blocked is False
+    assert payload["profile"]["dashboard_lab_route"] == "/lab/new-client"
+    assert payload["profile"]["importer_output_folder"] == "exports/local-real/dashboard-lab/new-client"
+    assert payload["profile"]["dashboard_lab_local_fixture_folder"] == "../musimack-dashboard-lab/public/local-fixtures/new-client"
+    assert "google-ads-summary.json" in payload["expected_files"]
+    assert "callrail-summary.json" in payload["expected_files"]
+    assert "form-fills-summary.json" in payload["expected_files"]
+    assert "ga4-snapshot.json" not in payload["expected_files"]
+    assert "new-client" not in [profile.slug for profile in load_dashboard_lab_profiles(registry)]
+
+
+def test_profile_registry_writer_rejects_duplicate_invalid_unknown_and_secret_like_values(tmp_path):
+    registry = _registry(tmp_path)
+    preview = preview_profile_registry_update(
+        {
+            "slug": "demo-profile",
+            "display_name": '{"client_secret":"value"}',
+            "domain": "example.com",
+            "vertical": "local service",
+            "service_model": "SEO/GEO",
+            "data_sources": ["ga4", "unknown_provider"],
+            "capabilities": [{"key": "unknown_capability", "status": "enabled"}],
+            "importer_output_folder": "C:/not-allowed",
+        },
+        registry_path=registry,
+    )
+
+    serialized = json.dumps(preview.as_safe_dict())
+    assert preview.blocked is True
+    assert "slug already exists" in serialized
+    assert "not allowed" in serialized
+    assert "not editable" in serialized
+    assert '{"client_secret":"value"}' not in serialized
+    assert "C:/not-allowed" not in serialized
+
+
+def test_profile_registry_writer_rejects_invalid_capability_status(tmp_path):
+    registry = _registry(tmp_path)
+    preview = preview_profile_registry_update(
+        {
+            "slug": "new-client",
+            "display_name": "New Client",
+            "domain": "example.com",
+            "vertical": "local service",
+            "service_model": "SEO/GEO",
+            "data_sources": ["ga4"],
+            "capabilities": [{"key": "content", "status": "active"}],
+        },
+        registry_path=registry,
+    )
+
+    assert preview.blocked is True
+    assert "capability status must be enabled or planned" in json.dumps(preview.as_safe_dict())
+
+
+def test_profile_registry_writer_save_requires_confirmation_and_preserves_order(tmp_path):
+    registry = _registry(tmp_path)
+    draft = {
+        "slug": "new-client",
+        "display_name": "New Client",
+        "domain": "example.com",
+        "vertical": "local service",
+        "service_model": "SEO/GEO",
+        "data_sources": ["ga4", "gsc"],
+        "capabilities": [
+            {"key": "content", "status": "enabled"},
+            {"key": "strategy", "status": "enabled"},
+            {"key": "reports", "status": "enabled"},
+            {"key": "support", "status": "enabled"},
+            {"key": "operator_profile", "status": "enabled"},
+        ],
+    }
+
+    with pytest.raises(ProfileRegistryWriteError):
+        write_profile_registry_update(draft, confirmed=False, registry_path=registry)
+
+    response = write_profile_registry_update(draft, confirmed=True, registry_path=registry)
+    profiles = load_dashboard_lab_profiles(registry)
+
+    assert response["saved"] is True
+    assert [profile.slug for profile in profiles] == ["demo-profile", "new-client"]
+    new_profile = profile_by_slug("new-client", profiles)
+    assert new_profile.dashboard_lab_route == "/lab/new-client"
+    assert expected_dashboard_files(new_profile)
 
 
 def test_provider_readiness_reports_safe_presence_without_values():
@@ -581,6 +706,37 @@ def test_guarded_copy_only_copies_expected_files_and_reports_missing(tmp_path):
     assert not (profile.dashboard_lab_local_fixture_folder / "raw-response.json").exists()
     assert next(item for item in results if item.file == "client-profile.json").status == "copied"
     assert next(item for item in results if item.file == "gsc-summary.json").status == "skipped missing source"
+
+
+def _registry(tmp_path: Path) -> Path:
+    registry = tmp_path / "profiles.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "profiles": [
+                    {
+                        "slug": "demo-profile",
+                        "display_name": "Demo Profile",
+                        "domain": "example.com",
+                        "vertical": "demo",
+                        "service_model": "demo",
+                        "dashboard_lab_route": "/lab/demo-profile",
+                        "importer_output_folder": "exports/local-real/dashboard-lab/demo-profile",
+                        "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/demo-profile",
+                        "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/demo-profile",
+                        "data_sources": ["ga4", "gsc", "local_falcon"],
+                        "capabilities": [
+                            {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+                            {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+                            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return registry
 
 
 def _test_profile(tmp_path, *, source_exists=True) -> DashboardLabProfile:

@@ -210,6 +210,48 @@ type LocalConfigPreview = {
   saved?: boolean;
 };
 
+type ProfileRegistryOption = {
+  key: string;
+  label: string;
+  status: string;
+  kind: string;
+  provider: string;
+  expected_output_file: string;
+};
+
+type ProfileRegistryCapabilityDraft = {
+  key: string;
+  status: string;
+};
+
+type ProfileRegistryDraft = {
+  slug: string;
+  display_name: string;
+  domain: string;
+  vertical: string;
+  service_model: string;
+  data_sources: string[];
+  capabilities: ProfileRegistryCapabilityDraft[];
+};
+
+type ProfileRegistryDraftResponse = {
+  draft: ProfileRegistryDraft;
+  provider_options: ProfileRegistryOption[];
+  capability_options: ProfileRegistryOption[];
+  warnings: string[];
+};
+
+type ProfileRegistryPreview = {
+  registry_path_label: string;
+  profile: Record<string, string | string[] | Array<Record<string, string>>>;
+  expected_files: string[];
+  changes: Array<Record<string, string>>;
+  blocked: boolean;
+  errors: string[];
+  warnings: string[];
+  saved?: boolean;
+};
+
 type LastActions = {
   last_action: ActionRunEntry | null;
   last_validation: ActionRunEntry | null;
@@ -327,24 +369,27 @@ function App() {
   const [localConfigBusy, setLocalConfigBusy] = useState<boolean>(false);
   const [localConfigMessage, setLocalConfigMessage] = useState<string>('');
   const [localConfigConfirmed, setLocalConfigConfirmed] = useState<boolean>(false);
+  const [profileRegistryDraft, setProfileRegistryDraft] = useState<ProfileRegistryDraftResponse | null>(null);
+  const [profileRegistryForm, setProfileRegistryForm] = useState<ProfileRegistryDraft | null>(null);
+  const [profileRegistryPreview, setProfileRegistryPreview] = useState<ProfileRegistryPreview | null>(null);
+  const [profileRegistryBusy, setProfileRegistryBusy] = useState<boolean>(false);
+  const [profileRegistryMessage, setProfileRegistryMessage] = useState<string>('');
+  const [profileRegistryConfirmed, setProfileRegistryConfirmed] = useState<boolean>(false);
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
   );
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/profiles`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((payload: { profiles: ProfileSummary[] }) => {
-        setProfiles(payload.profiles);
-        setSelectedSlug(payload.profiles[0]?.slug ?? '');
-      })
-      .catch((fetchError: Error) => setError(fetchError.message));
+    refreshProfiles(setProfiles, setSelectedSlug, setError);
+    refreshProfileRegistryDraft(
+      setProfileRegistryDraft,
+      setProfileRegistryForm,
+      setProfileRegistryPreview,
+      setProfileRegistryMessage,
+      setProfileRegistryBusy,
+      setProfileRegistryConfirmed,
+    );
   }, []);
 
   useEffect(() => {
@@ -445,6 +490,47 @@ function App() {
       </section>
 
       {error ? <div className="error-banner">API error: {error}</div> : null}
+
+      <ProfileRegistryCreator
+        busy={profileRegistryBusy}
+        confirmed={profileRegistryConfirmed}
+        draft={profileRegistryDraft}
+        form={profileRegistryForm}
+        message={profileRegistryMessage}
+        preview={profileRegistryPreview}
+        setConfirmed={setProfileRegistryConfirmed}
+        setForm={setProfileRegistryForm}
+        onPreview={() =>
+          previewProfileRegistry(
+            profileRegistryForm,
+            setProfileRegistryPreview,
+            setProfileRegistryMessage,
+            setProfileRegistryBusy,
+            setProfileRegistryConfirmed,
+          )
+        }
+        onSave={() =>
+          saveProfileRegistry(
+            profileRegistryForm,
+            profileRegistryConfirmed,
+            setProfileRegistryPreview,
+            setProfileRegistryMessage,
+            setProfileRegistryBusy,
+            setProfileRegistryConfirmed,
+            () => {
+              refreshProfiles(setProfiles, setSelectedSlug, setError);
+              refreshProfileRegistryDraft(
+                setProfileRegistryDraft,
+                setProfileRegistryForm,
+                setProfileRegistryPreview,
+                setProfileRegistryMessage,
+                setProfileRegistryBusy,
+                setProfileRegistryConfirmed,
+              );
+            },
+          )
+        }
+      />
 
       <div className="workspace">
         <aside className="client-list" aria-label="Client profiles">
@@ -946,6 +1032,203 @@ function LocalFalconApiKeyManager({
         </>
       )}
       {message ? <p className="vault-message">{message}</p> : null}
+    </section>
+  );
+}
+
+function ProfileRegistryCreator({
+  busy,
+  confirmed,
+  draft,
+  form,
+  message,
+  preview,
+  setConfirmed,
+  setForm,
+  onPreview,
+  onSave,
+}: {
+  busy: boolean;
+  confirmed: boolean;
+  draft: ProfileRegistryDraftResponse | null;
+  form: ProfileRegistryDraft | null;
+  message: string;
+  preview: ProfileRegistryPreview | null;
+  setConfirmed: (confirmed: boolean) => void;
+  setForm: (form: ProfileRegistryDraft) => void;
+  onPreview: () => void;
+  onSave: () => void;
+}) {
+  const providerOptions = draft?.provider_options ?? [];
+  const capabilityOptions = draft?.capability_options ?? [];
+
+  return (
+    <section className="profile-registry-card" aria-label="Create new client profile">
+      <div className="profile-registry-heading">
+        <div>
+          <span className="eyebrow">Tracked setup</span>
+          <h3>Create new client profile</h3>
+          <p>
+            Drafts a tracked profile shell in <code>config/dashboard_lab_profiles.json</code>. This does not create
+            dashboard-lab routes, local config, fixtures, providers, OAuth flows, or imports.
+          </p>
+        </div>
+        <span className="badge neutral">Tracked config</span>
+      </div>
+
+      {draft?.warnings.length ? <p className="vault-message">{draft.warnings[0]}</p> : null}
+
+      {form ? (
+        <>
+          <div className="profile-registry-fields">
+            <label className="local-config-field">
+              <span>Client display name</span>
+              <input
+                type="text"
+                value={form.display_name}
+                onChange={(event) => setForm({ ...form, display_name: event.target.value })}
+              />
+            </label>
+            <label className="local-config-field">
+              <span>Profile slug</span>
+              <input
+                type="text"
+                value={form.slug}
+                placeholder="new-client"
+                onChange={(event) => setForm({ ...form, slug: event.target.value })}
+              />
+            </label>
+            <label className="local-config-field">
+              <span>Domain</span>
+              <input
+                type="text"
+                value={form.domain}
+                placeholder="example.com"
+                onChange={(event) => setForm({ ...form, domain: event.target.value })}
+              />
+            </label>
+            <label className="local-config-field">
+              <span>Vertical</span>
+              <input
+                type="text"
+                value={form.vertical}
+                onChange={(event) => setForm({ ...form, vertical: event.target.value })}
+              />
+            </label>
+            <label className="local-config-field wide-field">
+              <span>Service model</span>
+              <input
+                type="text"
+                value={form.service_model}
+                onChange={(event) => setForm({ ...form, service_model: event.target.value })}
+              />
+            </label>
+          </div>
+
+          <div className="profile-registry-options">
+            <div className="profile-registry-option-group">
+              <h4>Provider outputs</h4>
+              <p>Enabled providers determine profile data sources and tracked expected output readiness.</p>
+              {providerOptions.map((option) => (
+                <label className="confirmation-row compact-confirmation" key={option.key}>
+                  <input
+                    type="checkbox"
+                    checked={form.data_sources.includes(option.key)}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        data_sources: toggleString(form.data_sources, option.key, event.target.checked),
+                      })
+                    }
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="profile-registry-option-group">
+              <h4>Dashboard capabilities</h4>
+              <p>These are profile rooms/capabilities only; they do not run providers or write fixtures.</p>
+              {capabilityOptions.map((option) => {
+                const existing = form.capabilities.find((item) => item.key === option.key);
+                return (
+                  <label className="confirmation-row compact-confirmation" key={option.key}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(existing)}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          capabilities: toggleCapability(form.capabilities, option, event.target.checked),
+                        })
+                      }
+                    />
+                    <span>{option.label} {existing?.status === 'planned' ? '(planned)' : ''}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="local-config-path">
+            Generated labels:{' '}
+            <code>{form.slug ? `/lab/${form.slug}` : '/lab/{slug}'}</code>{' '}
+            <code>{form.slug ? `exports/local-real/dashboard-lab/${form.slug}` : 'exports/local-real/dashboard-lab/{slug}'}</code>
+          </div>
+        </>
+      ) : (
+        <p className="vault-message">Loading tracked profile draft...</p>
+      )}
+
+      {preview ? (
+        <div className="local-config-preview" aria-label="Tracked profile preview">
+          <h4>Preview</h4>
+          {preview.errors.length ? (
+            <ul className="error-list">
+              {preview.errors.map((previewError) => (
+                <li key={previewError}>{previewError}</li>
+              ))}
+            </ul>
+          ) : (
+            <>
+              <p>
+                Will append <strong>{String(preview.profile.display_name ?? '')}</strong> to{' '}
+                <code>{preview.registry_path_label}</code>.
+              </p>
+              <div className="chip-row">
+                {preview.expected_files.map((file) => (
+                  <span className="file-chip" key={file}>{file}</span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {message ? <p className="vault-message">{message}</p> : null}
+
+      <div className="local-config-actions">
+        <button type="button" className="copy-button" disabled={busy || !form} onClick={onPreview}>
+          {busy ? 'Working...' : 'Preview tracked profile'}
+        </button>
+        <label className="confirmation-row compact-confirmation">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            disabled={!preview || preview.blocked}
+            onChange={(event) => setConfirmed(event.target.checked)}
+          />
+          <span>I confirm this writes tracked safe profile metadata only.</span>
+        </label>
+        <button
+          type="button"
+          className="primary-button"
+          disabled={busy || !preview || preview.blocked || !confirmed}
+          onClick={onSave}
+        >
+          Save tracked profile shell
+        </button>
+      </div>
     </section>
   );
 }
@@ -1845,6 +2128,139 @@ function yesNo(value: boolean) {
   return value ? 'Yes' : 'No';
 }
 
+function cloneProfileRegistryDraft(draft: ProfileRegistryDraft): ProfileRegistryDraft {
+  return {
+    slug: draft.slug,
+    display_name: draft.display_name,
+    domain: draft.domain,
+    vertical: draft.vertical,
+    service_model: draft.service_model,
+    data_sources: [...draft.data_sources],
+    capabilities: draft.capabilities.map((item) => ({ ...item })),
+  };
+}
+
+function toggleString(values: string[], key: string, checked: boolean) {
+  if (checked) {
+    return values.includes(key) ? values : [...values, key];
+  }
+  return values.filter((value) => value !== key);
+}
+
+function toggleCapability(
+  values: ProfileRegistryCapabilityDraft[],
+  option: ProfileRegistryOption,
+  checked: boolean,
+) {
+  if (checked) {
+    return values.some((item) => item.key === option.key)
+      ? values
+      : [...values, { key: option.key, status: option.status || 'enabled' }];
+  }
+  return values.filter((value) => value.key !== option.key);
+}
+
+function refreshProfiles(
+  setProfiles: (profiles: ProfileSummary[]) => void,
+  setSelectedSlug: (slug: string) => void,
+  setError: (error: string) => void,
+) {
+  fetchJson<{ profiles: ProfileSummary[] }>(`${API_BASE}/api/profiles`)
+    .then((payload) => {
+      setProfiles(payload.profiles);
+      setSelectedSlug(payload.profiles[0]?.slug ?? '');
+    })
+    .catch((fetchError: Error) => setError(fetchError.message));
+}
+
+function refreshProfileRegistryDraft(
+  setDraft: (draft: ProfileRegistryDraftResponse | null) => void,
+  setForm: (form: ProfileRegistryDraft | null) => void,
+  setPreview: (preview: ProfileRegistryPreview | null) => void,
+  setMessage: (message: string) => void,
+  setBusy: (busy: boolean) => void,
+  setConfirmed: (confirmed: boolean) => void,
+) {
+  setBusy(true);
+  fetchJson<ProfileRegistryDraftResponse>(`${API_BASE}/api/profile-registry/new-draft`)
+    .then((payload) => {
+      setDraft(payload);
+      setForm(cloneProfileRegistryDraft(payload.draft));
+      setPreview(null);
+      setMessage('');
+      setConfirmed(false);
+    })
+    .catch((fetchError: Error) => setMessage(safeProfileRegistryErrorMessage(fetchError)))
+    .finally(() => setBusy(false));
+}
+
+function previewProfileRegistry(
+  form: ProfileRegistryDraft | null,
+  setPreview: (preview: ProfileRegistryPreview | null) => void,
+  setMessage: (message: string) => void,
+  setBusy: (busy: boolean) => void,
+  setConfirmed: (confirmed: boolean) => void,
+) {
+  if (!form) {
+    setMessage('Tracked profile draft is still loading.');
+    return;
+  }
+  setBusy(true);
+  setConfirmed(false);
+  fetch(`${API_BASE}/api/profile-registry/preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ draft: form }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<ProfileRegistryPreview>;
+    })
+    .then((payload) => {
+      setPreview(payload);
+      setMessage(payload.blocked ? 'Preview found tracked profile validation issues.' : 'Preview ready. Review tracked config changes before saving.');
+    })
+    .catch((fetchError: Error) => setMessage(safeProfileRegistryErrorMessage(fetchError)))
+    .finally(() => setBusy(false));
+}
+
+function saveProfileRegistry(
+  form: ProfileRegistryDraft | null,
+  confirmed: boolean,
+  setPreview: (preview: ProfileRegistryPreview | null) => void,
+  setMessage: (message: string) => void,
+  setBusy: (busy: boolean) => void,
+  setConfirmed: (confirmed: boolean) => void,
+  onComplete: () => void,
+) {
+  if (!form) {
+    setMessage('Tracked profile draft is still loading.');
+    return;
+  }
+  setBusy(true);
+  fetch(`${API_BASE}/api/profile-registry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ draft: form, confirmed }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<ProfileRegistryPreview>;
+    })
+    .then((payload) => {
+      setPreview(payload);
+      setConfirmed(false);
+      setMessage('Tracked profile shell saved.');
+      onComplete();
+    })
+    .catch((fetchError: Error) => setMessage(safeProfileRegistryErrorMessage(fetchError)))
+    .finally(() => setBusy(false));
+}
+
 function fieldPlaceholder(field: LocalConfigField) {
   if (field.kind === 'env_var_name') {
     return 'PROFILE_PROVIDER_SETTING';
@@ -2188,6 +2604,14 @@ function safeLocalConfigErrorMessage(error: Error) {
     return 'Profile was not found.';
   }
   return status ? `Local config request failed with status ${status}.` : 'Local config request failed.';
+}
+
+function safeProfileRegistryErrorMessage(error: Error) {
+  const status = error.message.match(/\d{3}/)?.[0] ?? '';
+  if (status === '400') {
+    return 'Tracked profile request was rejected by safety validation.';
+  }
+  return status ? `Tracked profile request failed with status ${status}.` : 'Tracked profile request failed.';
 }
 
 function LastActionSummary({ lastActions }: { lastActions: LastActions }) {

@@ -29,6 +29,7 @@ from src.local_secret_vault import (
     VaultLockedError,
 )
 from src.operator_console import (
+    DEFAULT_PROFILE_REGISTRY,
     DashboardLabProfile,
     OperatorConsoleError,
     expected_dashboard_files,
@@ -46,6 +47,12 @@ from src.profile_local_config_writer import (
     build_local_config_draft,
     preview_local_config_update,
     write_local_config_update,
+)
+from src.profile_registry_writer import (
+    ProfileRegistryWriteError,
+    build_profile_registry_draft,
+    preview_profile_registry_update,
+    write_profile_registry_update,
 )
 
 
@@ -97,6 +104,13 @@ class SecretValueRequest(BaseModel):
 
 
 class LocalConfigUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    draft: dict[str, Any]
+    confirmed: bool = False
+
+
+class ProfileRegistryUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     draft: dict[str, Any]
@@ -282,6 +296,31 @@ def create_app(
                 for profile in current_profiles()
             ]
         }
+
+    @app.get("/api/profile-registry/new-draft")
+    def profile_registry_new_draft() -> dict[str, Any]:
+        return build_profile_registry_draft()
+
+    @app.post("/api/profile-registry/preview")
+    def profile_registry_preview(request: ProfileRegistryUpdateRequest) -> dict[str, Any]:
+        try:
+            return preview_profile_registry_update(
+                request.draft,
+                registry_path=registry_path or DEFAULT_PROFILE_REGISTRY,
+            ).as_safe_dict()
+        except ProfileRegistryWriteError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/profile-registry")
+    def profile_registry_save(request: ProfileRegistryUpdateRequest) -> dict[str, Any]:
+        try:
+            return write_profile_registry_update(
+                request.draft,
+                confirmed=request.confirmed,
+                registry_path=registry_path or DEFAULT_PROFILE_REGISTRY,
+            )
+        except ProfileRegistryWriteError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/profiles/{profile_slug}")
     def profile_detail(profile_slug: str) -> dict[str, Any]:
