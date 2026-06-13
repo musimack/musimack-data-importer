@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -70,6 +71,34 @@ PROVIDER_OUTPUT_FILES = {
     "callrail": "callrail-summary.json",
     "form_fills": "form-fills-summary.json",
 }
+PROVIDER_VALIDATION_TARGETS = {
+    "ga4": {
+        "script": ROOT / "scripts" / "validate_ga4_snapshot.py",
+        "argument": "--file",
+        "file": "ga4-snapshot.json",
+    },
+    "local_falcon": {
+        "script": ROOT / "scripts" / "validate_local_falcon_summary.py",
+        "argument": "--file",
+        "file": "local-falcon-summary.json",
+    },
+    "google_ads_search": {
+        "script": ROOT / "scripts" / "validate_google_ads_summary.py",
+        "argument": "--input",
+        "file": "google-ads-summary.json",
+    },
+    "callrail": {
+        "script": ROOT / "scripts" / "validate_callrail_summary.py",
+        "argument": "--input",
+        "file": "callrail-summary.json",
+    },
+    "form_fills": {
+        "script": ROOT / "scripts" / "validate_form_fills_summary.py",
+        "argument": "--input",
+        "file": "form-fills-summary.json",
+    },
+}
+LOCAL_VALIDATION_TIMEOUT_SECONDS = 20
 BASE_REQUIRED_DASHBOARD_FILES = [
     "client-profile.json",
     "combined-dashboard-summary.json",
@@ -1040,13 +1069,17 @@ def run_onboarding_action(
     if action["writes_files"] and not confirmed:
         raise HTTPException(status_code=400, detail="onboarding action requires explicit confirmation")
     if not action["available"]:
+        if action["kind"] == "validate_existing_output":
+            result = _run_onboarding_output_check(profile, action["provider"])
+        else:
+            result = {
+                "status": "unavailable",
+                "message": action["unavailable_reason"] or "This onboarding action is not available yet.",
+            }
         return {
             "profile": profile.slug,
             "action": action,
-            "result": {
-                "status": "unavailable",
-                "message": action["unavailable_reason"] or "This onboarding action is not available yet.",
-            },
+            "result": result,
             "safety": _onboarding_action_safety(),
         }
     if action["kind"] == "readiness_check":
@@ -1083,7 +1116,11 @@ def _onboarding_action_catalog(
     for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"):
         current = provider_status[provider]
         enabled = bool(current["enabled"])
-        output_exists = current["output_state"] == "Output exists"
+        validation_target = _onboarding_validation_target(profile, provider)
+        validation_unavailable_reason = _onboarding_validation_unavailable_reason(
+            enabled=enabled,
+            validation_target=validation_target,
+        )
         actions.append(
             _onboarding_action(
                 action_id=f"{provider}-check-readiness",
@@ -1106,9 +1143,9 @@ def _onboarding_action_catalog(
                 provider=provider,
                 kind="validate_existing_output",
                 label="Validate existing output",
-                description="Read safe metadata for the expected local summary file without returning file contents.",
-                available=enabled and output_exists,
-                unavailable_reason="" if enabled and output_exists else "Expected local summary output is missing.",
+                description="Run the allowlisted local validator for existing output without returning file contents.",
+                available=enabled and validation_unavailable_reason == "",
+                unavailable_reason=validation_unavailable_reason,
                 read_only=True,
                 writes_files=False,
                 external_api=False,
@@ -1215,28 +1252,122 @@ def _run_onboarding_readiness_check(
 
 
 def _run_onboarding_output_check(profile: DashboardLabProfile, provider: str) -> dict[str, Any]:
-    expected_file = PROVIDER_OUTPUT_FILES.get(provider, "")
-    files = {item.file: item for item in validate_profile_output(profile).files}
-    status = files.get(expected_file)
-    if status is None:
+    target = _onboarding_validation_target(profile, provider)
+    if target is None:
         return {
             "status": "unavailable",
-            "message": "No expected summary file is registered for this provider.",
+            "message": "Validation is not available yet for this provider.",
             "provider": provider,
-            "file": expected_file,
+            "file": PROVIDER_OUTPUT_FILES.get(provider, ""),
+            "error": "validator_unavailable",
         }
+    if not target["script_path"].is_file():
+        return {
+            "status": "unavailable",
+            "message": "Validation is not available yet for this provider.",
+            "provider": provider,
+            "file": target["file"],
+            "error": "validator_unavailable",
+        }
+    if not target["input_path"].is_file():
+        return {
+            "status": "unavailable",
+            "message": "Expected local validation input is missing.",
+            "provider": provider,
+            "file": target["file"],
+            "exists": False,
+            "error": "missing_output",
+        }
+
+    metadata = _safe_local_file_metadata(target["input_path"], target["file"])
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(target["script_path"]),
+                target["argument"],
+                str(target["input_path"]),
+            ],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=LOCAL_VALIDATION_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "failed",
+            "message": "Validation timed out.",
+            "provider": provider,
+            "file": target["file"],
+            "error": "validator_timeout",
+            **metadata,
+        }
+    status = "passed" if completed.returncode == 0 else "failed"
+    message = "Validation passed." if completed.returncode == 0 else "Validation failed."
     return {
-        "status": "ok" if status.exists and status.json_valid is not False else "warning",
-        "message": "Existing output metadata checked." if status.exists else "Expected output is missing.",
+        "status": status,
+        "message": message,
         "provider": provider,
-        "file": status.file,
-        "exists": status.exists,
-        "json_valid": status.json_valid,
-        "schema_version": status.schema_version,
-        "size": status.size,
-        "last_modified": status.last_modified,
-        "warning": status.warning,
+        "file": target["file"],
+        "validator": "allowlisted_local_validator",
+        "return_code": completed.returncode,
+        **metadata,
     }
+
+
+def _onboarding_validation_target(profile: DashboardLabProfile, provider: str) -> dict[str, Any] | None:
+    target = PROVIDER_VALIDATION_TARGETS.get(provider)
+    if target is None:
+        return None
+    file_label = str(target["file"])
+    return {
+        "script_path": target["script"],
+        "argument": str(target["argument"]),
+        "input_path": profile.importer_output_folder / file_label,
+        "file": file_label,
+    }
+
+
+def _onboarding_validation_unavailable_reason(*, enabled: bool, validation_target: dict[str, Any] | None) -> str:
+    if not enabled:
+        return "Provider is not enabled for this profile."
+    if validation_target is None or not validation_target["script_path"].is_file():
+        return "Validation is not available yet for this provider."
+    if not validation_target["input_path"].is_file():
+        return "Expected local validation input is missing."
+    return ""
+
+
+def _safe_local_file_metadata(path: Path, file_label: str) -> dict[str, Any]:
+    metadata = {
+        "exists": path.is_file(),
+        "json_valid": None,
+        "schema_version": None,
+        "size": None,
+        "last_modified": None,
+    }
+    if not metadata["exists"]:
+        return metadata
+    try:
+        stat = path.stat()
+        metadata["size"] = stat.st_size
+        metadata["last_modified"] = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+        with path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except json.JSONDecodeError:
+        metadata["json_valid"] = False
+        return metadata
+    except OSError:
+        metadata["json_valid"] = False
+        return metadata
+    metadata["json_valid"] = isinstance(payload, dict)
+    if isinstance(payload, dict) and isinstance(payload.get("schema_version"), str):
+        metadata["schema_version"] = payload["schema_version"]
+    return metadata
 
 
 def _onboarding_action_safety() -> dict[str, bool]:

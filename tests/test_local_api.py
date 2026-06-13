@@ -1034,7 +1034,8 @@ def test_profile_detail_embeds_onboarding_status_without_raw_values(tmp_path):
 def test_onboarding_actions_list_returns_safe_metadata_and_future_actions(tmp_path):
     registry = _registry(tmp_path)
     profile_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
-    _write_json(profile_folder / "ga4-summary.json", {"schema_version": "ga4.v1", "hidden": "do-not-return"})
+    _write_json(profile_folder / "ga4-snapshot.json", _ga4_snapshot_payload(hidden="do-not-return"))
+    _write_json(profile_folder / "gsc-summary.json", {"schema_version": "gsc.v1", "hidden": "do-not-return"})
     client = TestClient(
         create_app(
             registry_path=registry,
@@ -1058,6 +1059,8 @@ def test_onboarding_actions_list_returns_safe_metadata_and_future_actions(tmp_pa
     assert actions["ga4-check-readiness"]["read_only"] is True
     assert actions["ga4-check-readiness"]["writes_files"] is False
     assert actions["ga4-validate-existing-output"]["available"] is True
+    assert actions["gsc-validate-existing-output"]["available"] is False
+    assert actions["gsc-validate-existing-output"]["unavailable_reason"] == "Validation is not available yet for this provider."
     assert actions["ga4-future-run"]["available"] is False
     assert actions["ga4-future-run"]["writes_files"] is True
     assert actions["ga4-future-run"]["external_api"] is True
@@ -1071,7 +1074,7 @@ def test_onboarding_actions_list_returns_safe_metadata_and_future_actions(tmp_pa
 def test_onboarding_actions_preview_and_run_safe_read_only_actions_without_writes(tmp_path):
     registry = _registry(tmp_path)
     profile_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
-    _write_json(profile_folder / "ga4-summary.json", {"schema_version": "ga4.v1", "hidden": "do-not-return"})
+    _write_json(profile_folder / "ga4-snapshot.json", _ga4_snapshot_payload(hidden="do-not-return"))
     client = TestClient(
         create_app(
             registry_path=registry,
@@ -1093,13 +1096,85 @@ def test_onboarding_actions_preview_and_run_safe_read_only_actions_without_write
     assert output.status_code == 200
     output_payload = output.json()
     serialized = json.dumps({"readiness": readiness.json(), "output": output_payload})
-    assert output_payload["result"]["file"] == "ga4-summary.json"
-    assert output_payload["result"]["schema_version"] == "ga4.v1"
+    assert output_payload["result"]["status"] == "passed"
+    assert output_payload["result"]["file"] == "ga4-snapshot.json"
+    assert output_payload["result"]["schema_version"] == "ga4_snapshot.v1"
+    assert "stdout" not in serialized
+    assert "stderr" not in serialized
     assert "do-not-return" not in serialized
     assert "real-api-key-value" not in serialized
     assert str(tmp_path) not in serialized
     after_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
     assert after_files == before_files
+
+
+def test_onboarding_validation_action_runs_allowlisted_script_with_sanitized_failure(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["google_ads_search"],
+        capabilities=[
+            {
+                "key": "google_ads_search",
+                "label": "Google Ads Search",
+                "status": "enabled",
+                "kind": "paid_provider",
+                "provider": "google_ads_search",
+                "expected_output_file": "google-ads-summary.json",
+            }
+        ],
+    )
+    profile_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(
+        profile_folder / "google-ads-summary.json",
+        {"schema_version": "google_ads_summary.v1", "hidden": "do-not-return", "unsafe_shape": True},
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=_local_profile_config(tmp_path),
+        )
+    )
+    before_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+
+    listed = client.get("/api/profiles/demo-profile/onboarding-actions")
+    output = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/google_ads_search-validate-existing-output/run",
+        json={},
+    )
+
+    assert listed.status_code == 200
+    assert _action(listed.json(), "google_ads_search-validate-existing-output")["available"] is True
+    assert output.status_code == 200
+    payload = output.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] == "failed"
+    assert payload["result"]["file"] == "google-ads-summary.json"
+    assert payload["result"]["validator"] == "allowlisted_local_validator"
+    assert payload["result"]["return_code"] == 1
+    assert "stdout" not in serialized
+    assert "stderr" not in serialized
+    assert "do-not-return" not in serialized
+    assert "unsafe_shape" not in serialized
+    assert str(tmp_path) not in serialized
+    after_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+    assert after_files == before_files
+
+
+def test_onboarding_validation_action_is_unavailable_when_validation_input_is_missing(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+
+    listed = client.get("/api/profiles/demo-profile/onboarding-actions")
+    output = client.post("/api/profiles/demo-profile/onboarding-actions/ga4-validate-existing-output/run", json={})
+
+    assert listed.status_code == 200
+    action = _action(listed.json(), "ga4-validate-existing-output")
+    assert action["available"] is False
+    assert action["unavailable_reason"] == "Expected local validation input is missing."
+    assert output.status_code == 200
+    assert output.json()["result"]["status"] == "unavailable"
+    assert output.json()["result"]["error"] == "missing_output"
+    assert str(tmp_path) not in json.dumps(output.json())
 
 
 def test_onboarding_actions_reject_unknown_and_guard_future_actions(tmp_path):
@@ -1984,9 +2059,14 @@ def test_copy_action_response_does_not_return_file_contents(tmp_path):
 
 def test_copy_action_does_not_use_shell_or_subprocess():
     text = (Path(__file__).resolve().parents[1] / "server" / "main.py").read_text(encoding="utf-8")
+    copy_section = text.split("def run_copy_to_dashboard_lab_action", 1)[1].split("def _copy_plan_item", 1)[0]
+    validation_section = text.split("def _run_onboarding_output_check", 1)[1].split(
+        "def _onboarding_validation_target",
+        1,
+    )[0]
 
-    assert "import subprocess" not in text
-    assert "subprocess." not in text
+    assert "subprocess." not in copy_section
+    assert "subprocess.run" in validation_section
     assert "os.system" not in text
     assert "shell=True" not in text
 
@@ -2137,6 +2217,29 @@ def _full_provider_local_config(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return local_config
+
+
+def _ga4_snapshot_payload(*, hidden: str = "safe-extra-value") -> dict:
+    return {
+        "schema_version": "ga4_snapshot.v1",
+        "provider": "ga4",
+        "provider_key": "google_analytics",
+        "report_type": "traffic_overview",
+        "property_resource": "properties/123456789",
+        "date_range": {"start": "2026-01-01", "end": "2026-01-31"},
+        "metrics": [{"name": "sessions", "unit": "count", "value": 10}],
+        "dimension_rows": [
+            {
+                "kind": "traffic_channels",
+                "label": "Organic Search",
+                "metrics": [{"name": "sessions", "unit": "count", "value": 10}],
+            }
+        ],
+        "time_series": [],
+        "warnings": [],
+        "summary": "Safe aggregate traffic overview.",
+        "hidden": hidden,
+    }
 
 
 def _write_json(path: Path, payload: dict[str, str]) -> None:
