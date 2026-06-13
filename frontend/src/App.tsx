@@ -1076,7 +1076,7 @@ function OnboardingActionsPanel({
         <div>
           <span className="eyebrow">Guarded local actions</span>
           <h3>Onboarding Actions</h3>
-          <p>Safe checks and confirmed Form Fills date-only import are runnable here. Provider pulls, OAuth, and fixture copy remain disabled.</p>
+          <p>Safe checks and confirmed local aggregate imports are runnable here. Provider pulls, OAuth, and fixture copy remain disabled.</p>
         </div>
       </div>
       {message ? <p className="vault-message">{message}</p> : null}
@@ -1127,9 +1127,11 @@ function OnboardingActionCard({
   onRun: () => void;
 }) {
   const isFormFillsImport = action.id === 'form_fills.import-local';
+  const isCallRailImport = action.id === 'callrail.import-local';
+  const isLocalImport = isFormFillsImport || isCallRailImport;
   const runnable = action.available && !action.external_api && !action.fixture_copy && (
     (action.read_only && !action.writes_files) ||
-    (isFormFillsImport && action.writes_files && confirmed && inputValue.trim().length > 0)
+    (isLocalImport && action.writes_files && confirmed && inputValue.trim().length > 0)
   );
   const stateLabel = action.available ? 'Available' : action.label.startsWith('Future:') ? 'Planned' : 'Unavailable';
 
@@ -1150,7 +1152,7 @@ function OnboardingActionCard({
       {!action.available && action.unavailable_reason ? (
         <p className="blocked-reason">{action.unavailable_reason}</p>
       ) : null}
-      {isFormFillsImport ? (
+      {isLocalImport ? (
         <div className="onboarding-import-controls">
           <label>
             <span>Local input file</span>
@@ -1158,7 +1160,7 @@ function OnboardingActionCard({
               type="text"
               value={inputValue}
               onChange={(event) => onInputChange(event.target.value)}
-              placeholder="qa-form-fills.csv"
+              placeholder={isCallRailImport ? 'qa-callrail.csv' : 'qa-form-fills.csv'}
               disabled={busy || !action.available}
             />
           </label>
@@ -1169,13 +1171,17 @@ function OnboardingActionCard({
               onChange={(event) => onConfirmationChange(event.target.checked)}
               disabled={busy || !action.available}
             />
-            <span>I confirm this uses date-only local input and writes ignored local output only.</span>
+            <span>{isCallRailImport ? 'I confirm this uses a local aggregate CallRail export and writes ignored local output only.' : 'I confirm this uses date-only local input and writes ignored local output only.'}</span>
           </label>
-          <p className="safe-copy-footnote">No pasted form data, raw rows, PII, provider calls, OAuth, or fixture copy.</p>
+          <p className="safe-copy-footnote">
+            {isCallRailImport
+              ? 'No pasted call data, raw rows, caller names, phone numbers, recordings, transcripts, provider calls, OAuth, or fixture copy.'
+              : 'No pasted form data, raw rows, PII, provider calls, OAuth, or fixture copy.'}
+          </p>
         </div>
       ) : null}
       <button type="button" className="copy-button" disabled={!runnable || busy} onClick={onRun}>
-        {busy ? 'Running...' : runnable ? (isFormFillsImport ? 'Import date-only file' : 'Run safe check') : 'Not runnable'}
+        {busy ? 'Running...' : runnable ? (isCallRailImport ? 'Import aggregate export' : isFormFillsImport ? 'Import date-only file' : 'Run safe check') : 'Not runnable'}
       </button>
     </article>
   );
@@ -2826,7 +2832,7 @@ function runOnboardingAction(
       const status = String(payload.result.status ?? 'ok');
       const message = String(payload.result.message ?? 'Action completed.');
       setMessage(`${payload.action.provider_label}: ${safeOnboardingActionResultMessage(status, message)}`);
-      if (payload.action.id === 'form_fills.import-local' && status === 'ok') {
+      if ((payload.action.id === 'form_fills.import-local' || payload.action.id === 'callrail.import-local') && status === 'ok') {
         onComplete?.();
       }
     })

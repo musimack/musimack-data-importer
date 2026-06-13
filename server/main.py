@@ -64,6 +64,7 @@ IMPORTER_VAULT_PATH_ENV = "MUSIMACK_IMPORTER_VAULT_PATH"
 LOCAL_CONFIG_DIR_ENV = "MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR"
 PROFILE_REGISTRY_PATH_ENV = "MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH"
 FORM_FILLS_INPUT_DIR_ENV = "MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR"
+CALLRAIL_INPUT_DIR_ENV = "MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR"
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
@@ -170,6 +171,7 @@ def create_app(
     audit_log_path: Path | None = None,
     secret_vault_path: Path | None = None,
     form_fills_input_dir: Path | None = None,
+    callrail_input_dir: Path | None = None,
 ) -> FastAPI:
     if env is None:
         load_local_operator_config()
@@ -226,6 +228,12 @@ def create_app(
         return resolve_form_fills_input_dir(
             env=current_env(),
             explicit_dir=form_fills_input_dir,
+        )
+
+    def current_callrail_input_dir() -> Path:
+        return resolve_callrail_input_dir(
+            env=current_env(),
+            explicit_dir=callrail_input_dir,
         )
 
     @app.get("/api/health")
@@ -433,6 +441,7 @@ def create_app(
             safe_env=current_env(),
             local_config=current_profile_config(profile),
             form_fills_input_dir=current_form_fills_input_dir(),
+            callrail_input_dir=current_callrail_input_dir(),
         )
 
     @app.get("/api/profiles/{profile_slug}/action-plan")
@@ -719,6 +728,20 @@ def resolve_form_fills_input_dir(
     if override:
         return Path(override)
     return ROOT / "inputs" / "local-real" / "form-fills"
+
+
+def resolve_callrail_input_dir(
+    *,
+    env: Mapping[str, str] | None = None,
+    explicit_dir: Path | None = None,
+) -> Path:
+    if explicit_dir is not None:
+        return explicit_dir
+    source_env = os.environ if env is None else env
+    override = str(source_env.get(CALLRAIL_INPUT_DIR_ENV) or "").strip()
+    if override:
+        return Path(override)
+    return ROOT / "inputs" / "local-real" / "callrail"
 
 
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:
@@ -1087,6 +1110,7 @@ def run_onboarding_action(
     safe_env: Mapping[str, str],
     local_config: Mapping[str, Any],
     form_fills_input_dir: Path | None = None,
+    callrail_input_dir: Path | None = None,
 ) -> dict[str, Any]:
     action = _find_onboarding_action(
         profile,
@@ -1119,6 +1143,12 @@ def run_onboarding_action(
             profile,
             input_file=input_file,
             input_root=form_fills_input_dir or resolve_form_fills_input_dir(env=safe_env),
+        )
+    elif action["kind"] == "callrail_import_local":
+        result = _run_callrail_import_action(
+            profile,
+            input_file=input_file,
+            input_root=callrail_input_dir or resolve_callrail_input_dir(env=safe_env),
         )
     else:
         return {
@@ -1195,6 +1225,23 @@ def _onboarding_action_catalog(
                     kind="form_fills_import_local",
                     label="Import local date-only form fills",
                     description="Import an existing date-only CSV or JSON from the allowed local Form Fills input folder.",
+                    available=enabled,
+                    unavailable_reason="" if enabled else "Provider is not enabled for this profile.",
+                    read_only=False,
+                    writes_files=True,
+                    external_api=False,
+                    fixture_copy=False,
+                    requires_confirmation=True,
+                )
+            )
+        if provider == "callrail":
+            actions.append(
+                _onboarding_action(
+                    action_id="callrail.import-local",
+                    provider=provider,
+                    kind="callrail_import_local",
+                    label="Import local aggregate CallRail export",
+                    description="Import an existing local CallRail CSV export into aggregate dashboard output.",
                     available=enabled,
                     unavailable_reason="" if enabled else "Provider is not enabled for this profile.",
                     read_only=False,
@@ -1561,6 +1608,155 @@ def _safe_form_fills_summary(path: Path) -> dict[str, Any]:
     time_series = payload.get("time_series")
     if isinstance(time_series, list):
         summary["date_count"] = len(time_series)
+    date_range = payload.get("date_range")
+    if isinstance(date_range, dict):
+        summary["date_range_start"] = date_range.get("start_date")
+        summary["date_range_end"] = date_range.get("end_date")
+    return summary
+
+
+def _run_callrail_import_action(
+    profile: DashboardLabProfile,
+    *,
+    input_file: str | None,
+    input_root: Path,
+) -> dict[str, Any]:
+    resolved_input = _resolve_callrail_input_file(input_root=input_root, input_file=input_file)
+    if not resolved_input["path"].is_file():
+        return {
+            "status": "input_missing",
+            "message": "Input missing.",
+            "provider": "callrail",
+            "input_file": resolved_input["label"],
+            "output_file": "callrail-summary.json",
+            "error": "input_missing",
+        }
+
+    output_target = _callrail_output_target(profile)
+    output_target["cwd"].mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "import_callrail_export.py"),
+                "--profile",
+                profile.slug,
+                "--input",
+                str(resolved_input["path"]),
+                "--output-root",
+                output_target["argument"],
+                "--real-output",
+            ],
+            cwd=output_target["cwd"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=LOCAL_IMPORT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "failed",
+            "message": "Import timed out.",
+            "provider": "callrail",
+            "input_file": resolved_input["label"],
+            "output_file": "callrail-summary.json",
+            "error": "import_timeout",
+        }
+    if completed.returncode != 0:
+        return {
+            "status": "rejected",
+            "message": "Unsafe input rejected." if resolved_input["path"].is_file() else "Input missing.",
+            "provider": "callrail",
+            "input_file": resolved_input["label"],
+            "output_file": "callrail-summary.json",
+            "error": "import_failed",
+            "return_code": completed.returncode,
+        }
+
+    validation = _run_onboarding_output_check(profile, "callrail")
+    summary = _safe_callrail_summary(output_target["output_path"])
+    validation_passed = validation.get("status") == "passed"
+    return {
+        "status": "ok" if validation_passed else "failed",
+        "message": "CallRail import completed. Validation passed." if validation_passed else "CallRail import completed. Validation failed.",
+        "provider": "callrail",
+        "input_file": resolved_input["label"],
+        "output_file": "callrail-summary.json",
+        "validation_status": validation.get("status"),
+        "validation_message": validation.get("message"),
+        **summary,
+    }
+
+
+def _resolve_callrail_input_file(*, input_root: Path, input_file: str | None) -> dict[str, Any]:
+    raw = str(input_file or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="CallRail input file is required")
+    candidate = Path(raw)
+    root = _absolute_path(input_root)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    resolved = resolved.resolve(strict=False)
+    try:
+        label = resolved.relative_to(root.resolve(strict=False)).as_posix()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="CallRail input must stay under the allowed local input folder") from exc
+    if not label or label.startswith("../") or "/../" in label:
+        raise HTTPException(status_code=400, detail="CallRail input must stay under the allowed local input folder")
+    if resolved.suffix.lower() != ".csv":
+        raise HTTPException(status_code=400, detail="CallRail input must be a CSV file")
+    return {"path": resolved, "label": label}
+
+
+def _callrail_output_target(profile: DashboardLabProfile) -> dict[str, Any]:
+    output_folder = _absolute_path(profile.importer_output_folder)
+    if output_folder.name != profile.slug:
+        raise HTTPException(status_code=400, detail="CallRail output folder must match the selected profile")
+    output_root = output_folder.parent.resolve(strict=False)
+    output_posix = output_root.as_posix()
+    if "/public/fixtures/" in output_posix or output_posix.endswith("/public/fixtures"):
+        raise HTTPException(status_code=400, detail="CallRail output must not target committed dashboard-lab fixtures")
+    if "/public/local-fixtures/" in output_posix or output_posix.endswith("/public/local-fixtures"):
+        raise HTTPException(status_code=400, detail="CallRail import does not write dashboard-lab local fixtures")
+
+    marker = Path("exports") / "local-real" / "dashboard-lab"
+    marker_parts = marker.parts
+    parts = output_root.parts
+    for index in range(0, len(parts) - len(marker_parts) + 1):
+        if parts[index : index + len(marker_parts)] == marker_parts:
+            cwd = Path(*parts[:index]) if index else Path.cwd()
+            return {
+                "argument": marker.as_posix(),
+                "cwd": cwd,
+                "output_path": output_folder / "callrail-summary.json",
+            }
+    raise HTTPException(status_code=400, detail="CallRail output must stay under exports/local-real/dashboard-lab")
+
+
+def _safe_callrail_summary(path: Path) -> dict[str, Any]:
+    metadata = _safe_local_file_metadata(path, "callrail-summary.json")
+    summary: dict[str, Any] = {
+        "total_calls": None,
+        "google_ads_calls": None,
+        "answered_calls": None,
+        "missed_calls": None,
+        "qualified_calls": None,
+        "date_range_start": None,
+        "date_range_end": None,
+        **metadata,
+    }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return summary
+    if not isinstance(payload, dict):
+        return summary
+    payload_summary = payload.get("summary")
+    if isinstance(payload_summary, dict):
+        for key in ("total_calls", "google_ads_calls", "answered_calls", "missed_calls", "qualified_calls"):
+            summary[key] = payload_summary.get(key)
     date_range = payload.get("date_range")
     if isinstance(date_range, dict):
         summary["date_range_start"] = date_range.get("start_date")

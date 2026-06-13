@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -1341,6 +1342,184 @@ def test_form_fills_import_writes_temp_summary_and_validates_without_raw_content
     assert str(tmp_path) not in serialized
 
 
+def test_callrail_import_action_appears_only_when_provider_is_enabled(tmp_path):
+    disabled_client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+    enabled_client = TestClient(
+        create_app(
+            registry_path=_callrail_registry(tmp_path / "enabled"),
+            env={},
+            callrail_input_dir=tmp_path / "inputs",
+        )
+    )
+
+    disabled = _action(disabled_client.get("/api/profiles/demo-profile/onboarding-actions").json(), "callrail.import-local")
+    enabled = _action(enabled_client.get("/api/profiles/demo-profile/onboarding-actions").json(), "callrail.import-local")
+
+    assert disabled["available"] is False
+    assert enabled["available"] is True
+    assert enabled["writes_files"] is True
+    assert enabled["requires_confirmation"] is True
+    assert enabled["external_api"] is False
+    assert enabled["fixture_copy"] is False
+
+
+def test_callrail_import_requires_confirmation_and_enabled_provider(tmp_path):
+    input_dir = tmp_path / "inputs"
+    _write_callrail_csv(input_dir / "safe.csv", [_callrail_row()])
+    enabled_client = TestClient(
+        create_app(
+            registry_path=_callrail_registry(tmp_path),
+            env={},
+            callrail_input_dir=input_dir,
+        )
+    )
+    disabled_client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path / "disabled"),
+            env={},
+            callrail_input_dir=input_dir,
+        )
+    )
+
+    missing_confirmation = enabled_client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"input_file": "safe.csv"},
+    )
+    disabled = disabled_client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"confirmed": True, "input_file": "safe.csv"},
+    )
+
+    assert missing_confirmation.status_code == 400
+    assert missing_confirmation.json()["detail"] == "onboarding action requires explicit confirmation"
+    assert disabled.status_code == 200
+    assert disabled.json()["result"]["status"] == "unavailable"
+    assert str(tmp_path) not in json.dumps(disabled.json())
+
+
+def test_callrail_import_rejects_missing_and_traversal_inputs_safely(tmp_path):
+    client = TestClient(
+        create_app(
+            registry_path=_callrail_registry(tmp_path),
+            env={},
+            callrail_input_dir=tmp_path / "inputs",
+        )
+    )
+
+    missing = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"confirmed": True, "input_file": "missing.csv"},
+    )
+    traversal = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"confirmed": True, "input_file": "../outside.csv"},
+    )
+
+    assert missing.status_code == 200
+    assert missing.json()["result"]["status"] == "input_missing"
+    assert traversal.status_code == 400
+    assert traversal.json()["detail"] == "CallRail input must stay under the allowed local input folder"
+    serialized = json.dumps({"missing": missing.json(), "traversal": traversal.json()})
+    assert str(tmp_path) not in serialized
+
+
+def test_callrail_import_rejects_sensitive_input_without_echoing_contents(tmp_path):
+    input_dir = tmp_path / "inputs"
+    sensitive_name = "Private Caller"
+    sensitive_phone = "503-555-0199"
+    sensitive_recording = "https://recordings.example.test/private"
+    _write_callrail_csv(
+        input_dir / "unsafe.csv",
+        [
+            _callrail_row(
+                name=sensitive_name,
+                phone=sensitive_phone,
+                recording_url=sensitive_recording,
+                landing_page="https://example.test/rooms?phone=5035550199",
+            )
+        ],
+    )
+    client = TestClient(
+        create_app(
+            registry_path=_callrail_registry(tmp_path),
+            env={},
+            callrail_input_dir=input_dir,
+        )
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"confirmed": True, "input_file": "unsafe.csv"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] in {"ok", "rejected"}
+    assert sensitive_name not in serialized
+    assert sensitive_phone not in serialized
+    assert sensitive_recording not in serialized
+    assert "stdout" not in serialized
+    assert "stderr" not in serialized
+    assert str(tmp_path) not in serialized
+
+
+def test_callrail_import_writes_temp_summary_and_validates_without_raw_content(tmp_path):
+    input_dir = tmp_path / "inputs"
+    output_folder = tmp_path / "workspace" / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_callrail_csv(
+        input_dir / "safe" / "callrail.csv",
+        [
+            _callrail_row(
+                status="Answered",
+                keyword="safe aggregate keyword",
+                campaign="Safe Campaign",
+                gclid="synthetic-gclid",
+                duration="90",
+                first_time="Yes",
+                qualified="Qualified",
+            ),
+            _callrail_row(status="Missed", keyword="", campaign="Safe Campaign", duration="10"),
+        ],
+    )
+    client = TestClient(
+        create_app(
+            registry_path=_callrail_registry(tmp_path, importer_output_folder=output_folder),
+            env={},
+            callrail_input_dir=input_dir,
+        )
+    )
+    expected_output = output_folder / "callrail-summary.json"
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"confirmed": True, "input_file": "safe/callrail.csv"},
+    )
+    validation = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail-validate-existing-output/run",
+        json={},
+    )
+
+    assert response.status_code == 200
+    assert expected_output.exists()
+    payload = response.json()
+    serialized = json.dumps({"import": payload, "validation": validation.json()})
+    assert payload["result"]["status"] == "ok"
+    assert payload["result"]["message"] == "CallRail import completed. Validation passed."
+    assert payload["result"]["input_file"] == "safe/callrail.csv"
+    assert payload["result"]["output_file"] == "callrail-summary.json"
+    assert payload["result"]["total_calls"] == 2
+    assert payload["result"]["answered_calls"] == 1
+    assert payload["result"]["missed_calls"] == 1
+    assert validation.status_code == 200
+    assert validation.json()["result"]["status"] == "passed"
+    assert "safe aggregate keyword" not in serialized
+    assert "synthetic-gclid" not in serialized
+    assert "stdout" not in serialized
+    assert "stderr" not in serialized
+    assert str(tmp_path) not in serialized
+
+
 def test_onboarding_actions_reject_unknown_and_guard_future_actions(tmp_path):
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
 
@@ -2317,6 +2496,24 @@ def _form_fills_registry(tmp_path: Path, *, importer_output_folder: Path | None 
     )
 
 
+def _callrail_registry(tmp_path: Path, *, importer_output_folder: Path | None = None) -> Path:
+    return _registry(
+        tmp_path,
+        data_sources=["callrail"],
+        capabilities=[
+            {
+                "key": "callrail",
+                "label": "CallRail",
+                "status": "enabled",
+                "kind": "lead_provider",
+                "provider": "callrail",
+                "expected_output_file": "callrail-summary.json",
+            }
+        ],
+        importer_output_folder=importer_output_folder,
+    )
+
+
 def _local_profile_config(tmp_path: Path) -> Path:
     local_config = tmp_path / "dashboard_lab_profiles.local.json"
     local_config.write_text(
@@ -2433,6 +2630,92 @@ def _write_json(path: Path, payload: dict[str, str]) -> None:
 def _write_text(path: Path, value: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(value, encoding="utf-8")
+
+
+CALLRAIL_TEST_HEADERS = [
+    "Call Status",
+    "Number Name",
+    "Tracking Number",
+    "Name",
+    "Phone Number",
+    "Email",
+    "First-Time Caller",
+    "Source",
+    "Duration (seconds)",
+    "Start Time",
+    "Keywords",
+    "Referrer",
+    "Medium",
+    "Landing Page",
+    "Campaign",
+    "Qualified",
+    "Destination Number",
+    "Google Ads gclid",
+    "Recording Url",
+    "Note",
+    "utm_medium",
+    "utm_source",
+]
+
+
+def _callrail_row(
+    *,
+    status: str = "Answered",
+    number_name: str = "Booking line",
+    tracking_number: str = "",
+    name: str = "",
+    phone: str = "",
+    email: str = "",
+    first_time: str = "No",
+    source: str = "Google Ads",
+    medium: str = "cpc",
+    duration: str = "30",
+    start_time: str = "2026-01-01 09:00:00",
+    keyword: str = "aggregate keyword",
+    referrer: str = "",
+    landing_page: str = "/rooms",
+    campaign: str = "Brand Search",
+    qualified: str = "No",
+    destination_number: str = "",
+    gclid: str = "",
+    recording_url: str = "",
+    note: str = "",
+    utm_medium: str = "",
+    utm_source: str = "",
+) -> dict[str, str]:
+    return {
+        "Call Status": status,
+        "Number Name": number_name,
+        "Tracking Number": tracking_number,
+        "Name": name,
+        "Phone Number": phone,
+        "Email": email,
+        "First-Time Caller": first_time,
+        "Source": source,
+        "Duration (seconds)": duration,
+        "Start Time": start_time,
+        "Keywords": keyword,
+        "Referrer": referrer,
+        "Medium": medium,
+        "Landing Page": landing_page,
+        "Campaign": campaign,
+        "Qualified": qualified,
+        "Destination Number": destination_number,
+        "Google Ads gclid": gclid,
+        "Recording Url": recording_url,
+        "Note": note,
+        "utm_medium": utm_medium,
+        "utm_source": utm_source,
+    }
+
+
+def _write_callrail_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CALLRAIL_TEST_HEADERS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
 
 
 def _write_audit(path: Path, payload: dict) -> None:
