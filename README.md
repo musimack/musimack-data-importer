@@ -722,8 +722,10 @@ npm run dev
 Then open:
 
 ```text
-http://localhost:5174
+http://localhost:5274
 ```
+
+The importer frontend intentionally uses port `5274` so it can run at the same time as dashboard-lab, which commonly uses port `5174`.
 
 The frontend shows:
 
