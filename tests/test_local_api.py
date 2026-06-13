@@ -361,6 +361,136 @@ def test_profile_secret_env_override_does_not_create_default_vault_path(tmp_path
     assert "fake-local-falcon-api-key" not in serialized
 
 
+def test_local_config_draft_for_known_profile_returns_safe_metadata(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
+
+    response = client.get("/api/profiles/demo-profile/local-config/draft")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["profile"] == "demo-profile"
+    assert payload["exists"] is False
+    assert payload["draft"]["profile"] == "demo-profile"
+    assert payload["draft"]["google_ads_search"] == {"status": "planned"}
+    assert payload["path_label"].endswith("demo-profile.local.json")
+    assert str(config_dir) not in json.dumps(payload)
+    assert not (config_dir / "demo-profile.local.json").exists()
+
+
+def test_local_config_draft_unknown_profile_returns_404(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=tmp_path))
+
+    response = client.get("/api/profiles/missing-profile/local-config/draft")
+
+    assert response.status_code == 404
+
+
+def test_local_config_preview_returns_safe_changes_without_writing(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
+
+    response = client.post(
+        "/api/profiles/demo-profile/local-config/preview",
+        json={
+            "draft": {
+                "profile": "demo-profile",
+                "ga4": {"property_id_env": "DEMO_GA4_PROPERTY_ID"},
+                "gsc": {"site_url": "https://demo.example.test/"},
+                "local_falcon": {"manifest_path": "local-falcon-manifests/demo-profile.json"},
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["blocked"] is False
+    assert payload["would_create"] is True
+    assert any(change["key"] == "property_id_env" for change in payload["changes"])
+    serialized = json.dumps(payload)
+    assert str(config_dir) not in serialized
+    assert not (config_dir / "demo-profile.local.json").exists()
+
+
+def test_local_config_save_requires_confirmation_and_writes_temp_config_only(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
+    draft = {
+        "profile": "demo-profile",
+        "ga4": {"property_id_env": "DEMO_GA4_PROPERTY_ID"},
+        "gsc": {"site_url": "sc-domain:demo.example.test"},
+        "local_falcon": {"manifest_path": "local-falcon-manifests/demo-profile.json"},
+    }
+
+    unconfirmed = client.post("/api/profiles/demo-profile/local-config", json={"draft": draft})
+    confirmed = client.post("/api/profiles/demo-profile/local-config", json={"draft": draft, "confirmed": True})
+
+    path = config_dir / "demo-profile.local.json"
+    assert unconfirmed.status_code == 400
+    assert confirmed.status_code == 200
+    assert confirmed.json()["saved"] is True
+    assert path.exists()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["profile"] == "demo-profile"
+    assert payload["ga4"]["property_id_env"] == "DEMO_GA4_PROPERTY_ID"
+    assert payload["google_ads_search"]["status"] == "planned"
+    assert str(config_dir) not in json.dumps(confirmed.json())
+
+
+def test_local_config_api_rejects_disallowed_and_secret_like_fields(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
+
+    response = client.post(
+        "/api/profiles/demo-profile/local-config/preview",
+        json={
+            "draft": {
+                "profile": "demo-profile",
+                "ga4": {
+                    "property_id": "not-editable",
+                    "property_id_env": "lowercase",
+                    "oauth_client_secrets_env": '{"client_secret":"value"}',
+                },
+                "local_falcon": {"api_key_env": "LOCAL_FALCON_API_KEY_VALUE"},
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["blocked"] is True
+    assert "not editable" in serialized
+    assert '{"client_secret":"value"}' not in serialized
+    assert "lowercase" not in serialized
+    assert not (config_dir / "demo-profile.local.json").exists()
+
+
+def test_local_config_api_does_not_echo_dangerous_disallowed_field_names(tmp_path):
+    config_dir = tmp_path / "local-profile-configs"
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}, local_profile_config_dir=config_dir))
+
+    response = client.post(
+        "/api/profiles/demo-profile/local-config/preview",
+        json={
+            "draft": {
+                "profile": "demo-profile",
+                "ga4": {
+                    '{"client_secret":"value"}': "DEMO_GA4_PROPERTY_ID",
+                },
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["blocked"] is True
+    assert "not editable" in serialized
+    assert '{"client_secret":"value"}' not in serialized
+    assert not (config_dir / "demo-profile.local.json").exists()
+
+
 def test_local_falcon_readiness_uses_env_key_when_vault_is_missing(tmp_path):
     registry = _registry(tmp_path)
     local_config = _local_falcon_config_without_key(tmp_path)

@@ -12,6 +12,12 @@ from src.profile_local_config import (
     load_profile_local_config,
     profile_local_config_path,
 )
+from src.profile_local_config_writer import (
+    ProfileLocalConfigWriteError,
+    build_local_config_draft,
+    preview_local_config_update,
+    write_local_config_update,
+)
 
 
 def test_profile_local_config_path_resolves_by_slug(tmp_path):
@@ -23,6 +29,136 @@ def test_profile_local_config_path_resolves_by_slug(tmp_path):
 def test_profile_local_config_rejects_unsafe_slug(tmp_path):
     with pytest.raises(ProfileLocalConfigError):
         profile_local_config_path("../inn-at-spanish-head", config_dir=tmp_path)
+
+
+def test_local_config_writer_builds_safe_missing_draft(tmp_path):
+    draft = build_local_config_draft("inn-at-spanish-head", config_dir=tmp_path)
+
+    assert draft["profile"] == "inn-at-spanish-head"
+    assert draft["exists"] is False
+    assert draft["draft"]["profile"] == "inn-at-spanish-head"
+    assert draft["draft"]["google_ads_search"] == {"status": "planned"}
+    assert draft["path_label"].endswith("inn-at-spanish-head.local.json")
+    assert not (tmp_path / "inn-at-spanish-head.local.json").exists()
+
+
+def test_local_config_writer_preview_normalizes_allowed_fields_without_writing(tmp_path):
+    preview = preview_local_config_update(
+        "inn-at-spanish-head",
+        {
+            "profile": "inn-at-spanish-head",
+            "ga4": {
+                "property_id_env": "INN_GA4_PROPERTY_ID",
+                "oauth_client_secrets_env": "INN_GA4_CLIENT",
+                "oauth_token_file_env": "INN_GA4_TOKEN",
+            },
+            "gsc": {
+                "site_url": "sc-domain:spanishhead.com",
+                "oauth_client_secrets_env": "INN_GSC_CLIENT",
+                "oauth_token_file_env": "INN_GSC_TOKEN",
+            },
+            "local_falcon": {
+                "manifest_path": "local-falcon-manifests/inn-at-spanish-head.json",
+                "api_key_env": "LOCAL_FALCON_API_KEY",
+            },
+            "google_ads_search": {"status": "planned"},
+        },
+        config_dir=tmp_path,
+    )
+
+    payload = preview.as_safe_dict()
+    assert preview.blocked is False
+    assert payload["would_create"] is True
+    assert payload["normalized_config"]["local_falcon"]["manifest_path"] == "local-falcon-manifests/inn-at-spanish-head.json"
+    assert any(change["key"] == "property_id_env" for change in payload["changes"])
+    assert not (tmp_path / "inn-at-spanish-head.local.json").exists()
+
+
+def test_local_config_writer_rejects_invalid_env_secret_markers_and_raw_payloads(tmp_path):
+    preview = preview_local_config_update(
+        "inn-at-spanish-head",
+        {
+            "profile": "inn-at-spanish-head",
+            "ga4": {
+                "property_id_env": "lowercase_name",
+                "oauth_client_secrets_env": '{"client_secret":"value"}',
+                "oauth_token_file_env": "REFRESH_TOKEN_VALUE",
+            },
+            "local_falcon": {
+                "manifest_path": "date,email\n2026-01-01,test@example.test",
+                "api_key_env": "LOCAL_FALCON_API_KEY_VALUE",
+            },
+        },
+        config_dir=tmp_path,
+    )
+
+    serialized = json.dumps(preview.as_safe_dict())
+    assert preview.blocked is True
+    assert "must be an uppercase environment variable name" in serialized
+    assert "lowercase_name" not in serialized
+    assert '{"client_secret":"value"}' not in serialized
+    assert "test@example.test" not in serialized
+    assert not (tmp_path / "inn-at-spanish-head.local.json").exists()
+
+
+def test_local_config_writer_save_requires_confirmation_and_writes_temp_dir_only(tmp_path):
+    draft = {
+        "profile": "inn-at-spanish-head",
+        "ga4": {"property_id_env": "INN_GA4_PROPERTY_ID"},
+        "gsc": {"site_url": "https://spanishhead.com/"},
+        "local_falcon": {"manifest_path": "local-falcon-manifests/inn-at-spanish-head.json"},
+    }
+
+    with pytest.raises(ProfileLocalConfigWriteError):
+        write_local_config_update("inn-at-spanish-head", draft, confirmed=False, config_dir=tmp_path)
+
+    response = write_local_config_update("inn-at-spanish-head", draft, confirmed=True, config_dir=tmp_path)
+    path = tmp_path / "inn-at-spanish-head.local.json"
+
+    assert response["saved"] is True
+    assert path.exists()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["profile"] == "inn-at-spanish-head"
+    assert payload["ga4"]["property_id_env"] == "INN_GA4_PROPERTY_ID"
+    assert payload["google_ads_search"]["status"] == "planned"
+
+
+def test_local_config_writer_merges_existing_config_predictably(tmp_path):
+    path = tmp_path / "inn-at-spanish-head.local.json"
+    path.write_text(
+        json.dumps(
+            {
+                "profile": "inn-at-spanish-head",
+                "ga4": {"property_id_env": "OLD_GA4_PROPERTY_ID"},
+                "gsc": {"site_url": "https://spanishhead.com/"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    response = write_local_config_update(
+        "inn-at-spanish-head",
+        {"profile": "inn-at-spanish-head", "ga4": {"oauth_token_file_env": "INN_GA4_TOKEN"}},
+        confirmed=True,
+        config_dir=tmp_path,
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert response["saved"] is True
+    assert payload["ga4"]["property_id_env"] == "OLD_GA4_PROPERTY_ID"
+    assert payload["ga4"]["oauth_token_file_env"] == "INN_GA4_TOKEN"
+    assert payload["gsc"]["site_url"] == "https://spanishhead.com/"
+
+
+def test_local_config_writer_rejects_profile_mismatch_and_path_escape(tmp_path):
+    path = tmp_path / "inn-at-spanish-head.local.json"
+    path.write_text(json.dumps({"profile": "aluma-seo-geo"}), encoding="utf-8")
+
+    with pytest.raises(ProfileLocalConfigWriteError):
+        preview_local_config_update("inn-at-spanish-head", {"profile": "inn-at-spanish-head"}, config_dir=tmp_path)
+
+    with pytest.raises(ProfileLocalConfigError):
+        build_local_config_draft("../inn-at-spanish-head", config_dir=tmp_path)
 
 
 def test_missing_profile_local_config_is_safe(tmp_path):

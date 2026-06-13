@@ -163,6 +163,53 @@ type SecretMetadata = {
   value_returned: boolean;
 };
 
+type LocalConfigField = {
+  provider: string;
+  key: string;
+  label: string;
+  kind: string;
+  required: boolean;
+  secret_value_allowed: boolean;
+};
+
+type LocalConfigDraft = {
+  profile: string;
+  ga4: Record<string, string>;
+  gsc: Record<string, string>;
+  local_falcon: Record<string, string>;
+  google_ads_search: Record<string, string>;
+};
+
+type LocalConfigDraftResponse = {
+  profile: string;
+  path_label: string;
+  exists: boolean;
+  editable: boolean;
+  draft: LocalConfigDraft;
+  fields: LocalConfigField[];
+  warnings: string[];
+};
+
+type LocalConfigChange = {
+  provider: string;
+  key: string;
+  action: string;
+  safe_value: string;
+};
+
+type LocalConfigPreview = {
+  profile: string;
+  path_label: string;
+  would_create: boolean;
+  would_update: boolean;
+  normalized_config: LocalConfigDraft;
+  changes: LocalConfigChange[];
+  blocked: boolean;
+  errors: string[];
+  warnings: string[];
+  saved?: boolean;
+};
+
 type LastActions = {
   last_action: ActionRunEntry | null;
   last_validation: ActionRunEntry | null;
@@ -274,6 +321,12 @@ function App() {
   const [localFalconApiKey, setLocalFalconApiKey] = useState<string>('');
   const [localFalconSecretBusy, setLocalFalconSecretBusy] = useState<boolean>(false);
   const [localFalconSecretMessage, setLocalFalconSecretMessage] = useState<string>('');
+  const [localConfigDraft, setLocalConfigDraft] = useState<LocalConfigDraftResponse | null>(null);
+  const [localConfigForm, setLocalConfigForm] = useState<LocalConfigDraft | null>(null);
+  const [localConfigPreview, setLocalConfigPreview] = useState<LocalConfigPreview | null>(null);
+  const [localConfigBusy, setLocalConfigBusy] = useState<boolean>(false);
+  const [localConfigMessage, setLocalConfigMessage] = useState<string>('');
+  const [localConfigConfirmed, setLocalConfigConfirmed] = useState<boolean>(false);
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
@@ -322,6 +375,11 @@ function App() {
       setCopyConfirmed(false);
       setCopyResult(null);
       setActionHistory(null);
+      setLocalConfigDraft(null);
+      setLocalConfigForm(null);
+      setLocalConfigPreview(null);
+      setLocalConfigMessage('');
+      setLocalConfigConfirmed(false);
       return;
     }
     setValidationConfirmed(false);
@@ -330,6 +388,11 @@ function App() {
     setCopyConfirmed(false);
     setCopyResult(null);
     setActionHistory(null);
+    setLocalConfigDraft(null);
+    setLocalConfigForm(null);
+    setLocalConfigPreview(null);
+    setLocalConfigMessage('');
+    setLocalConfigConfirmed(false);
     refreshProfileStatus(
       selectedSlug,
       setDetail,
@@ -338,6 +401,14 @@ function App() {
       setError,
       setRefreshing,
       setStatusMessage,
+    );
+    refreshLocalConfigDraft(
+      selectedSlug,
+      setLocalConfigDraft,
+      setLocalConfigForm,
+      setLocalConfigPreview,
+      setLocalConfigMessage,
+      setLocalConfigBusy,
     );
   }, [selectedSlug]);
 
@@ -462,6 +533,49 @@ function App() {
               />
 
               <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
+
+              <LocalConfigEditor
+                busy={localConfigBusy}
+                confirmed={localConfigConfirmed}
+                draft={localConfigDraft}
+                form={localConfigForm}
+                message={localConfigMessage}
+                preview={localConfigPreview}
+                setConfirmed={setLocalConfigConfirmed}
+                setForm={setLocalConfigForm}
+                onPreview={() =>
+                  previewLocalConfig(
+                    detail.slug,
+                    localConfigForm,
+                    setLocalConfigPreview,
+                    setLocalConfigMessage,
+                    setLocalConfigBusy,
+                    setLocalConfigConfirmed,
+                  )
+                }
+                onSave={() =>
+                  saveLocalConfig(
+                    detail.slug,
+                    localConfigForm,
+                    localConfigConfirmed,
+                    setLocalConfigPreview,
+                    setLocalConfigMessage,
+                    setLocalConfigBusy,
+                    setLocalConfigConfirmed,
+                    () => {
+                      refreshLocalConfigDraft(
+                        detail.slug,
+                        setLocalConfigDraft,
+                        setLocalConfigForm,
+                        setLocalConfigPreview,
+                        setLocalConfigMessage,
+                        setLocalConfigBusy,
+                      );
+                      refreshSelectedProfile('Local profile config saved');
+                    },
+                  )
+                }
+              />
 
               <ProviderChecklist detail={detail} />
 
@@ -832,6 +946,200 @@ function LocalFalconApiKeyManager({
         </>
       )}
       {message ? <p className="vault-message">{message}</p> : null}
+    </section>
+  );
+}
+
+function LocalConfigEditor({
+  busy,
+  confirmed,
+  draft,
+  form,
+  message,
+  preview,
+  setConfirmed,
+  setForm,
+  onPreview,
+  onSave,
+}: {
+  busy: boolean;
+  confirmed: boolean;
+  draft: LocalConfigDraftResponse | null;
+  form: LocalConfigDraft | null;
+  message: string;
+  preview: LocalConfigPreview | null;
+  setConfirmed: (confirmed: boolean) => void;
+  setForm: (form: LocalConfigDraft) => void;
+  onPreview: () => void;
+  onSave: () => void;
+}) {
+  const fields = draft?.fields ?? [];
+
+  return (
+    <section className="local-config-card" aria-label="Local profile config setup">
+      <div className="local-config-heading">
+        <div>
+          <span className="eyebrow">Local setup</span>
+          <h3>Set up local config</h3>
+          <p>
+            Create or update the ignored per-profile config file. Do not paste secret values, OAuth JSON, API keys, raw
+            CSV rows, or customer data.
+          </p>
+        </div>
+        <span className={draft?.exists ? 'badge ok' : 'badge warn'}>{draft?.exists ? 'Exists' : 'Missing'}</span>
+      </div>
+
+      {draft ? (
+        <div className="local-config-path">
+          Target: <code>{draft.path_label}</code>
+        </div>
+      ) : (
+        <p className="vault-message">Loading local config draft...</p>
+      )}
+
+      {form ? (
+        <div className="local-config-sections">
+          <LocalConfigProviderSection
+            description="Use env var names only; real GA4 IDs and OAuth paths stay in the local shell or env file."
+            fields={fields.filter((field) => field.provider === 'ga4')}
+            form={form}
+            provider="ga4"
+            title="GA4"
+            setForm={setForm}
+          />
+          <LocalConfigProviderSection
+            description="Site URL is safe operational metadata; OAuth file locations remain env var references."
+            fields={fields.filter((field) => field.provider === 'gsc')}
+            form={form}
+            provider="gsc"
+            title="GSC"
+            setForm={setForm}
+          />
+          <LocalConfigProviderSection
+            description="Manifest path is an ignored local reference. API key value belongs in env or the encrypted vault."
+            fields={fields.filter((field) => field.provider === 'local_falcon')}
+            form={form}
+            provider="local_falcon"
+            title="Local Falcon"
+            setForm={setForm}
+          />
+          <LocalConfigProviderSection
+            description="Google Ads remains read-only reporting and planned-only in this local config editor."
+            fields={fields.filter((field) => field.provider === 'google_ads_search')}
+            form={form}
+            provider="google_ads_search"
+            title="Google Ads Search"
+            setForm={setForm}
+          />
+          <div className="local-config-disabled">
+            <strong>Not editable in v1:</strong> CallRail and Form Fills path references stay manual until their
+            per-profile schema is added.
+          </div>
+        </div>
+      ) : null}
+
+      {preview ? (
+        <div className="local-config-preview" aria-label="Local config preview">
+          <h4>Preview</h4>
+          <p>
+            {preview.would_create ? 'Will create' : 'Will update'} <code>{preview.path_label}</code>
+          </p>
+          {preview.errors.length ? (
+            <ul className="error-list">
+              {preview.errors.map((previewError) => (
+                <li key={previewError}>{previewError}</li>
+              ))}
+            </ul>
+          ) : preview.changes.length ? (
+            <ul className="status-list">
+              {preview.changes.map((change) => (
+                <li key={`${change.provider}-${change.key}`}>
+                  <span className="tiny-dot ok" />
+                  <span>
+                    {providerLabel(change.provider)} {humanizeKey(change.key)}: {change.safe_value || 'Cleared'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No field changes detected.</p>
+          )}
+        </div>
+      ) : null}
+
+      {message ? <p className="vault-message">{message}</p> : null}
+
+      <div className="local-config-actions">
+        <button type="button" className="copy-button" disabled={busy || !form} onClick={onPreview}>
+          {busy ? 'Working...' : 'Preview local config changes'}
+        </button>
+        <label className="confirmation-row compact-confirmation">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            disabled={!preview || preview.blocked}
+            onChange={(event) => setConfirmed(event.target.checked)}
+          />
+          <span>I confirm this writes only ignored local config and contains no secrets or raw data.</span>
+        </label>
+        <button
+          type="button"
+          className="primary-button"
+          disabled={busy || !preview || preview.blocked || !confirmed}
+          onClick={onSave}
+        >
+          Save ignored local config
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LocalConfigProviderSection({
+  description,
+  fields,
+  form,
+  provider,
+  title,
+  setForm,
+}: {
+  description: string;
+  fields: LocalConfigField[];
+  form: LocalConfigDraft;
+  provider: keyof LocalConfigDraft;
+  title: string;
+  setForm: (form: LocalConfigDraft) => void;
+}) {
+  const providerForm = form[provider] as Record<string, string>;
+
+  return (
+    <section className="local-config-provider" aria-label={`${title} local config`}>
+      <div>
+        <h4>{title}</h4>
+        <p>{description}</p>
+      </div>
+      <div className="local-config-fields">
+        {fields.map((field) => (
+          <label className="local-config-field" key={`${field.provider}-${field.key}`}>
+            <span>{field.label}</span>
+            <input
+              type="text"
+              value={providerForm[field.key] ?? ''}
+              disabled={field.kind === 'planned_status'}
+              placeholder={fieldPlaceholder(field)}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  [provider]: {
+                    ...providerForm,
+                    [field.key]: event.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+        ))}
+      </div>
     </section>
   );
 }
@@ -1537,6 +1845,118 @@ function yesNo(value: boolean) {
   return value ? 'Yes' : 'No';
 }
 
+function fieldPlaceholder(field: LocalConfigField) {
+  if (field.kind === 'env_var_name') {
+    return 'PROFILE_PROVIDER_SETTING';
+  }
+  if (field.kind === 'site_url') {
+    return 'sc-domain:example.com';
+  }
+  if (field.kind === 'path_reference') {
+    return 'local-falcon-manifests/profile.local.json';
+  }
+  return 'planned';
+}
+
+function cloneLocalConfigDraft(draft: LocalConfigDraft): LocalConfigDraft {
+  return {
+    profile: draft.profile,
+    ga4: { ...draft.ga4 },
+    gsc: { ...draft.gsc },
+    local_falcon: { ...draft.local_falcon },
+    google_ads_search: { ...draft.google_ads_search },
+  };
+}
+
+function refreshLocalConfigDraft(
+  profileSlug: string,
+  setDraft: (draft: LocalConfigDraftResponse | null) => void,
+  setForm: (form: LocalConfigDraft | null) => void,
+  setPreview: (preview: LocalConfigPreview | null) => void,
+  setMessage: (message: string) => void,
+  setBusy: (busy: boolean) => void,
+) {
+  setBusy(true);
+  fetchJson<LocalConfigDraftResponse>(`${API_BASE}/api/profiles/${profileSlug}/local-config/draft`)
+    .then((payload) => {
+      setDraft(payload);
+      setForm(cloneLocalConfigDraft(payload.draft));
+      setPreview(null);
+      setMessage('');
+    })
+    .catch((fetchError: Error) => setMessage(safeLocalConfigErrorMessage(fetchError)))
+    .finally(() => setBusy(false));
+}
+
+function previewLocalConfig(
+  profileSlug: string,
+  form: LocalConfigDraft | null,
+  setPreview: (preview: LocalConfigPreview | null) => void,
+  setMessage: (message: string) => void,
+  setBusy: (busy: boolean) => void,
+  setConfirmed: (confirmed: boolean) => void,
+) {
+  if (!form) {
+    setMessage('Local config draft is still loading.');
+    return;
+  }
+  setBusy(true);
+  setConfirmed(false);
+  fetch(`${API_BASE}/api/profiles/${profileSlug}/local-config/preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ draft: form }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<LocalConfigPreview>;
+    })
+    .then((payload) => {
+      setPreview(payload);
+      setMessage(payload.blocked ? 'Preview found local config validation issues.' : 'Preview ready. Review changes before saving.');
+    })
+    .catch((fetchError: Error) => setMessage(safeLocalConfigErrorMessage(fetchError)))
+    .finally(() => setBusy(false));
+}
+
+function saveLocalConfig(
+  profileSlug: string,
+  form: LocalConfigDraft | null,
+  confirmed: boolean,
+  setPreview: (preview: LocalConfigPreview | null) => void,
+  setMessage: (message: string) => void,
+  setBusy: (busy: boolean) => void,
+  setConfirmed: (confirmed: boolean) => void,
+  onComplete: () => void,
+) {
+  if (!form) {
+    setMessage('Local config draft is still loading.');
+    return;
+  }
+  setBusy(true);
+  fetch(`${API_BASE}/api/profiles/${profileSlug}/local-config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ draft: form, confirmed }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<LocalConfigPreview>;
+    })
+    .then((payload) => {
+      setPreview(payload);
+      setConfirmed(false);
+      setMessage('Ignored local profile config saved.');
+      onComplete();
+    })
+    .catch((fetchError: Error) => setMessage(safeLocalConfigErrorMessage(fetchError)))
+    .finally(() => setBusy(false));
+}
+
 function refreshProfileStatus(
   slug: string,
   setDetail: (detail: ProfileDetail) => void,
@@ -1757,6 +2177,17 @@ function safeSecretErrorMessage(error: Error) {
     return 'Profile or secret setting was not found.';
   }
   return status ? `Secret request failed with status ${status}.` : 'Secret request failed.';
+}
+
+function safeLocalConfigErrorMessage(error: Error) {
+  const status = error.message.match(/\d{3}/)?.[0] ?? '';
+  if (status === '400') {
+    return 'Local config request was rejected by safety validation.';
+  }
+  if (status === '404') {
+    return 'Profile was not found.';
+  }
+  return status ? `Local config request failed with status ${status}.` : 'Local config request failed.';
 }
 
 function LastActionSummary({ lastActions }: { lastActions: LastActions }) {

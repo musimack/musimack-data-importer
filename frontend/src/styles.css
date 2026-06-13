@@ -195,6 +195,7 @@ code {
 
 .simple-summary-card,
 .secret-vault-card,
+.local-config-card,
 .next-action-card,
 .safe-copy-card,
 .provider-checklist,
@@ -414,6 +415,114 @@ code {
 .local-secret-confirmation {
   align-items: center;
   padding: 7px 9px;
+}
+
+.local-config-card {
+  background: #ffffff;
+  border-color: #cdd8e4;
+  display: grid;
+  gap: 14px;
+}
+
+.local-config-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.local-config-heading h3,
+.local-config-heading p,
+.local-config-provider h4,
+.local-config-provider p,
+.local-config-preview h4,
+.local-config-preview p {
+  margin: 0;
+}
+
+.local-config-heading h3 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.local-config-heading p,
+.local-config-provider p,
+.local-config-preview p,
+.local-config-disabled,
+.local-config-path {
+  color: #485160;
+  line-height: 1.5;
+}
+
+.local-config-path,
+.local-config-preview,
+.local-config-disabled {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.local-config-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.local-config-provider {
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.local-config-provider h4 {
+  font-size: 16px;
+}
+
+.local-config-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.local-config-field {
+  display: grid;
+  gap: 6px;
+}
+
+.local-config-field span {
+  color: #687181;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.local-config-field input {
+  border: 1px solid #bac4d1;
+  border-radius: 6px;
+  color: #253043;
+  font: inherit;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.local-config-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.local-config-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.error-list {
+  color: #8f332b;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .secondary-next-action {

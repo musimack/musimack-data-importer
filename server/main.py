@@ -40,7 +40,13 @@ from src.operator_console import (
     readiness_matrix,
     validate_profile_output,
 )
-from src.profile_local_config import DEFAULT_LOCAL_PROFILE_CONFIG_DIR, load_profile_provider_config_map
+from src.profile_local_config import DEFAULT_LOCAL_PROFILE_CONFIG_DIR, ProfileLocalConfigError, load_profile_provider_config_map
+from src.profile_local_config_writer import (
+    ProfileLocalConfigWriteError,
+    build_local_config_draft,
+    preview_local_config_update,
+    write_local_config_update,
+)
 
 
 APP_NAME = "musimack-data-importer-local-api"
@@ -89,6 +95,13 @@ class SecretValueRequest(BaseModel):
     value: str
 
 
+class LocalConfigUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    draft: dict[str, Any]
+    confirmed: bool = False
+
+
 PROVIDER_LABELS = {
     "ga4": "GA4",
     "gsc": "GSC",
@@ -105,6 +118,7 @@ def create_app(
     registry_path: Path | None = None,
     env: Mapping[str, str] | None = None,
     local_profile_config_path: Path | None = None,
+    local_profile_config_dir: Path | None = None,
     audit_log_path: Path | None = None,
     secret_vault_path: Path | None = None,
 ) -> FastAPI:
@@ -137,12 +151,15 @@ def create_app(
         config = (
             aggregate
             if aggregate
-            else load_profile_provider_config_map(profile.slug, config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR, env=current_env())
+            else load_profile_provider_config_map(profile.slug, config_dir=current_local_profile_config_dir(), env=current_env())
         )
         return _with_secret_vault_readiness(profile, config, current_env(), secret_vault_state)
 
     def current_env() -> Mapping[str, str]:
         return os.environ if env is None else env
+
+    def current_local_profile_config_dir() -> Path:
+        return local_profile_config_dir or DEFAULT_LOCAL_PROFILE_CONFIG_DIR
 
     def current_audit_log_path() -> Path:
         return audit_log_path or DEFAULT_AUDIT_LOG
@@ -286,6 +303,45 @@ def create_app(
             safe_env=current_env(),
             local_config=current_profile_config(profile),
         )
+
+    @app.get("/api/profiles/{profile_slug}/local-config/draft")
+    def local_config_draft(profile_slug: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+            return build_local_config_draft(profile.slug, config_dir=current_local_profile_config_dir())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        except (ProfileLocalConfigError, ProfileLocalConfigWriteError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/profiles/{profile_slug}/local-config/preview")
+    def local_config_preview(profile_slug: str, request: LocalConfigUpdateRequest) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+            return preview_local_config_update(
+                profile.slug,
+                request.draft,
+                config_dir=current_local_profile_config_dir(),
+            ).as_safe_dict()
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        except (ProfileLocalConfigError, ProfileLocalConfigWriteError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/profiles/{profile_slug}/local-config")
+    def local_config_save(profile_slug: str, request: LocalConfigUpdateRequest) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+            return write_local_config_update(
+                profile.slug,
+                request.draft,
+                confirmed=request.confirmed,
+                config_dir=current_local_profile_config_dir(),
+            )
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        except (ProfileLocalConfigError, ProfileLocalConfigWriteError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/profiles/{profile_slug}/action-runs")
     def profile_action_runs(
