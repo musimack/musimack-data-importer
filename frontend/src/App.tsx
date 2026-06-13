@@ -424,6 +424,69 @@ type GuardedImportPhase = {
   notes: string[];
 };
 
+type CompletionStep = {
+  id?: string;
+  label: string;
+  status: string;
+  detail: string;
+};
+
+type CompletionChecklistItem = {
+  label: string;
+  status: string;
+  detail: string;
+};
+
+type CompletionSummary = {
+  profile: {
+    slug: string;
+    display_name: string;
+    route: string;
+    readiness_state: string;
+  };
+  enabled_provider_labels: string[];
+  completed_steps: CompletionStep[];
+  incomplete_steps: CompletionStep[];
+  blockers: string[];
+  local_config: {
+    state: string;
+    configured_provider_count: number;
+    path_labels: string[];
+  };
+  vault: {
+    state: string;
+    local_falcon_api_key_metadata: string;
+    locked: boolean;
+  };
+  provider_outputs: Array<{
+    provider: string;
+    label: string;
+    status: string;
+  }>;
+  validation: {
+    state: string;
+    last_validation: string;
+    warning_count: number;
+  };
+  fixture_copy: {
+    state: string;
+    preview_state: string;
+    eligible_file_count: number;
+    copied_file_count: number;
+    last_copy: string;
+  };
+  dashboard_lab_readiness: {
+    state: string;
+    portal_publishing: string;
+  };
+  planned_live_actions: string[];
+  recommended_next_actions: string[];
+  final_checklist: CompletionChecklistItem[];
+  safety_notes: string[];
+  operator_handoff_text: string;
+  generated_at: string;
+};
+
 type ProfileSummary = {
   slug: string;
   display_name: string;
@@ -463,7 +526,6 @@ function App() {
   const [selectedSlug, setSelectedSlug] = useState<string>('');
   const [detail, setDetail] = useState<ProfileDetail | null>(null);
   const [error, setError] = useState<string>('');
-  const [copiedActionId, setCopiedActionId] = useState<string>('');
   const [validationConfirmed, setValidationConfirmed] = useState<boolean>(false);
   const [validationResult, setValidationResult] = useState<ValidationRunResult | null>(null);
   const [validationRunning, setValidationRunning] = useState<boolean>(false);
@@ -474,6 +536,10 @@ function App() {
   const [actionHistory, setActionHistory] = useState<ActionRunHistory | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [completionSummary, setCompletionSummary] = useState<CompletionSummary | null>(null);
+  const [completionSummaryBusy, setCompletionSummaryBusy] = useState<boolean>(false);
+  const [completionSummaryMessage, setCompletionSummaryMessage] = useState<string>('');
+  const [copiedHandoff, setCopiedHandoff] = useState<boolean>(false);
   const [vaultStatus, setVaultStatus] = useState<SecretVaultStatus | null>(null);
   const [vaultPassphrase, setVaultPassphrase] = useState<string>('');
   const [vaultBusy, setVaultBusy] = useState<boolean>(false);
@@ -547,6 +613,9 @@ function App() {
       setCopyConfirmed(false);
       setCopyResult(null);
       setActionHistory(null);
+      setCompletionSummary(null);
+      setCompletionSummaryMessage('');
+      setCopiedHandoff(false);
       setLocalConfigDraft(null);
       setLocalConfigForm(null);
       setLocalConfigPreview(null);
@@ -565,6 +634,9 @@ function App() {
     setCopyConfirmed(false);
     setCopyResult(null);
     setActionHistory(null);
+    setCompletionSummary(null);
+    setCompletionSummaryMessage('');
+    setCopiedHandoff(false);
     setLocalConfigDraft(null);
     setLocalConfigForm(null);
     setLocalConfigPreview(null);
@@ -583,6 +655,12 @@ function App() {
       setError,
       setRefreshing,
       setStatusMessage,
+    );
+    refreshCompletionSummary(
+      selectedSlug,
+      setCompletionSummary,
+      setCompletionSummaryBusy,
+      setCompletionSummaryMessage,
     );
     refreshLocalConfigDraft(
       selectedSlug,
@@ -608,6 +686,13 @@ function App() {
       setRefreshing,
       setStatusMessage,
       message,
+    );
+    refreshCompletionSummary(
+      selectedSlug,
+      setCompletionSummary,
+      setCompletionSummaryBusy,
+      setCompletionSummaryMessage,
+      '',
     );
     refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage, clearOnboardingMessage);
   };
@@ -718,6 +803,29 @@ function App() {
               <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
+
+              <CompletionSummaryPanel
+                summary={completionSummary}
+                busy={completionSummaryBusy}
+                message={completionSummaryMessage}
+                copied={copiedHandoff}
+                onRefresh={() => {
+                  refreshCompletionSummary(
+                    detail.slug,
+                    setCompletionSummary,
+                    setCompletionSummaryBusy,
+                    setCompletionSummaryMessage,
+                    'Completion summary refreshed.',
+                  );
+                }}
+                onCopy={() =>
+                  copyHandoffSummary(
+                    completionSummary?.operator_handoff_text ?? '',
+                    setCopiedHandoff,
+                    setCompletionSummaryMessage,
+                  )
+                }
+              />
 
               <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
 
@@ -932,8 +1040,6 @@ function App() {
 
                   <GroupedActionPlan
                     actions={detail.action_plan.actions}
-                    copiedActionId={copiedActionId}
-                    setCopiedActionId={setCopiedActionId}
                   />
                 </div>
               </details>
@@ -1239,6 +1345,150 @@ function OnboardingFlowChecklist({
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function CompletionSummaryPanel({
+  summary,
+  busy,
+  message,
+  copied,
+  onRefresh,
+  onCopy,
+}: {
+  summary: CompletionSummary | null;
+  busy: boolean;
+  message: string;
+  copied: boolean;
+  onRefresh: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <section className="completion-summary-card" aria-label="Onboarding completion summary">
+      <div className="completion-summary-heading">
+        <div>
+          <span className="eyebrow">Operator completion report</span>
+          <h3>Completion summary</h3>
+          <p>
+            Safe readiness snapshot for local onboarding only. Portal publishing, live provider pulls, and OAuth stay separate.
+          </p>
+        </div>
+        <span className={summary ? statusBadgeClass(summary.profile.readiness_state) : 'badge neutral'}>
+          {summary?.profile.readiness_state ?? 'Loading'}
+        </span>
+      </div>
+
+      <div className="completion-summary-actions">
+        <button type="button" className="copy-button" disabled={busy} onClick={onRefresh}>
+          {busy ? 'Refreshing...' : 'Refresh summary'}
+        </button>
+        <button type="button" className="primary-button" disabled={!summary} onClick={onCopy}>
+          {copied ? 'Copied summary' : 'Copy summary'}
+        </button>
+      </div>
+
+      {message ? <p className="vault-message">{message}</p> : null}
+
+      {summary ? (
+        <>
+          <div className="completion-summary-strip">
+            <StatusTile label="Readiness" value={summary.profile.readiness_state} tone={statusTone(summary.profile.readiness_state)} />
+            <StatusTile label="Validation" value={summary.validation.state} tone={statusTone(summary.validation.state)} />
+            <StatusTile label="Fixture copy" value={summary.fixture_copy.state} tone={statusTone(summary.fixture_copy.state)} />
+            <StatusTile label="Portal" value={summary.dashboard_lab_readiness.portal_publishing} tone="neutral" />
+          </div>
+
+          <div className="completion-summary-grid">
+            <article className="completion-summary-panel">
+              <h4>Completed</h4>
+              <ul className="status-list">
+                {summary.completed_steps.map((step) => (
+                  <li key={step.id ?? step.label}>
+                    <span className="tiny-dot ok" />
+                    <span>{step.label}: {step.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="completion-summary-panel">
+              <h4>Pending</h4>
+              <ul className="status-list">
+                {summary.incomplete_steps.map((step) => (
+                  <li key={step.id ?? step.label}>
+                    <span className={step.status === 'separate' ? 'tiny-dot neutral' : 'tiny-dot warn'} />
+                    <span>{step.label}: {step.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          <div className="completion-summary-grid">
+            <article className="completion-summary-panel">
+              <h4>Blockers</h4>
+              {summary.blockers.length ? (
+                <div className="chip-row">
+                  {summary.blockers.map((blocker) => (
+                    <span className="setup-chip" key={blocker}>{blocker}</span>
+                  ))}
+                </div>
+              ) : (
+                <p>No current blockers.</p>
+              )}
+            </article>
+
+            <article className="completion-summary-panel">
+              <h4>Recommended next</h4>
+              <ul>
+                {summary.recommended_next_actions.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          <article className="completion-summary-panel">
+            <div className="card-heading">
+              <div>
+                <h4>Final QA checklist</h4>
+                <p>Compact local-only finish list for the operator.</p>
+              </div>
+            </div>
+            <div className="completion-checklist">
+              {summary.final_checklist.map((item) => (
+                <div className="completion-checklist-item" key={item.label}>
+                  <span className={item.status === 'complete' ? 'badge ok' : item.status === 'separate' ? 'badge neutral' : 'badge warn'}>
+                    {item.status === 'complete' ? 'Complete' : item.status === 'separate' ? 'Separate' : 'Pending'}
+                  </span>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p>{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="completion-summary-panel">
+            <div className="card-heading">
+              <div>
+                <h4>Operator handoff summary</h4>
+                <p>Copy-safe text only. No paths, secrets, config values, rows, or file contents.</p>
+              </div>
+            </div>
+            <textarea
+              className="handoff-text"
+              value={summary.operator_handoff_text}
+              readOnly
+              aria-label="Operator handoff summary text"
+            />
+          </article>
+        </>
+      ) : (
+        <p className="vault-message">Loading completion summary...</p>
+      )}
     </section>
   );
 }
@@ -1581,8 +1831,8 @@ function SecretVaultPanel({
           <span className="eyebrow">Security settings</span>
           <h3>Secret Vault</h3>
           <p>
-            Unlocks the local encrypted vault for this backend session only. This panel does not run provider imports,
-            store new secrets, or copy fixtures.
+            Unlocks the local encrypted vault for this backend session only. Real vault use is manual operator-only.
+            This panel never prints secret values or vault contents and does not run provider imports or copy fixtures.
           </p>
         </div>
         <span className={isUnlocked ? 'badge ok' : vaultExists ? 'badge neutral' : 'badge warn'}>
@@ -1682,7 +1932,7 @@ function LocalFalconApiKeyManager({
       <div className="local-secret-heading">
         <div>
           <h4>Local Falcon API key</h4>
-          <p>Saved keys stay encrypted in the local vault. This does not run a Local Falcon pull.</p>
+          <p>Saved keys stay encrypted in the local vault, remain write-only in this UI, and do not trigger a Local Falcon pull.</p>
         </div>
         <span className={configured ? 'badge ok' : 'badge warn'}>{configured ? 'Configured' : 'Missing'}</span>
       </div>
@@ -2604,12 +2854,8 @@ function OutputStatusTable({ outputStatus }: { outputStatus: OutputStatus }) {
 
 function GroupedActionPlan({
   actions,
-  copiedActionId,
-  setCopiedActionId,
 }: {
   actions: ActionPlanItem[];
-  copiedActionId: string;
-  setCopiedActionId: (actionId: string) => void;
 }) {
   const groups = groupActionsByProvider(actions);
   return (
@@ -2618,8 +2864,8 @@ function GroupedActionPlan({
         <div>
           <h3>Provider Action Plan</h3>
           <p>
-            Commands are copyable guidance for operator-run local workflows. The console only exposes guarded validation
-            and dashboard-lab copy actions.
+            Sequencing guidance only. This panel stays path-free and keeps secrets, local config values, and file
+            contents out of view.
           </p>
         </div>
       </div>
@@ -2634,12 +2880,7 @@ function GroupedActionPlan({
             </div>
             <div className="action-grid">
               {providerActions.map((action) => (
-                <ActionCard
-                  action={action}
-                  copiedActionId={copiedActionId}
-                  setCopiedActionId={setCopiedActionId}
-                  key={action.id}
-                />
+                <ActionCard action={action} key={action.id} />
               ))}
             </div>
           </section>
@@ -2651,12 +2892,8 @@ function GroupedActionPlan({
 
 function ActionCard({
   action,
-  copiedActionId,
-  setCopiedActionId,
 }: {
   action: ActionPlanItem;
-  copiedActionId: string;
-  setCopiedActionId: (actionId: string) => void;
 }) {
   return (
     <article className="action-card">
@@ -2687,30 +2924,14 @@ function ActionCard({
 
       <dl className="action-meta">
         <div>
-          <dt>Expected output</dt>
-          <dd>{action.expected_output}</dd>
+          <dt>Status</dt>
+          <dd>{statusLabel(action.status)}</dd>
         </div>
         <div>
           <dt>Manual step</dt>
           <dd>{action.manual_step}</dd>
         </div>
       </dl>
-
-      {action.command ? (
-        <div className="command-block">
-          <div className="command-heading">
-            <span>Copyable operator command</span>
-            <button
-              type="button"
-              className="copy-button"
-              onClick={() => copyCommand(action.id, action.command, setCopiedActionId)}
-            >
-              {copiedActionId === action.id ? 'Copied' : 'Copy command'}
-            </button>
-          </div>
-          <pre>{action.command}</pre>
-        </div>
-      ) : null}
 
       <div className="mini-section">
         <h5>Safety Notes</h5>
@@ -3430,6 +3651,23 @@ function refreshProfileStatus(
     .finally(() => setRefreshing(false));
 }
 
+function refreshCompletionSummary(
+  slug: string,
+  setSummary: (summary: CompletionSummary | null) => void,
+  setBusy: (busy: boolean) => void,
+  setMessage: (message: string) => void,
+  successMessage = '',
+) {
+  setBusy(true);
+  fetchJson<CompletionSummary>(`${API_BASE}/api/profiles/${slug}/onboarding-completion-summary`)
+    .then((payload) => {
+      setSummary(payload);
+      setMessage(successMessage);
+    })
+    .catch((fetchError: Error) => setMessage(fetchError.message))
+    .finally(() => setBusy(false));
+}
+
 function fetchJson<T>(url: string): Promise<T> {
   return fetch(url).then((response) => {
     if (!response.ok) {
@@ -3839,14 +4077,15 @@ function actionLabel(actionId: string) {
   return labels[actionId] ?? actionId;
 }
 
-function copyCommand(
-  actionId: string,
-  command: string,
-  setCopiedActionId: (actionId: string) => void,
+function copyHandoffSummary(
+  summary: string,
+  setCopied: (copied: boolean) => void,
+  setMessage: (message: string) => void,
 ) {
-  void navigator.clipboard.writeText(command).then(() => {
-    setCopiedActionId(actionId);
-    window.setTimeout(() => setCopiedActionId(''), 1600);
+  void navigator.clipboard.writeText(summary).then(() => {
+    setCopied(true);
+    setMessage('Operator handoff summary copied.');
+    window.setTimeout(() => setCopied(false), 1600);
   });
 }
 

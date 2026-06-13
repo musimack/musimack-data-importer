@@ -365,6 +365,93 @@ code {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.completion-summary-card {
+  background: #ffffff;
+  border-color: #ccd8e4;
+  display: grid;
+  gap: 14px;
+}
+
+.completion-summary-heading,
+.completion-summary-actions {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.completion-summary-heading h3,
+.completion-summary-heading p,
+.completion-summary-panel h4,
+.completion-summary-panel p {
+  margin: 0;
+}
+
+.completion-summary-heading h3 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.completion-summary-heading p,
+.completion-summary-panel p {
+  color: #485160;
+  line-height: 1.5;
+}
+
+.completion-summary-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.completion-summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.completion-summary-panel {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.completion-summary-panel ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.completion-checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.completion-checklist-item {
+  align-items: flex-start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.completion-checklist-item p {
+  margin-top: 4px;
+}
+
+.handoff-text {
+  background: #ffffff;
+  border: 1px solid #bac4d1;
+  border-radius: 6px;
+  color: #253043;
+  font: inherit;
+  min-height: 220px;
+  padding: 10px 12px;
+  resize: vertical;
+  width: 100%;
+}
+
 .onboarding-flow-step {
   background: #f8fafb;
   border: 1px solid #e1e7ec;
@@ -1327,6 +1414,10 @@ dd {
   background: #c6951a;
 }
 
+.tiny-dot.neutral {
+  background: #7f91a7;
+}
+
 .provider-meta {
   display: grid;
   gap: 10px;
@@ -1773,6 +1864,8 @@ pre {
   .new-onboarding-heading,
   .section-heading,
   .simple-summary-main,
+  .completion-summary-heading,
+  .completion-summary-actions,
   .onboarding-flow-heading,
   .onboarding-status-heading,
   .onboarding-actions-heading,
@@ -1794,6 +1887,8 @@ pre {
   .profile-grid,
   .profile-registry-fields,
   .profile-registry-options,
+  .completion-summary-strip,
+  .completion-summary-grid,
   .readiness-grid,
   .provider-grid,
   .new-onboarding-steps,
@@ -1837,6 +1932,7 @@ pre {
   .onboarding-flow-card,
   .onboarding-status-card,
   .onboarding-actions-card,
+  .completion-summary-card,
   .session-history-card,
   .secret-vault-card,
   .profile-registry-card,

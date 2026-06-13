@@ -803,7 +803,7 @@ $env:MUSIMACK_IMPORTER_VAULT_PATH = "$PWD\\.tmp\\manual-vault.local.json"
 python -m uvicorn server.main:app --reload --port 8765
 ```
 
-`MUSIMACK_IMPORTER_VAULT_PATH` is for local dev/test only. Use fake passphrases and fake vault contents for manual QA, do not enter real provider secrets, do not screenshot or log passphrases, and delete the disposable test vault when finished. The Secret Vault panel only checks status and locks/unlocks the local encrypted vault; it does not run provider imports, add secret entries, or copy dashboard fixtures.
+`MUSIMACK_IMPORTER_VAULT_PATH` is for local dev/test and disposable QA only. Use fake passphrases and fake vault contents for automated QA and browser verification, do not screenshot or log passphrases, and delete the disposable test vault when finished. If David is manually operating the UI for real onboarding, the frontend may create, unlock, and update the real local vault, but Codex must not inspect, print, dump, or expose secret values or vault contents. The Secret Vault panel only checks status and locks/unlocks the local encrypted vault; it does not run provider imports or copy dashboard fixtures.
 
 To manually QA the local profile config editor without touching the real ignored `local-profile-configs/` directory, run the backend with a disposable local config directory override:
 
@@ -897,6 +897,19 @@ The React/FastAPI console currently executes only local guarded actions: profile
 ```powershell
 python -m streamlit run app/importer_console.py
 ```
+
+The React console also includes an operator completion report for the selected profile. That summary is local-only and path-free. It reports:
+
+- current readiness state,
+- completed local onboarding steps,
+- pending steps and blockers,
+- validation and fixture-copy state,
+- planned or unavailable live actions,
+- a copy-safe operator handoff summary.
+
+Use the handoff summary when local onboarding is complete enough to pass to the next operator. It must stay free of secrets, raw local config values, raw provider rows, file contents, phone numbers, caller names, transcripts, recordings, customer IDs, and OAuth/token material.
+
+The completion report is not portal publishing. It does not create dashboard-lab routes, update portal/database state, run live provider pulls, start OAuth, or publish client-facing output. Portal publishing remains a separate manual workflow after local QA is complete.
 
 Create local operator config once:
 

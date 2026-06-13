@@ -41,7 +41,7 @@ def test_runtime_safety_status_reports_overrides_without_paths(tmp_path):
     vault = tmp_path / "vault" / "importer-vault.local.json"
     form_input = tmp_path / "form-fills-input"
     callrail_input = tmp_path / "callrail-input"
-    fixture_target = tmp_path / "dashboard-lab-fixtures"
+    fixture_target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
     client = TestClient(
         create_app(
             registry_path=_registry(tmp_path),
@@ -2043,6 +2043,152 @@ def test_local_config_and_secrets_are_not_exposed(tmp_path):
     assert "real-api-key-value" not in serialized
     assert "configured_secret_value" not in serialized
     assert "credentials_ready" in serialized
+
+
+def test_onboarding_completion_summary_returns_safe_metadata_and_handoff_text(tmp_path):
+    registry = _registry(
+        tmp_path,
+        capabilities=[
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills"},
+        ],
+        data_sources=["callrail", "form_fills"],
+    )
+    output_dir = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(output_dir / "callrail-summary.json", {"schema_version": "callrail.v1", "caller_name": "hidden"})
+    _write_json(output_dir / "form-fills-summary.json", {"schema_version": "form-fills.v1", "email": "hidden"})
+    fixture_target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
+    audit_path = tmp_path / "logs" / "local-action-runs.jsonl"
+    _write_audit(
+        audit_path,
+        {"timestamp": "2026-06-13T09:00:00+00:00", "action_id": "validate-output", "profile_slug": "demo-profile", "status": "ok"},
+    )
+    _write_audit(
+        audit_path,
+        {
+            "timestamp": "2026-06-13T09:05:00+00:00",
+            "action_id": "dashboard_lab.copy-validated-fixtures",
+            "profile_slug": "demo-profile",
+            "status": "ok",
+            "file_counts": {"copied": 2, "overwritten": 0, "skipped": 0, "failed": 0},
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+            audit_log_path=audit_path,
+            dashboard_lab_fixture_target_dir=fixture_target,
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-completion-summary")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["profile"]["slug"] == "demo-profile"
+    assert payload["profile"]["readiness_state"] == "Dashboard-lab ready"
+    assert payload["enabled_provider_labels"] == ["CallRail", "Form Fills"]
+    assert payload["fixture_copy"]["copied_file_count"] == 2
+    assert "Operator handoff: Demo Profile" in payload["operator_handoff_text"]
+    assert "Portal publishing is separate" in payload["operator_handoff_text"]
+    assert "CallRail" in json.dumps(payload["provider_outputs"])
+    assert "hidden" not in serialized
+    assert "configured_secret_value" not in serialized
+    assert "123456789" not in serialized
+    assert "https://private-property.example.test/" not in serialized
+    assert str(tmp_path) not in serialized
+    assert "exports/local-real" not in serialized
+    assert "dashboard-lab-fixtures" not in serialized
+
+
+def test_onboarding_completion_summary_reports_blockers_safely(tmp_path):
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={},
+            audit_log_path=tmp_path / "logs" / "missing.jsonl",
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-completion-summary")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["profile"]["readiness_state"] == "Setup in progress"
+    assert "Missing local config" in payload["blockers"]
+    assert "Output missing" in payload["blockers"]
+    assert "Validation not run" in payload["blockers"]
+    assert "Fixture copy not previewed" in payload["blockers"]
+    assert "Fixture copy not completed" in payload["blockers"]
+    assert str(tmp_path) not in serialized
+    assert "dashboard_lab_profiles" not in serialized
+
+
+def test_onboarding_completion_summary_does_not_treat_failed_actions_as_complete(tmp_path):
+    registry = _registry(
+        tmp_path,
+        capabilities=[
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail"},
+        ],
+        data_sources=["callrail"],
+    )
+    output_dir = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(output_dir / "callrail-summary.json", {"schema_version": "callrail.v1"})
+    fixture_target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
+    audit_path = tmp_path / "logs" / "local-action-runs.jsonl"
+    _write_audit(
+        audit_path,
+        {
+            "timestamp": "2026-06-13T09:00:00+00:00",
+            "action_id": "dashboard_lab.copy-validated-fixtures",
+            "profile_slug": "demo-profile",
+            "status": "ok",
+            "file_counts": {"copied": 1, "overwritten": 0, "skipped": 0, "failed": 0},
+        },
+    )
+    _write_audit(
+        audit_path,
+        {
+            "timestamp": "2026-06-13T09:10:00+00:00",
+            "action_id": "validate-output",
+            "profile_slug": "demo-profile",
+            "status": "failed",
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+            audit_log_path=audit_path,
+            dashboard_lab_fixture_target_dir=fixture_target,
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-completion-summary")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["profile"]["readiness_state"] == "Blocked"
+    assert payload["validation"]["last_validation"] == "Failed"
+    assert "Validation failed" in payload["blockers"]
+    pending_labels = {item["label"]: item for item in payload["incomplete_steps"]}
+    assert pending_labels["Validation completed"]["detail"] == "Failed"
+    checklist_labels = {item["label"]: item for item in payload["final_checklist"]}
+    assert checklist_labels["Validation completed"]["status"] == "pending"
+    assert checklist_labels["Validation completed"]["detail"] == "Failed"
+
+
+def test_onboarding_completion_summary_unknown_profile_returns_404(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+
+    response = client.get("/api/profiles/missing-profile/onboarding-completion-summary")
+
+    assert response.status_code == 404
 
 
 def test_action_plan_endpoint_returns_safe_structured_data(tmp_path):

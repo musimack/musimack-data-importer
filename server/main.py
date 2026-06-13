@@ -43,7 +43,11 @@ from src.operator_console import (
     readiness_matrix,
     validate_profile_output,
 )
-from src.profile_local_config import DEFAULT_LOCAL_PROFILE_CONFIG_DIR, ProfileLocalConfigError, load_profile_provider_config_map
+from src.profile_local_config import (
+    DEFAULT_LOCAL_PROFILE_CONFIG_DIR,
+    ProfileLocalConfigError,
+    load_profile_provider_config_map,
+)
 from src.profile_local_config_writer import (
     ProfileLocalConfigWriteError,
     build_local_config_draft,
@@ -414,6 +418,19 @@ def create_app(
         except OperatorConsoleError as exc:
             raise HTTPException(status_code=404, detail="profile not found") from exc
         return build_onboarding_status(
+            profile,
+            safe_env=current_env(),
+            local_config=current_profile_config(profile),
+            audit_log_path=current_audit_log_path(),
+        )
+
+    @app.get("/api/profiles/{profile_slug}/onboarding-completion-summary")
+    def profile_onboarding_completion_summary(profile_slug: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        return build_onboarding_completion_summary(
             profile,
             safe_env=current_env(),
             local_config=current_profile_config(profile),
@@ -1038,6 +1055,145 @@ def build_onboarding_status(
     }
 
 
+def build_onboarding_completion_summary(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+    audit_log_path: Path = DEFAULT_AUDIT_LOG,
+) -> dict[str, Any]:
+    report = validate_profile_output(profile)
+    onboarding_status = build_onboarding_status(
+        profile,
+        safe_env=safe_env,
+        local_config=local_config,
+        audit_log_path=audit_log_path,
+        output_report=report,
+    )
+    checklist = provider_setup_checklist(profile, env=dict(safe_env), local_config=dict(local_config))
+    checklist_map = {item["provider_key"]: item for item in checklist}
+    enabled_provider_labels = [
+        PROVIDER_LABELS.get(provider, provider)
+        for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills")
+        if provider in profile.data_sources
+    ]
+    actions = _onboarding_action_catalog(profile, safe_env=safe_env, local_config=local_config)
+    try:
+        safe_preview = build_safe_dashboard_lab_copy_preview(profile)["result"]
+    except HTTPException:
+        safe_preview = {
+            "status": "not_ready",
+            "eligible_count": 0,
+            "items": [],
+            "guardrails": _safe_copy_guardrails(),
+        }
+    last_actions = build_last_action_summary(profile, audit_log_path)
+    validation_last = _completion_action_label(last_actions.get("last_validation"))
+    copy_last = _completion_action_label(last_actions.get("last_copy"))
+    readiness_state = _completion_readiness_state(
+        onboarding_status=onboarding_status,
+        safe_preview=safe_preview,
+        last_actions=last_actions,
+    )
+    completed_steps, incomplete_steps = _completion_steps(
+        onboarding_status=onboarding_status,
+        readiness_state=readiness_state,
+        validation_last=validation_last,
+        copy_last=copy_last,
+    )
+    blockers = _completion_blockers(
+        profile=profile,
+        onboarding_status=onboarding_status,
+        checklist=checklist_map,
+        safe_preview=safe_preview,
+        last_actions=last_actions,
+    )
+    recommended_next_actions = _completion_recommended_actions(
+        readiness_state=readiness_state,
+        blockers=blockers,
+        onboarding_status=onboarding_status,
+        safe_preview=safe_preview,
+    )
+    final_checklist = _completion_final_checklist(
+        profile=profile,
+        onboarding_status=onboarding_status,
+        last_actions=last_actions,
+    )
+    planned_live_actions = [
+        action["label"]
+        for action in actions
+        if bool(action.get("external_api")) or str(action.get("label") or "").startswith("Future:")
+    ]
+    provider_outputs = [
+        {
+            "provider": provider["provider"],
+            "label": provider["label"],
+            "status": provider["output_state"],
+        }
+        for provider in onboarding_status["providers"]
+        if provider["enabled"]
+    ]
+    fixture_copy = {
+        "state": onboarding_status["dashboard_copy"]["state"],
+        "preview_state": safe_preview["status"],
+        "eligible_file_count": int(safe_preview["eligible_count"]),
+        "copied_file_count": int(
+            (last_actions["last_copy"] or {}).get("file_counts", {}).get("copied", 0)
+            + (last_actions["last_copy"] or {}).get("file_counts", {}).get("overwritten", 0)
+        ),
+        "last_copy": copy_last,
+    }
+    validation = {
+        "state": onboarding_status["validation"]["state"],
+        "last_validation": validation_last,
+        "warning_count": onboarding_status["validation"]["warning_count"],
+    }
+    handoff_text = _build_operator_handoff_text(
+        profile=profile,
+        enabled_provider_labels=enabled_provider_labels,
+        readiness_state=readiness_state,
+        completed_steps=completed_steps,
+        incomplete_steps=incomplete_steps,
+        blockers=blockers,
+        planned_live_actions=planned_live_actions,
+        validation=validation,
+        fixture_copy=fixture_copy,
+        recommended_next_actions=recommended_next_actions,
+    )
+    return {
+        "profile": {
+            "slug": profile.slug,
+            "display_name": profile.display_name,
+            "route": profile.dashboard_lab_route,
+            "readiness_state": readiness_state,
+        },
+        "enabled_provider_labels": enabled_provider_labels,
+        "completed_steps": completed_steps,
+        "incomplete_steps": incomplete_steps,
+        "blockers": blockers,
+        "local_config": onboarding_status["local_config"],
+        "vault": onboarding_status["vault"],
+        "provider_outputs": provider_outputs,
+        "validation": validation,
+        "fixture_copy": fixture_copy,
+        "dashboard_lab_readiness": {
+            "state": readiness_state,
+            "portal_publishing": "Separate manual workflow",
+        },
+        "planned_live_actions": planned_live_actions,
+        "recommended_next_actions": recommended_next_actions,
+        "final_checklist": final_checklist,
+        "safety_notes": [
+            "Local onboarding summary only. No provider execution, OAuth, portal publishing, or database mutation.",
+            "Secrets stay in env or the encrypted vault and are never returned here.",
+            "File contents, raw rows, phone numbers, caller names, transcripts, recordings, customer IDs, and OAuth material are excluded.",
+            "Dashboard-lab readiness here means local fixture readiness only. Portal publishing is separate.",
+        ],
+        "operator_handoff_text": handoff_text,
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+
 def _onboarding_provider_status(
     profile: DashboardLabProfile,
     provider: str,
@@ -1088,6 +1244,286 @@ def _onboarding_provider_status(
         "copy_state": copy_state,
         "next_step": next_step,
     }
+
+
+def _completion_readiness_state(
+    *,
+    onboarding_status: Mapping[str, Any],
+    safe_preview: Mapping[str, Any],
+    last_actions: Mapping[str, Any],
+) -> str:
+    local_config_state = str(onboarding_status["local_config"]["state"])
+    validation_state = str(onboarding_status["validation"]["state"])
+    copy_succeeded = _action_succeeded(last_actions.get("last_copy"))
+    providers = onboarding_status["providers"]
+    enabled_providers = [item for item in providers if item["enabled"]]
+    if not enabled_providers and local_config_state != "Configured":
+        return "Not started"
+    last_validation = last_actions.get("last_validation") or {}
+    if str(last_validation.get("status") or "") == "failed":
+        return "Blocked"
+    if copy_succeeded:
+        return "Dashboard-lab ready"
+    if any(item["config_state"] in {"Needs config", "Vault locked"} for item in enabled_providers):
+        return "Setup in progress"
+    if (
+        safe_preview.get("status") == "ready"
+        and _action_succeeded(last_actions.get("last_validation"))
+    ):
+        return "Fixture copy ready"
+    if (
+        enabled_providers
+        and all(item["output_state"] == "Output exists" for item in enabled_providers)
+        and validation_state in {"Ready for validation", "Validation passed"}
+    ):
+        return "Local data ready"
+    return "Setup in progress"
+
+
+def _completion_steps(
+    *,
+    onboarding_status: Mapping[str, Any],
+    readiness_state: str,
+    validation_last: str,
+    copy_last: str,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    local_config_state = str(onboarding_status["local_config"]["state"])
+    vault_state = str(onboarding_status["vault"]["state"])
+    providers = [item for item in onboarding_status["providers"] if item["enabled"]]
+    output_ready = bool(providers) and all(item["output_state"] == "Output exists" for item in providers)
+    fixture_preview_ready = readiness_state in {"Fixture copy ready", "Dashboard-lab ready"}
+    checklist = [
+        {"id": "profile_shell", "label": "Profile shell created", "status": "complete", "detail": "Tracked profile shell is saved."},
+        {
+            "id": "local_config",
+            "label": "Local config saved",
+            "status": "complete" if local_config_state == "Configured" else "pending",
+            "detail": local_config_state,
+        },
+        {
+            "id": "secrets",
+            "label": "Secrets configured if needed",
+            "status": "complete" if vault_state in {"Configured via vault", "Not configured"} else "pending",
+            "detail": vault_state,
+        },
+        {
+            "id": "local_imports",
+            "label": "Local imports completed if enabled",
+            "status": "complete" if output_ready else "pending",
+            "detail": "Enabled local providers have summary output." if output_ready else "One or more enabled providers still need output.",
+        },
+        {
+            "id": "validation",
+            "label": "Validation completed",
+            "status": "complete" if validation_last == "Available" else "pending",
+            "detail": validation_last,
+        },
+        {
+            "id": "fixture_preview",
+            "label": "Fixture copy preview completed",
+            "status": "complete" if fixture_preview_ready else "pending",
+            "detail": readiness_state,
+        },
+        {
+            "id": "fixture_copy",
+            "label": "Fixture copy completed",
+            "status": "complete" if copy_last == "Available" else "pending",
+            "detail": copy_last,
+        },
+        {
+            "id": "portal",
+            "label": "Portal publishing separate",
+            "status": "separate",
+            "detail": "Handled outside the importer after local QA.",
+        },
+    ]
+    completed = [item for item in checklist if item["status"] == "complete"]
+    incomplete = [item for item in checklist if item["status"] != "complete"]
+    return completed, incomplete
+
+
+def _completion_blockers(
+    *,
+    profile: DashboardLabProfile,
+    onboarding_status: Mapping[str, Any],
+    checklist: Mapping[str, Any],
+    safe_preview: Mapping[str, Any],
+    last_actions: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    providers = [item for item in onboarding_status["providers"] if item["enabled"]]
+    if onboarding_status["local_config"]["state"] != "Configured":
+        blockers.append("Missing local config")
+    if any(item["config_state"] == "Vault locked" for item in providers):
+        blockers.append("Missing required secret")
+    if any(item["output_state"] != "Output exists" for item in providers):
+        blockers.append("Output missing")
+    last_validation = last_actions.get("last_validation") or {}
+    if not last_validation:
+        blockers.append("Validation not run")
+    elif str(last_validation.get("status") or "") == "failed":
+        blockers.append("Validation failed")
+    if safe_preview.get("status") != "ready":
+        blockers.append("Fixture copy not previewed")
+    if not _action_succeeded(last_actions.get("last_copy")):
+        blockers.append("Fixture copy not completed")
+    if any(
+        str(checklist.get(provider, {}).get("status") or "") == "planned"
+        for provider in ("ga4", "gsc", "local_falcon", "google_ads_search")
+        if provider in profile.data_sources
+    ):
+        blockers.append("Live provider action planned/unavailable")
+    return _dedupe_strings(blockers)
+
+
+def _completion_recommended_actions(
+    *,
+    readiness_state: str,
+    blockers: list[str],
+    onboarding_status: Mapping[str, Any],
+    safe_preview: Mapping[str, Any],
+) -> list[str]:
+    if blockers:
+        return blockers[:3]
+    if readiness_state == "Dashboard-lab ready":
+        return [
+            "Review the copied local dashboard-lab fixtures.",
+            "Hand off the operator summary.",
+            "Handle portal publishing separately.",
+        ]
+    if readiness_state == "Fixture copy ready":
+        return [
+            "Confirm the guarded fixture copy step.",
+            "Refresh the completion summary after copy.",
+            "Prepare the operator handoff.",
+        ]
+    if safe_preview.get("status") == "ready":
+        return [
+            "Run the guarded fixture copy.",
+            "Refresh the completion summary.",
+            "Prepare the operator handoff.",
+        ]
+    if onboarding_status["validation"]["last_validation"] != "Available":
+        return [
+            "Run validation on the current local output.",
+            "Refresh the completion summary.",
+        ]
+    return ["Continue local setup and refresh the completion summary."]
+
+
+def _completion_final_checklist(
+    *,
+    profile: DashboardLabProfile,
+    onboarding_status: Mapping[str, Any],
+    last_actions: Mapping[str, Any],
+) -> list[dict[str, str]]:
+    providers = [item for item in onboarding_status["providers"] if item["enabled"]]
+    output_ready = bool(providers) and all(item["output_state"] == "Output exists" for item in providers)
+    validation_last = _completion_action_label(last_actions.get("last_validation"))
+    copy_last = _completion_action_label(last_actions.get("last_copy"))
+    return [
+        {"label": "Profile shell created", "status": "complete", "detail": profile.dashboard_lab_route},
+        {
+            "label": "Local config saved",
+            "status": "complete" if onboarding_status["local_config"]["state"] == "Configured" else "pending",
+            "detail": str(onboarding_status["local_config"]["state"]),
+        },
+        {
+            "label": "Secrets configured if needed",
+            "status": "complete" if onboarding_status["vault"]["state"] != "Vault locked" else "pending",
+            "detail": str(onboarding_status["vault"]["state"]),
+        },
+        {
+            "label": "Local imports completed if enabled",
+            "status": "complete" if output_ready else "pending",
+            "detail": "Ready" if output_ready else "Waiting on output",
+        },
+        {
+            "label": "Validation completed",
+            "status": "complete" if _action_succeeded(last_actions.get("last_validation")) else "pending",
+            "detail": validation_last,
+        },
+        {
+            "label": "Fixture copy completed",
+            "status": "complete" if _action_succeeded(last_actions.get("last_copy")) else "pending",
+            "detail": copy_last,
+        },
+        {
+            "label": "Dashboard-lab ready",
+            "status": "complete" if _action_succeeded(last_actions.get("last_copy")) else "pending",
+            "detail": str(onboarding_status["dashboard_copy"]["state"]),
+        },
+        {
+            "label": "Portal publishing separate",
+            "status": "separate",
+            "detail": "Manual follow-up outside this tool.",
+        },
+    ]
+
+
+def _build_operator_handoff_text(
+    *,
+    profile: DashboardLabProfile,
+    enabled_provider_labels: list[str],
+    readiness_state: str,
+    completed_steps: list[dict[str, str]],
+    incomplete_steps: list[dict[str, str]],
+    blockers: list[str],
+    planned_live_actions: list[str],
+    validation: Mapping[str, Any],
+    fixture_copy: Mapping[str, Any],
+    recommended_next_actions: list[str],
+) -> str:
+    lines = [
+        f"Operator handoff: {profile.display_name} ({profile.slug})",
+        f"Dashboard-lab route: {profile.dashboard_lab_route}",
+        f"Current readiness: {readiness_state}",
+        f"Enabled providers: {', '.join(enabled_provider_labels) if enabled_provider_labels else 'none'}",
+        "",
+        "Completed local steps:",
+    ]
+    lines.extend(f"- {item['label']}: {item['detail']}" for item in completed_steps)
+    lines.append("")
+    lines.append("Still pending:")
+    lines.extend(f"- {item['label']}: {item['detail']}" for item in incomplete_steps)
+    lines.append("")
+    lines.append(f"Validation status: {validation['state']} ({validation['last_validation']})")
+    lines.append(f"Fixture copy status: {fixture_copy['state']} ({fixture_copy['last_copy']})")
+    if blockers:
+        lines.append("")
+        lines.append("Current blockers:")
+        lines.extend(f"- {item}" for item in blockers)
+    if planned_live_actions:
+        lines.append("")
+        lines.append("Planned or unavailable live actions:")
+        lines.extend(f"- {item}" for item in planned_live_actions)
+    lines.append("")
+    lines.append("Recommended next actions:")
+    lines.extend(f"- {item}" for item in recommended_next_actions)
+    lines.append("")
+    lines.append("Portal publishing is separate from this local importer workflow.")
+    lines.append("Live provider pulls, OAuth, fixture copies beyond the guarded local target, and portal publishing are not run automatically by this completed local workflow.")
+    return "\n".join(lines)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            ordered.append(value)
+    return ordered
+
+
+def _action_succeeded(action: Mapping[str, Any] | None) -> bool:
+    return bool(action) and str(action.get("status") or "") == "ok"
+
+
+def _completion_action_label(action: Mapping[str, Any] | None) -> str:
+    if not action:
+        return "Not run"
+    return "Available" if _action_succeeded(action) else "Failed"
 
 
 def _onboarding_local_config_state(checklist: list[dict[str, Any]]) -> dict[str, Any]:
