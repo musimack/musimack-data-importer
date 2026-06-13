@@ -194,9 +194,12 @@ code {
 }
 
 .simple-summary-card,
+.runtime-safety-banner,
+.new-onboarding-card,
 .onboarding-flow-card,
 .onboarding-status-card,
 .onboarding-actions-card,
+.session-history-card,
 .secret-vault-card,
 .profile-registry-card,
 .local-config-card,
@@ -216,6 +219,116 @@ code {
   border-color: #bfd9d2;
   display: grid;
   gap: 16px;
+}
+
+.runtime-safety-banner {
+  align-items: flex-start;
+  background: #f5f8fb;
+  border-color: #cdd8e3;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.runtime-safety-banner.qa {
+  background: #f0faf5;
+  border-color: #b9dbc9;
+}
+
+.runtime-safety-banner strong,
+.runtime-safety-banner span {
+  display: block;
+}
+
+.runtime-safety-banner span {
+  color: #596575;
+  margin-top: 3px;
+}
+
+.runtime-safety-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.runtime-safety-flags span {
+  background: #ffffff;
+  border: 1px solid #d6dde6;
+  border-radius: 999px;
+  color: #344052;
+  font-size: 12px;
+  font-weight: 750;
+  margin: 0;
+  padding: 5px 8px;
+}
+
+.new-onboarding-card {
+  background: #ffffff;
+  border-color: #d4dce6;
+  display: grid;
+  gap: 14px;
+}
+
+.new-onboarding-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.new-onboarding-heading h2,
+.new-onboarding-heading p {
+  margin: 0;
+}
+
+.new-onboarding-heading h2 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.new-onboarding-heading p {
+  color: #596575;
+  line-height: 1.5;
+  margin-top: 8px;
+  max-width: 880px;
+}
+
+.new-onboarding-steps {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.new-onboarding-step {
+  align-items: center;
+  background: #f8fafb;
+  border: 1px solid #e0e6ed;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.new-onboarding-step span {
+  align-items: center;
+  background: #334155;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.new-onboarding-step strong {
+  color: #253043;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .onboarding-status-card {
@@ -248,7 +361,7 @@ code {
 .onboarding-flow-steps {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .onboarding-flow-step {
@@ -272,6 +385,21 @@ code {
   color: #253043;
   font-size: 14px;
   line-height: 1.25;
+}
+
+.onboarding-flow-step.ok {
+  background: #f4fbf7;
+  border-color: #c8dfd1;
+}
+
+.onboarding-flow-step.warn {
+  background: #fff9ed;
+  border-color: #ecd7a8;
+}
+
+.onboarding-flow-step.neutral {
+  background: #f8fafb;
+  border-color: #dfe3ea;
 }
 
 .onboarding-status-strip {
@@ -406,6 +534,85 @@ code {
   gap: 10px;
   min-width: 0;
   padding: 12px;
+}
+
+.onboarding-action-group.planned {
+  background: #f8fafb;
+}
+
+.planned-actions-panel {
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  grid-column: 1 / -1;
+  padding: 12px;
+}
+
+.planned-actions-panel summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.planned-actions-panel > p {
+  color: #596575;
+  line-height: 1.5;
+  margin: 8px 0 12px;
+}
+
+.session-history-card {
+  background: #ffffff;
+  border-color: #d5dde8;
+  display: grid;
+  gap: 12px;
+}
+
+.session-history-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.session-history-heading h3,
+.session-history-heading p {
+  margin: 0;
+}
+
+.session-history-heading p {
+  color: #596575;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.session-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.session-history-item {
+  align-items: start;
+  background: #f8fafb;
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1.4fr) auto;
+  padding: 10px;
+}
+
+.session-history-item strong,
+.session-history-item span,
+.session-history-item p,
+.session-history-item time {
+  margin: 0;
+  min-width: 0;
+}
+
+.session-history-item div span,
+.session-history-item time {
+  color: #687181;
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
 }
 
 .onboarding-action-group h4 {
@@ -1447,11 +1654,14 @@ pre {
   }
 
   .topbar,
+  .runtime-safety-banner,
+  .new-onboarding-heading,
   .section-heading,
   .simple-summary-main,
   .onboarding-flow-heading,
   .onboarding-status-heading,
   .onboarding-actions-heading,
+  .session-history-heading,
   .secret-vault-heading,
   .profile-registry-heading,
   .local-secret-heading,
@@ -1470,10 +1680,12 @@ pre {
   .profile-registry-options,
   .readiness-grid,
   .provider-grid,
+  .new-onboarding-steps,
   .summary-counts,
   .onboarding-flow-steps,
   .onboarding-status-strip,
   .onboarding-action-groups,
+  .session-history-item,
   .vault-status-grid,
   .vault-controls,
   .next-action-card,

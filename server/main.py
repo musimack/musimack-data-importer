@@ -365,6 +365,10 @@ def create_app(
             ]
         }
 
+    @app.get("/api/runtime-safety-status")
+    def runtime_safety_status() -> dict[str, Any]:
+        return build_runtime_safety_status(current_env())
+
     @app.get("/api/profile-registry/new-draft")
     def profile_registry_new_draft() -> dict[str, Any]:
         return build_profile_registry_draft()
@@ -771,6 +775,43 @@ def resolve_dashboard_lab_fixture_target_dir(
     if override:
         return Path(override)
     return None
+
+
+def build_runtime_safety_status(env: Mapping[str, str]) -> dict[str, Any]:
+    flags = {
+        "profile_registry_override_active": _env_override_active(env, PROFILE_REGISTRY_PATH_ENV),
+        "local_config_override_active": _env_override_active(env, LOCAL_CONFIG_DIR_ENV),
+        "vault_override_active": _env_override_active(env, IMPORTER_VAULT_PATH_ENV),
+        "form_fills_input_override_active": _env_override_active(env, FORM_FILLS_INPUT_DIR_ENV),
+        "callrail_input_override_active": _env_override_active(env, CALLRAIL_INPUT_DIR_ENV),
+        "dashboard_lab_fixture_target_override_active": _env_override_active(env, DASHBOARD_LAB_FIXTURE_TARGET_DIR_ENV),
+    }
+    return {
+        "mode": "qa_override" if any(flags.values()) else "default_local",
+        "overrides": flags,
+        "active_labels": [
+            label
+            for key, label in {
+                "profile_registry_override_active": "Profile registry override active",
+                "local_config_override_active": "Local config override active",
+                "vault_override_active": "Vault override active",
+                "form_fills_input_override_active": "Form Fills input override active",
+                "callrail_input_override_active": "CallRail input override active",
+                "dashboard_lab_fixture_target_override_active": "Fixture target override active",
+            }.items()
+            if flags[key]
+        ],
+        "guardrails": [
+            "no raw paths returned",
+            "no provider pulls or OAuth flows",
+            "no portal publishing",
+            "no dashboard-lab source edits",
+        ],
+    }
+
+
+def _env_override_active(env: Mapping[str, str], name: str) -> bool:
+    return bool(str(env.get(name) or "").strip())
 
 
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:

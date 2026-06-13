@@ -142,6 +142,29 @@ type ActionRunHistory = {
   skipped_malformed: number;
 };
 
+type RuntimeSafetyStatus = {
+  mode: string;
+  overrides: {
+    profile_registry_override_active: boolean;
+    local_config_override_active: boolean;
+    vault_override_active: boolean;
+    form_fills_input_override_active: boolean;
+    callrail_input_override_active: boolean;
+    dashboard_lab_fixture_target_override_active: boolean;
+  };
+  active_labels: string[];
+  guardrails: string[];
+};
+
+type SessionActionResult = {
+  id: string;
+  timestamp: string;
+  label: string;
+  provider: string;
+  status: string;
+  message: string;
+};
+
 type SecretVaultStatus = {
   exists: boolean;
   unlocked: boolean;
@@ -474,12 +497,15 @@ function App() {
   const [onboardingActionBusyId, setOnboardingActionBusyId] = useState<string>('');
   const [onboardingActionInputs, setOnboardingActionInputs] = useState<Record<string, string>>({});
   const [onboardingActionConfirmations, setOnboardingActionConfirmations] = useState<Record<string, boolean>>({});
+  const [runtimeSafetyStatus, setRuntimeSafetyStatus] = useState<RuntimeSafetyStatus | null>(null);
+  const [sessionActionResults, setSessionActionResults] = useState<SessionActionResult[]>([]);
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
   );
 
   useEffect(() => {
+    refreshRuntimeSafetyStatus(setRuntimeSafetyStatus);
     refreshProfiles(setProfiles, setSelectedSlug, setError);
     refreshProfileRegistryDraft(
       setProfileRegistryDraft,
@@ -600,7 +626,11 @@ function App() {
         production, portal database, OAuth, upload, or provider mutation actions happen here.
       </section>
 
+      <RuntimeSafetyBanner status={runtimeSafetyStatus} />
+
       {error ? <div className="error-banner">API error: {error}</div> : null}
+
+      <NewClientOnboardingGuide runtimeSafetyStatus={runtimeSafetyStatus} />
 
       <ProfileRegistryCreator
         busy={profileRegistryBusy}
@@ -683,9 +713,11 @@ function App() {
 
               <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
 
-              <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} />
+              <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
+
+              <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
 
               <OnboardingActionsPanel
                 actions={onboardingActions}
@@ -709,10 +741,17 @@ function App() {
                     },
                     setOnboardingActionBusyId,
                     setOnboardingActionMessage,
+                    (result) =>
+                      setSessionActionResults((current) => [
+                        result,
+                        ...current.filter((item) => item.id !== result.id),
+                      ].slice(0, 8)),
                     () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
                   )
                 }
               />
+
+              <SessionActionHistoryPanel results={sessionActionResults} />
 
               <SecretVaultPanel
                 passphrase={vaultPassphrase}
@@ -746,7 +785,10 @@ function App() {
                     setLocalFalconSecretMessage,
                     setLocalFalconSecretBusy,
                     setLocalFalconApiKey,
-                    () => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy),
+                    () => {
+                      refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
+                      refreshSelectedProfile('Secret readiness refreshed');
+                    },
                   )
                 }
                 onDeleteLocalFalconKey={() =>
@@ -755,12 +797,13 @@ function App() {
                     setLocalFalconSecretStatus,
                     setLocalFalconSecretMessage,
                     setLocalFalconSecretBusy,
-                    () => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy),
+                    () => {
+                      refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
+                      refreshSelectedProfile('Secret readiness refreshed');
+                    },
                   )
                 }
               />
-
-              <PrimaryNextAction detail={detail} copyPreview={copyPreview} />
 
               <LocalConfigEditor
                 busy={localConfigBusy}
@@ -931,6 +974,72 @@ const PROVIDER_SAFETY_NOTES: Record<string, string> = {
   dashboard_lab: 'Guarded copy targets dashboard-lab public/local-fixtures only and excludes ga4-snapshot.json.',
 };
 
+function RuntimeSafetyBanner({ status }: { status: RuntimeSafetyStatus | null }) {
+  if (!status) {
+    return (
+      <section className="runtime-safety-banner" aria-label="Runtime safety status">
+        <strong>Runtime safety</strong>
+        <span>Checking local mode...</span>
+      </section>
+    );
+  }
+  const qaMode = status.mode === 'qa_override';
+  return (
+    <section className={qaMode ? 'runtime-safety-banner qa' : 'runtime-safety-banner'} aria-label="Runtime safety status">
+      <div>
+        <strong>{qaMode ? 'QA mode active' : 'Default local mode'}</strong>
+        <span>
+          {qaMode
+            ? 'Disposable overrides are active. Raw paths are hidden.'
+            : 'Using default local paths. Profile shell saves write tracked registry metadata.'}
+        </span>
+      </div>
+      <div className="runtime-safety-flags">
+        {(status.active_labels.length ? status.active_labels : ['No disposable overrides active']).map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NewClientOnboardingGuide({ runtimeSafetyStatus }: { runtimeSafetyStatus: RuntimeSafetyStatus | null }) {
+  const qaMode = runtimeSafetyStatus?.mode === 'qa_override';
+  const steps = [
+    'Create profile shell',
+    'Add local config',
+    'Add secrets if needed',
+    'Import local files',
+    'Validate outputs',
+    'Preview fixture copy',
+    'Copy validated fixtures',
+    'Ready for dashboard-lab',
+  ];
+  return (
+    <section className="new-onboarding-card" aria-label="New Client Onboarding">
+      <div className="new-onboarding-heading">
+        <div>
+          <span className="eyebrow">New Client Onboarding</span>
+          <h2>Build a real-profile-ready setup from one console</h2>
+          <p>
+            Profile shells are tracked metadata. Local config stays ignored. Secrets stay encrypted locally. Imports
+            write ignored local output. Fixture copy is confirmed and guarded. Portal publishing is not part of this tool.
+          </p>
+        </div>
+        <span className={qaMode ? 'badge ok' : 'badge neutral'}>{qaMode ? 'Disposable QA' : 'Local operator'}</span>
+      </div>
+      <div className="new-onboarding-steps">
+        {steps.map((step, index) => (
+          <div className="new-onboarding-step" key={step}>
+            <span>{index + 1}</span>
+            <strong>{step}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SimpleOnboardingSummary({
   detail,
   copyPreview,
@@ -1037,40 +1146,69 @@ function StatusTile({ label, value, tone }: { label: string; value: string; tone
   );
 }
 
-function OnboardingFlowChecklist({ detail, copyPreview }: { detail: ProfileDetail; copyPreview: CopyPreview | null }) {
+function OnboardingFlowChecklist({
+  detail,
+  copyPreview,
+  actions,
+}: {
+  detail: ProfileDetail;
+  copyPreview: CopyPreview | null;
+  actions: OnboardingActionsResponse | null;
+}) {
   const enabledProviders = detail.onboarding_status.providers.filter((provider) => provider.enabled);
   const readyProviders = enabledProviders.filter((provider) => provider.copy_state === 'Ready for dashboard-lab copy');
   const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.some((item) => item.source_exists);
+  const copyAction = actions?.actions.find((action) => action.id === 'dashboard_lab.copy-validated-fixtures');
+  const localFileActions = actions?.actions.filter((action) => action.id === 'form_fills.import-local' || action.id === 'callrail.import-local') ?? [];
+  const unavailableLocalImports = localFileActions.filter((action) => !action.available).length;
   const steps = [
     {
       label: 'Profile shell',
-      state: 'Ready',
+      state: 'Complete',
       detail: detail.dashboard_lab_route,
+      tone: 'ok',
     },
     {
       label: 'Local config',
-      state: detail.onboarding_status.local_config.state,
+      state: stepStateLabel(detail.onboarding_status.local_config.state),
       detail: 'Ignored local config only',
+      tone: stepTone(detail.onboarding_status.local_config.state),
     },
     {
       label: 'Secrets/readiness',
-      state: detail.onboarding_status.vault.state,
+      state: stepStateLabel(detail.onboarding_status.vault.state),
       detail: 'Vault metadata only',
+      tone: stepTone(detail.onboarding_status.vault.state),
     },
     {
       label: 'Local imports',
-      state: `${readyProviders.length}/${enabledProviders.length || 0} ready`,
-      detail: 'Form Fills and CallRail can run locally when enabled',
+      state: enabledProviders.length ? `${readyProviders.length}/${enabledProviders.length} ready` : 'Skipped/not enabled',
+      detail: unavailableLocalImports ? 'Enable lead sources before local imports' : 'Form Fills and CallRail can run locally when enabled',
+      tone: enabledProviders.length && readyProviders.length === enabledProviders.length ? 'ok' : enabledProviders.length ? 'warn' : 'neutral',
     },
     {
       label: 'Validation',
-      state: detail.onboarding_status.validation.state,
+      state: stepStateLabel(detail.onboarding_status.validation.state),
       detail: 'No provider calls',
+      tone: stepTone(detail.onboarding_status.validation.state),
     },
     {
-      label: 'Fixture copy',
-      state: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Copied' : copyReady ? 'Ready to copy' : 'Needs output',
+      label: 'Preview fixture copy',
+      state: copyReady ? 'Ready' : 'Needs attention',
+      detail: 'Preview is read-only',
+      tone: copyReady ? 'ok' : 'warn',
+    },
+    {
+      label: 'Copy validated fixtures',
+      state: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Complete' : copyAction?.available ? 'Ready' : 'Needs attention',
       detail: 'Guarded local fixtures only',
+      tone: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'ok' : copyAction?.available ? 'warn' : 'neutral',
+    },
+    {
+      label: 'Ready for dashboard-lab',
+      state: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Complete' : 'Not started',
+      detail: 'Portal publishing is separate',
+      tone: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'ok' : 'neutral',
     },
   ];
   return (
@@ -1086,7 +1224,7 @@ function OnboardingFlowChecklist({ detail, copyPreview }: { detail: ProfileDetai
       </div>
       <div className="onboarding-flow-steps">
         {steps.map((step) => (
-          <div className="onboarding-flow-step" key={step.label}>
+          <div className={`onboarding-flow-step ${step.tone}`} key={step.label}>
             <span>{step.label}</span>
             <strong>{step.state}</strong>
             <small>{step.detail}</small>
@@ -1095,6 +1233,34 @@ function OnboardingFlowChecklist({ detail, copyPreview }: { detail: ProfileDetai
       </div>
     </section>
   );
+}
+
+function stepStateLabel(state: string) {
+  const normalized = state.toLowerCase();
+  if (normalized.includes('ready') || normalized.includes('configured') || normalized.includes('available')) {
+    return 'Ready';
+  }
+  if (normalized.includes('missing') || normalized.includes('needs') || normalized.includes('blocked')) {
+    return 'Needs attention';
+  }
+  if (normalized.includes('planned') || normalized.includes('not enabled')) {
+    return 'Planned/unavailable';
+  }
+  if (normalized.includes('done') || normalized.includes('copied')) {
+    return 'Complete';
+  }
+  return state || 'Not started';
+}
+
+function stepTone(state: string) {
+  const normalized = state.toLowerCase();
+  if (normalized.includes('ready') || normalized.includes('configured') || normalized.includes('available') || normalized.includes('done') || normalized.includes('copied')) {
+    return 'ok';
+  }
+  if (normalized.includes('missing') || normalized.includes('needs') || normalized.includes('blocked')) {
+    return 'warn';
+  }
+  return 'neutral';
 }
 
 function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus }) {
@@ -1132,6 +1298,19 @@ function OnboardingActionsPanel({
   onConfirmationChange: (actionId: string, confirmed: boolean) => void;
   onRun: (actionId: string) => void;
 }) {
+  const safeGroups = actions?.groups
+    .map((group) => ({
+      ...group,
+      actions: group.actions.filter((action) => !isPlannedLiveAction(action)),
+    }))
+    .filter((group) => group.actions.length > 0);
+  const plannedGroups = actions?.groups
+    .map((group) => ({
+      ...group,
+      actions: group.actions.filter((action) => isPlannedLiveAction(action)),
+    }))
+    .filter((group) => group.actions.length > 0);
+
   return (
     <section className="onboarding-actions-card" aria-label="Onboarding Actions">
       <div className="onboarding-actions-heading">
@@ -1142,9 +1321,9 @@ function OnboardingActionsPanel({
         </div>
       </div>
       {message ? <p className="vault-message">{message}</p> : null}
-      {actions ? (
+      {actions && safeGroups ? (
         <div className="onboarding-action-groups">
-          {actions.groups.map((group) => (
+          {safeGroups.map((group) => (
             <section className="onboarding-action-group" key={group.provider} aria-label={`${group.label} onboarding actions`}>
               <h4>{group.label}</h4>
               <div className="onboarding-action-list">
@@ -1163,12 +1342,41 @@ function OnboardingActionsPanel({
               </div>
             </section>
           ))}
+          {plannedGroups && plannedGroups.length ? (
+            <details className="planned-actions-panel">
+              <summary>Planned live provider actions</summary>
+              <p>These actions are visible for sequencing and intentionally disabled. They do not run in this milestone.</p>
+              {plannedGroups.map((group) => (
+                <section className="onboarding-action-group planned" key={group.provider} aria-label={`${group.label} planned actions`}>
+                  <h4>{group.label}</h4>
+                  <div className="onboarding-action-list">
+                    {group.actions.map((action) => (
+                      <OnboardingActionCard
+                        action={action}
+                        inputValue={actionInputs[action.id] ?? ''}
+                        confirmed={Boolean(actionConfirmations[action.id])}
+                        busy={busyActionId === action.id}
+                        key={action.id}
+                        onInputChange={(value) => onInputChange(action.id, value)}
+                        onConfirmationChange={(confirmed) => onConfirmationChange(action.id, confirmed)}
+                        onRun={() => onRun(action.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </details>
+          ) : null}
         </div>
       ) : (
         <p className="vault-message">Loading onboarding actions...</p>
       )}
     </section>
   );
+}
+
+function isPlannedLiveAction(action: OnboardingAction) {
+  return action.label.startsWith('Future:') || action.external_api;
 }
 
 function OnboardingActionCard({
@@ -1280,6 +1488,38 @@ function actionButtonLabel(actionId: string) {
     return 'Copy validated fixtures';
   }
   return 'Run safe check';
+}
+
+function SessionActionHistoryPanel({ results }: { results: SessionActionResult[] }) {
+  return (
+    <section className="session-history-card" aria-label="Current session action results">
+      <div className="session-history-heading">
+        <div>
+          <span className="eyebrow">Current browser session</span>
+          <h3>Recent action results</h3>
+          <p>In-memory only. Shows safe labels and status, not command output, paths, payloads, or secrets.</p>
+        </div>
+        <span className="badge neutral">{results.length ? `${results.length} recent` : 'No actions yet'}</span>
+      </div>
+      {results.length ? (
+        <div className="session-history-list">
+          {results.map((result) => (
+            <article className="session-history-item" key={result.id}>
+              <div>
+                <strong>{result.label}</strong>
+                <span>{result.provider}</span>
+              </div>
+              <span className={statusBadgeClass(result.status)}>{result.status}</span>
+              <p>{result.message}</p>
+              <time>{result.timestamp}</time>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="vault-message">Run a safe local check, import, validation, or fixture-copy action to see it here.</p>
+      )}
+    </section>
+  );
 }
 
 function SecretVaultPanel({
@@ -2884,6 +3124,12 @@ function fetchJson<T>(url: string): Promise<T> {
   });
 }
 
+function refreshRuntimeSafetyStatus(setRuntimeSafetyStatus: (status: RuntimeSafetyStatus | null) => void) {
+  fetchJson<RuntimeSafetyStatus>(`${API_BASE}/api/runtime-safety-status`)
+    .then((payload) => setRuntimeSafetyStatus(payload))
+    .catch(() => setRuntimeSafetyStatus(null));
+}
+
 function refreshOnboardingActions(
   profileSlug: string,
   setActions: (actions: OnboardingActionsResponse | null) => void,
@@ -2906,6 +3152,7 @@ function runOnboardingAction(
   options: { confirmed: boolean; inputFile: string },
   setBusyActionId: (actionId: string) => void,
   setMessage: (message: string) => void,
+  addSessionResult: (result: SessionActionResult) => void,
   onComplete?: () => void,
 ) {
   setBusyActionId(actionId);
@@ -2926,15 +3173,17 @@ function runOnboardingAction(
     .then((payload) => {
       const status = String(payload.result.status ?? 'ok');
       const message = String(payload.result.message ?? 'Action completed.');
-      setMessage(`${payload.action.provider_label}: ${safeOnboardingActionResultMessage(status, message)}`);
-      if (
-        (
-          payload.action.id === 'form_fills.import-local' ||
-          payload.action.id === 'callrail.import-local' ||
-          payload.action.id === 'dashboard_lab.copy-validated-fixtures'
-        ) &&
-        status === 'ok'
-      ) {
+      const safeMessage = safeOnboardingActionResultMessage(status, message);
+      setMessage(`${payload.action.provider_label}: ${safeMessage}`);
+      addSessionResult({
+        id: `${payload.action.id}-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        label: payload.action.label,
+        provider: payload.action.provider_label,
+        status: safeActionStatus(status),
+        message: safeMessage,
+      });
+      if (shouldRefreshAfterOnboardingAction(status)) {
         onComplete?.();
       }
     })
@@ -2962,6 +3211,23 @@ function safeOnboardingActionResultMessage(status: string, message: string) {
     return message || 'Needs output or validation.';
   }
   return message;
+}
+
+function shouldRefreshAfterOnboardingAction(status: string) {
+  return !['failed', 'rejected', 'input_missing', 'unavailable'].includes(status);
+}
+
+function safeActionStatus(status: string) {
+  if (status === 'ok' || status === 'passed' || status === 'ready') {
+    return 'complete';
+  }
+  if (status === 'not_ready' || status === 'unavailable') {
+    return 'needs attention';
+  }
+  if (status === 'rejected' || status === 'failed' || status === 'input_missing') {
+    return 'blocked';
+  }
+  return status || 'complete';
 }
 
 function refreshVaultStatus(

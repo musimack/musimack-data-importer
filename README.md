@@ -727,6 +727,37 @@ http://localhost:5274
 
 The importer frontend intentionally uses port `5274` so it can run at the same time as dashboard-lab, which commonly uses port `5174`.
 
+### Local onboarding runbook
+
+Use the console as a guided local workstation:
+
+1. Create a tracked profile shell.
+2. Add ignored per-profile local config with env var names and safe path references only.
+3. Add encrypted local vault secrets only when a provider needs them.
+4. Import supported local files, such as Form Fills and aggregate CallRail exports, from ignored local input folders.
+5. Validate ignored local output summaries.
+6. Preview the guarded dashboard-lab fixture copy.
+7. Confirm and copy only validated dashboard summary fixtures.
+8. Open dashboard-lab separately when the local fixture view is ready.
+
+For disposable browser QA, start the backend with safe overrides:
+
+```powershell
+New-Item -ItemType Directory -Force .tmp | Out-Null
+Copy-Item config\dashboard_lab_profiles.json .tmp\dashboard_lab_profiles.qa.json
+$env:MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH = "$PWD\\.tmp\\dashboard_lab_profiles.qa.json"
+$env:MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR = "$PWD\\.tmp\\local-profile-configs"
+$env:MUSIMACK_IMPORTER_VAULT_PATH = "$PWD\\.tmp\\importer-vault.local.json"
+$env:MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR = "$PWD\\.tmp\\form-fills-input"
+$env:MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR = "$PWD\\.tmp\\callrail-input"
+$env:MUSIMACK_IMPORTER_DASHBOARD_LAB_FIXTURE_TARGET_DIR = "$PWD\\.tmp\\dashboard-lab-fixtures"
+python -m uvicorn server.main:app --reload --port 8765
+```
+
+Use fake client/profile metadata, fake env var names, and aggregate/date-only local inputs only. Do not paste secrets, OAuth JSON, API keys, raw provider rows, raw fixture payloads, customer data, caller names, phone numbers, recordings, or transcripts. Delete `.tmp` after QA.
+
+This console does not publish to the portal, run live provider APIs unless a future explicit action is added, start OAuth flows, edit dashboard-lab source, edit client-dashboard, or put secrets in Git.
+
 To manually QA the Secret Vault panel without touching the real default vault path, run the backend with a disposable vault path override:
 
 ```powershell
@@ -758,21 +789,25 @@ python -m uvicorn server.main:app --reload --port 8765
 
 The frontend shows:
 
-- client/profile list for `aluma-seo-geo` and `inn-at-spanish-head`,
+- client/profile list, including Spanish Head,
+- a New Client Onboarding guide and path-free runtime safety mode banner,
 - selected client detail metadata,
-- data-source readiness cards for GA4, GSC, and Local Falcon,
-- expected local-real output folder and dashboard-lab local fixture folder,
-- output file status for `client-profile.json`, `ga4-summary.json`, `gsc-summary.json`, `combined-dashboard-summary.json`, and `local-falcon-summary.json`,
-- a guarded validation panel for reading local-real output metadata only,
-- a guarded dashboard-lab copy panel with dry-run preview and confirmation,
-- a refresh control for selected profile status, copy preview, and recent run history,
+- profile shell draft/preview/save controls,
+- ignored local config draft/preview/save controls,
+- local encrypted vault status and Local Falcon API key management,
+- source-aware onboarding status and next best action,
+- guarded local imports for supported local files,
+- guarded validation controls for local output metadata only,
+- guarded dashboard-lab fixture-copy preview and confirmation,
+- a refresh control for selected profile status, copy preview, onboarding actions, and recent run history,
+- a current-browser-session action result history,
 - a recent local actions panel sourced from ignored audit logs,
 - read-only action plan cards with preview commands, expected outputs, missing inputs, blocked reasons, and safety notes,
 - a visible local-only safety notice.
 
-Provider import action plans are previews only. The browser can copy provider command previews to the clipboard, but it cannot run GA4, GSC, or Local Falcon imports. GA4 remains snapshot/manual-first in the browser: operators run the local snapshot export and then the dashboard-lab `ga4-summary.json` writer from PowerShell.
+Live provider action plans are previews only. The browser can copy provider command previews to the clipboard, but GA4, GSC, Local Falcon fetches, and Google Ads reporting pulls remain disabled/planned unless a future explicit guarded action is added. GA4 remains snapshot/manual-first in the browser: operators run the local snapshot export and then the dashboard-lab `ga4-summary.json` writer from PowerShell.
 
-The guarded validation panel is the only browser-triggered local action currently available. It requires explicit confirmation, reads only metadata from `exports/local-real/dashboard-lab/{profile}/`, validates expected dashboard-lab files, reports missing files, malformed JSON, schema versions, file sizes, and last-modified times, and returns one of `ok`, `warning`, `missing_outputs`, `invalid_json`, or `folder_missing`. Missing files for disabled providers are warnings rather than fatal errors. The validation action does not run shell commands, does not use subprocesses, does not contact providers, does not copy files, and does not touch the portal or dashboard-lab repos.
+Guarded browser actions are local-only. Validation reads only metadata from `exports/local-real/dashboard-lab/{profile}/`, validates expected dashboard-lab files, reports missing files, malformed JSON, schema versions, file sizes, and last-modified times, and returns one of `ok`, `warning`, `missing_outputs`, `invalid_json`, or `folder_missing`. Supported local import actions require explicit confirmation and allowed ignored input folders. Fixture copy requires explicit confirmation and copies only allowlisted summary files. These actions do not contact providers, start OAuth, publish to the portal, or edit dashboard-lab source.
 
 Validation action audit entries are written locally to:
 
@@ -819,7 +854,7 @@ config/dashboard_lab_profiles.local.json
 
 That ignored local file may contain real operational identifiers, but the API exposes only presence/absence style readiness booleans. It must not expose API keys, OAuth tokens, refresh tokens, client secret JSON, Authorization headers, credential paths, raw provider payloads, or real output file contents.
 
-The React/FastAPI console currently executes only guarded validation and guarded dashboard-lab local fixture copy actions. It does not implement live GA4 imports, live GSC imports, Local Falcon runs from the browser, profile CRUD, OAuth, uploads, auth/login, staging/production connections, or production database access. The existing Streamlit console remains available at `app/importer_console.py` and is still launched with:
+The React/FastAPI console currently executes only local guarded actions: profile shell metadata save, ignored local config save, local vault status/key management, supported local aggregate imports, validation, and guarded dashboard-lab local fixture copy. It does not implement live GA4 imports, live GSC imports, Local Falcon runs from the browser, OAuth, uploads, auth/login, staging/production connections, or production database access. The existing Streamlit console remains available at `app/importer_console.py` and is still launched with:
 
 ```powershell
 python -m streamlit run app/importer_console.py

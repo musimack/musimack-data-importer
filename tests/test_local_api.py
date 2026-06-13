@@ -20,6 +20,55 @@ def test_health_endpoint_returns_safe_status(tmp_path):
     assert response.json() == {"ok": True, "app": "musimack-data-importer-local-api"}
 
 
+def test_runtime_safety_status_default_is_path_free(tmp_path):
+    client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
+
+    response = client.get("/api/runtime-safety-status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["mode"] == "default_local"
+    assert payload["active_labels"] == []
+    assert not any(payload["overrides"].values())
+    assert str(tmp_path) not in serialized
+    assert "dashboard_lab_profiles" not in serialized
+
+
+def test_runtime_safety_status_reports_overrides_without_paths(tmp_path):
+    registry = tmp_path / "override" / "dashboard_lab_profiles.qa.json"
+    config_dir = tmp_path / "local-profile-configs"
+    vault = tmp_path / "vault" / "importer-vault.local.json"
+    form_input = tmp_path / "form-fills-input"
+    callrail_input = tmp_path / "callrail-input"
+    fixture_target = tmp_path / "dashboard-lab-fixtures"
+    client = TestClient(
+        create_app(
+            registry_path=_registry(tmp_path),
+            env={
+                "MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH": str(registry),
+                "MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR": str(config_dir),
+                "MUSIMACK_IMPORTER_VAULT_PATH": str(vault),
+                "MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR": str(form_input),
+                "MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR": str(callrail_input),
+                "MUSIMACK_IMPORTER_DASHBOARD_LAB_FIXTURE_TARGET_DIR": str(fixture_target),
+            },
+        )
+    )
+
+    response = client.get("/api/runtime-safety-status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["mode"] == "qa_override"
+    assert all(payload["overrides"].values())
+    assert "Profile registry override active" in payload["active_labels"]
+    assert "Fixture target override active" in payload["active_labels"]
+    for path in (registry, config_dir, vault, form_input, callrail_input, fixture_target, tmp_path):
+        assert str(path) not in serialized
+
+
 def test_profile_registry_new_draft_returns_safe_options(tmp_path):
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
 
