@@ -194,6 +194,7 @@ code {
 }
 
 .simple-summary-card,
+.onboarding-status-card,
 .secret-vault-card,
 .profile-registry-card,
 .local-config-card,
@@ -215,7 +216,115 @@ code {
   gap: 16px;
 }
 
+.onboarding-status-card {
+  background: #ffffff;
+  border-color: #c6d5e5;
+  display: grid;
+  gap: 14px;
+}
+
+.onboarding-status-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.status-tile {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.status-tile span {
+  color: #687181;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.status-tile strong {
+  color: #253043;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.status-tile.ok {
+  background: #f4fbf7;
+  border-color: #c8dfd1;
+}
+
+.status-tile.warn {
+  background: #fff9ed;
+  border-color: #ecd7a8;
+}
+
+.status-tile.neutral {
+  background: #f8fafb;
+  border-color: #dfe3ea;
+}
+
+.onboarding-provider-table {
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.onboarding-provider-row {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(150px, 1.1fr) repeat(4, minmax(112px, 0.7fr)) minmax(190px, 1.3fr);
+  padding: 10px 12px;
+}
+
+.onboarding-provider-row + .onboarding-provider-row {
+  border-top: 1px solid #e7ecf1;
+}
+
+.onboarding-provider-row.header {
+  background: #f4f7fa;
+  color: #596575;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.onboarding-provider-row span {
+  min-width: 0;
+}
+
+.onboarding-provider-row strong {
+  display: block;
+  line-height: 1.25;
+}
+
+.onboarding-provider-row small {
+  color: #687181;
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.disabled-provider-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.disabled-provider-summary > span {
+  color: #687181;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .simple-summary-main,
+.onboarding-status-heading,
 .safe-copy-heading {
   align-items: flex-start;
   display: flex;
@@ -225,6 +334,8 @@ code {
 
 .simple-summary-main h3,
 .simple-summary-main p,
+.onboarding-status-card h3,
+.onboarding-status-card p,
 .next-action-card h3,
 .next-action-card p,
 .safe-copy-card h3,
@@ -243,6 +354,7 @@ code {
 }
 
 .simple-summary-main h3,
+.onboarding-status-card h3,
 .next-action-card h3,
 .safe-copy-card h3 {
   font-size: 22px;
@@ -250,6 +362,7 @@ code {
 }
 
 .simple-summary-main p,
+.onboarding-status-card p,
 .safe-copy-card p,
 .next-action-card p,
 .safe-copy-footnote,
@@ -1173,6 +1286,7 @@ pre {
   .topbar,
   .section-heading,
   .simple-summary-main,
+  .onboarding-status-heading,
   .secret-vault-heading,
   .profile-registry-heading,
   .local-secret-heading,
@@ -1192,6 +1306,7 @@ pre {
   .readiness-grid,
   .provider-grid,
   .summary-counts,
+  .onboarding-status-strip,
   .vault-status-grid,
   .vault-controls,
   .next-action-card,
@@ -1199,6 +1314,11 @@ pre {
   .action-grid,
   .summary-grid,
   .expected-files-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-provider-row,
+  .onboarding-provider-row.header {
     grid-template-columns: 1fr;
   }
 

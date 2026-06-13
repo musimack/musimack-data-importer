@@ -342,6 +342,19 @@ def create_app(
             audit_log_path=current_audit_log_path(),
         )
 
+    @app.get("/api/profiles/{profile_slug}/onboarding-status")
+    def profile_onboarding_status(profile_slug: str) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        return build_onboarding_status(
+            profile,
+            safe_env=current_env(),
+            local_config=current_profile_config(profile),
+            audit_log_path=current_audit_log_path(),
+        )
+
     @app.get("/api/profiles/{profile_slug}/action-plan")
     def profile_action_plan(profile_slug: str) -> dict[str, Any]:
         try:
@@ -743,6 +756,13 @@ def serialize_profile_detail(
     audit_log_path: Path = DEFAULT_AUDIT_LOG,
 ) -> dict[str, Any]:
     report = validate_profile_output(profile)
+    onboarding_status = build_onboarding_status(
+        profile,
+        safe_env=safe_env,
+        local_config=local_config,
+        audit_log_path=audit_log_path,
+        output_report=report,
+    )
     return {
         **serialize_profile_summary(profile, safe_env=safe_env, local_config=local_config),
         "paths": {
@@ -751,6 +771,7 @@ def serialize_profile_detail(
         },
         "output_status": serialize_output_report(profile, report),
         "action_plan": build_action_plan(profile, safe_env=safe_env, local_config=local_config),
+        "onboarding_status": onboarding_status,
         "guarded_import_sequence": guarded_import_sequence(profile),
         "last_actions": build_last_action_summary(profile, audit_log_path),
         "safety": {
@@ -759,6 +780,160 @@ def serialize_profile_detail(
             "real_output_ignored_path": "exports/local-real/",
             "dashboard_lab_local_fixtures_only": True,
         },
+    }
+
+
+def build_onboarding_status(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+    audit_log_path: Path = DEFAULT_AUDIT_LOG,
+    output_report: Any | None = None,
+) -> dict[str, Any]:
+    report = output_report or validate_profile_output(profile)
+    output_status = serialize_output_report(profile, report)
+    provider_readiness = serialize_provider_readiness(profile, safe_env=safe_env, local_config=local_config)
+    provider_readiness_map = {item["provider"]: item for item in provider_readiness}
+    checklist = provider_setup_checklist(profile, env=dict(safe_env), local_config=dict(local_config))
+    checklist_map = {item["provider_key"]: item for item in checklist}
+    expected_files = {item["file"]: item for item in output_status["files"]}
+    last_actions = build_last_action_summary(profile, audit_log_path)
+
+    providers = [
+        _onboarding_provider_status(
+            profile,
+            provider,
+            provider_readiness=provider_readiness_map.get(provider),
+            checklist_item=checklist_map.get(provider),
+            output_files=expected_files,
+        )
+        for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills")
+    ]
+    enabled_provider_count = sum(1 for item in providers if item["enabled"])
+    configured_provider_count = sum(1 for item in providers if item["enabled"] and item["config_state"] in {"Configured", "Configured via vault"})
+    output_ready_count = sum(1 for item in providers if item["enabled"] and item["output_state"] == "Output exists")
+    ready_for_copy_count = sum(1 for item in providers if item["enabled"] and item["copy_state"] == "Ready for dashboard-lab copy")
+
+    return {
+        "profile": {
+            "slug": profile.slug,
+            "display_name": profile.display_name,
+            "route": profile.dashboard_lab_route,
+            "shell_state": "Profile shell created",
+            "enabled_provider_count": enabled_provider_count,
+            "configured_provider_count": configured_provider_count,
+            "output_ready_count": output_ready_count,
+            "ready_for_copy_count": ready_for_copy_count,
+        },
+        "local_config": _onboarding_local_config_state(checklist),
+        "vault": _onboarding_vault_state(local_config),
+        "validation": {
+            "state": "Ready for validation" if output_status["folder_exists"] else "Validation unknown",
+            "folder_exists": output_status["folder_exists"],
+            "overall_ok": output_status["ok"],
+            "last_validation": "Available" if last_actions["last_validation"] else "Not run",
+            "warning_count": len(output_status["warnings"]),
+        },
+        "dashboard_copy": {
+            "state": "Ready for dashboard-lab copy" if ready_for_copy_count and ready_for_copy_count == enabled_provider_count else "Not applicable" if not enabled_provider_count else "Output missing",
+            "ready_provider_count": ready_for_copy_count,
+            "last_copy": "Available" if last_actions["last_copy"] else "Not run",
+        },
+        "providers": providers,
+        "safety": {
+            "read_only": True,
+            "no_provider_execution": True,
+            "no_fixture_copy": True,
+            "no_secret_values": True,
+            "no_file_contents": True,
+        },
+    }
+
+
+def _onboarding_provider_status(
+    profile: DashboardLabProfile,
+    provider: str,
+    *,
+    provider_readiness: Mapping[str, Any] | None,
+    checklist_item: Mapping[str, Any] | None,
+    output_files: Mapping[str, Any],
+) -> dict[str, Any]:
+    enabled = provider in profile.data_sources
+    expected_file = PROVIDER_OUTPUT_FILES.get(provider, "")
+    output = output_files.get(expected_file)
+    output_exists = bool(output.get("exists")) if isinstance(output, Mapping) else False
+    readiness = provider_readiness or {}
+    checklist = checklist_item or {}
+    config_ready = bool(readiness.get("config_ready")) or str(checklist.get("status")) in {"ready", "output_available"}
+    credential_source = str(checklist.get("credential_source") or "")
+    vault_locked = provider == "local_falcon" and credential_source == "vault locked"
+    vault_configured = provider == "local_falcon" and credential_source == "vault"
+
+    if not enabled:
+        config_state = "Not enabled"
+        output_state = "Not applicable"
+        validation_state = "Not applicable"
+        copy_state = "Not applicable"
+        next_step = "Enable this provider in the tracked profile registry before onboarding it."
+    else:
+        if vault_locked:
+            config_state = "Vault locked"
+        elif config_ready and vault_configured:
+            config_state = "Configured via vault"
+        elif config_ready:
+            config_state = "Configured"
+        else:
+            config_state = "Needs config"
+        output_state = "Output exists" if output_exists else "Output missing"
+        validation_state = "Ready for validation" if output_exists else "Validation unknown"
+        copy_state = "Ready for dashboard-lab copy" if str(checklist.get("dashboard_copy_readiness")) == "Ready" else "Output missing"
+        next_step = str(checklist.get("safe_next_action") or checklist.get("blocked_reason") or "Review provider setup.")
+
+    return {
+        "provider": provider,
+        "label": PROVIDER_LABELS.get(provider, provider),
+        "enabled": enabled,
+        "expected_output_file": expected_file,
+        "config_state": config_state,
+        "output_state": output_state,
+        "validation_state": validation_state,
+        "copy_state": copy_state,
+        "next_step": next_step,
+    }
+
+
+def _onboarding_local_config_state(checklist: list[dict[str, Any]]) -> dict[str, Any]:
+    visible_items = [item for item in checklist if item.get("status") != "not_enabled"]
+    present_count = sum(1 for item in visible_items if item.get("local_config_file_present"))
+    valid = all(bool(item.get("local_config_valid", True)) for item in visible_items)
+    if present_count:
+        state = "Configured" if valid else "Needs config"
+    else:
+        state = "Needs config"
+    labels = sorted({str(item.get("local_config_path_label") or "") for item in visible_items if item.get("local_config_path_label")})
+    return {
+        "state": state,
+        "configured_provider_count": present_count,
+        "path_labels": labels[:3],
+    }
+
+
+def _onboarding_vault_state(local_config: Mapping[str, Any]) -> dict[str, Any]:
+    local_falcon_config = _provider_config(local_config, "local_falcon")
+    source = str(local_falcon_config.get("api_key_readiness_source") or "")
+    configured = bool(local_falcon_config.get("api_key_vault_configured"))
+    locked = bool(local_falcon_config.get("api_key_vault_locked")) or source == "locked"
+    if locked:
+        state = "Vault locked"
+    elif configured:
+        state = "Configured via vault"
+    else:
+        state = "Not configured"
+    return {
+        "state": state,
+        "local_falcon_api_key_metadata": "configured" if configured else "not configured",
+        "locked": locked,
     }
 
 

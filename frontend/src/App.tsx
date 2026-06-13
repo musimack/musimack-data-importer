@@ -297,6 +297,61 @@ type ProviderSetupChecklistItem = {
   dashboard_copy_readiness: string;
 };
 
+type OnboardingProviderStatus = {
+  provider: string;
+  label: string;
+  enabled: boolean;
+  expected_output_file: string;
+  config_state: string;
+  output_state: string;
+  validation_state: string;
+  copy_state: string;
+  next_step: string;
+};
+
+type OnboardingStatus = {
+  profile: {
+    slug: string;
+    display_name: string;
+    route: string;
+    shell_state: string;
+    enabled_provider_count: number;
+    configured_provider_count: number;
+    output_ready_count: number;
+    ready_for_copy_count: number;
+  };
+  local_config: {
+    state: string;
+    configured_provider_count: number;
+    path_labels: string[];
+  };
+  vault: {
+    state: string;
+    local_falcon_api_key_metadata: string;
+    locked: boolean;
+  };
+  validation: {
+    state: string;
+    folder_exists: boolean;
+    overall_ok: boolean;
+    last_validation: string;
+    warning_count: number;
+  };
+  dashboard_copy: {
+    state: string;
+    ready_provider_count: number;
+    last_copy: string;
+  };
+  providers: OnboardingProviderStatus[];
+  safety: {
+    read_only: boolean;
+    no_provider_execution: boolean;
+    no_fixture_copy: boolean;
+    no_secret_values: boolean;
+    no_file_contents: boolean;
+  };
+};
+
 type GuardedImportPhase = {
   phase: string;
   label: string;
@@ -325,6 +380,7 @@ type ProfileDetail = ProfileSummary & {
     dashboard_lab_local_fixture_folder: string;
   };
   output_status: OutputStatus;
+  onboarding_status: OnboardingStatus;
   action_plan: ActionPlan;
   guarded_import_sequence: {
     profile_slug: string;
@@ -571,6 +627,8 @@ function App() {
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
               <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
+
+              <OnboardingStatusDashboard status={detail.onboarding_status} />
 
               <SecretVaultPanel
                 passphrase={vaultPassphrase}
@@ -824,6 +882,89 @@ function MetricPill({ label, value }: { label: string; value: string | number })
     <div className="metric-pill">
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function OnboardingStatusDashboard({ status }: { status: OnboardingStatus }) {
+  const enabledProviders = status.providers.filter((provider) => provider.enabled);
+  const disabledProviders = status.providers.filter((provider) => !provider.enabled);
+
+  return (
+    <section className="onboarding-status-card" aria-label="Client Onboarding Status">
+      <div className="onboarding-status-heading">
+        <div>
+          <span className="eyebrow">Read-only status</span>
+          <h3>Client Onboarding Status</h3>
+          <p>
+            A compact view of profile setup, local readiness, safe output checks, and dashboard-lab copy readiness.
+          </p>
+        </div>
+        <span className="badge neutral">{status.profile.route}</span>
+      </div>
+
+      <div className="onboarding-status-strip" aria-label="Profile onboarding summary">
+        <StatusTile label="Profile shell" value={status.profile.shell_state} tone="ok" />
+        <StatusTile label="Local config" value={status.local_config.state} tone={statusTone(status.local_config.state)} />
+        <StatusTile label="Secret vault" value={status.vault.state} tone={statusTone(status.vault.state)} />
+        <StatusTile label="Validation" value={status.validation.state} tone={statusTone(status.validation.state)} />
+        <StatusTile label="Dashboard copy" value={status.dashboard_copy.state} tone={statusTone(status.dashboard_copy.state)} />
+      </div>
+
+      <div className="onboarding-provider-table" role="table" aria-label="Provider onboarding status">
+        <div className="onboarding-provider-row header" role="row">
+          <span role="columnheader">Provider</span>
+          <span role="columnheader">Config</span>
+          <span role="columnheader">Output</span>
+          <span role="columnheader">Validation</span>
+          <span role="columnheader">Copy</span>
+          <span role="columnheader">Next</span>
+        </div>
+        {enabledProviders.map((provider) => (
+          <ProviderStatusRow key={provider.provider} provider={provider} />
+        ))}
+      </div>
+
+      {disabledProviders.length ? (
+        <div className="disabled-provider-summary">
+          <span>Not enabled</span>
+          <div className="chip-row">
+            {disabledProviders.map((provider) => (
+              <span className="setup-chip" key={provider.provider}>{provider.label}</span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <p className="safe-copy-footnote">
+        Read-only snapshot. No provider calls, fixture copy, local config write, registry write, vault unlock, or secret
+        decryption is performed here.
+      </p>
+    </section>
+  );
+}
+
+function StatusTile({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className={`status-tile ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus }) {
+  return (
+    <div className="onboarding-provider-row" role="row">
+      <span role="cell">
+        <strong>{provider.label}</strong>
+        <small>{provider.expected_output_file || 'No summary file'}</small>
+      </span>
+      <span className={statusBadgeClass(provider.config_state)} role="cell">{provider.config_state}</span>
+      <span className={statusBadgeClass(provider.output_state)} role="cell">{provider.output_state}</span>
+      <span className={statusBadgeClass(provider.validation_state)} role="cell">{provider.validation_state}</span>
+      <span className={statusBadgeClass(provider.copy_state)} role="cell">{provider.copy_state}</span>
+      <span role="cell">{provider.next_step}</span>
     </div>
   );
 }
@@ -2104,6 +2245,27 @@ function checklistStatusClass(status: string, severity: string) {
     return 'badge ok';
   }
   if (status === 'ready_to_fetch' || status === 'planned' || status === 'capability' || status === 'not_enabled') {
+    return 'badge neutral';
+  }
+  return 'badge warn';
+}
+
+function statusTone(value: string) {
+  if (value.includes('Configured') || value.includes('created') || value.includes('exists') || value.includes('Ready')) {
+    return 'ok';
+  }
+  if (value.includes('Not enabled') || value.includes('Not applicable') || value.includes('unknown') || value.includes('Not configured')) {
+    return 'neutral';
+  }
+  return 'warn';
+}
+
+function statusBadgeClass(value: string) {
+  const tone = statusTone(value);
+  if (tone === 'ok') {
+    return 'badge ok';
+  }
+  if (tone === 'neutral') {
     return 'badge neutral';
   }
   return 'badge warn';

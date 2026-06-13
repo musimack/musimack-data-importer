@@ -925,6 +925,112 @@ def test_profile_detail_endpoint_includes_readiness_and_outputs_without_contents
     assert "lf-secret-value" not in serialized
 
 
+def test_onboarding_status_endpoint_returns_safe_read_only_matrix(tmp_path):
+    registry = _registry(
+        tmp_path,
+        capabilities=[
+            {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+            {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+            {"key": "google_ads_search", "label": "Google Ads Search", "status": "planned", "kind": "paid_provider"},
+            {"key": "callrail", "label": "CallRail", "status": "planned", "kind": "lead_provider"},
+            {"key": "form_fills", "label": "Form Fills", "status": "planned", "kind": "lead_provider"},
+        ],
+        data_sources=["ga4", "gsc", "local_falcon"],
+    )
+    profile_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(profile_folder / "ga4-summary.json", {"schema_version": "ga4.v1", "hidden": "do-not-return"})
+    config_dir = tmp_path / "local-profile-configs"
+    config_dir.mkdir()
+    _write_json(
+        config_dir / "demo-profile.local.json",
+        {
+            "profile": "demo-profile",
+            "ga4": {
+                "property_id_env": "QA_GA4_PROPERTY_ID",
+                "oauth_client_secrets_env": "QA_GA4_CLIENT",
+                "oauth_token_file_env": "QA_GA4_TOKEN",
+            },
+            "gsc": {
+                "site_url": "sc-domain:example.com",
+                "oauth_client_secrets_env": "QA_GSC_CLIENT",
+                "oauth_token_file_env": "QA_GSC_TOKEN",
+            },
+            "local_falcon": {
+                "manifest_path": "local-falcon-manifests/demo-profile.json",
+                "api_key_env": "LOCAL_FALCON_API_KEY",
+            },
+        },
+    )
+    before_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={
+                "MUSIMACK_GA4_PROPERTY_ID": "property-123",
+                "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS": "C:/private/client-secret.json",
+                "MUSIMACK_GA4_OAUTH_TOKEN_FILE": "C:/private/token.json",
+                "LOCAL_FALCON_API_KEY": "lf-secret-value",
+            },
+            local_profile_config_dir=config_dir,
+            secret_vault_path=tmp_path / "vault.local.json",
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    providers = {item["provider"]: item for item in payload["providers"]}
+    assert payload["profile"]["shell_state"] == "Profile shell created"
+    assert payload["safety"] == {
+        "read_only": True,
+        "no_provider_execution": True,
+        "no_fixture_copy": True,
+        "no_secret_values": True,
+        "no_file_contents": True,
+    }
+    assert providers["ga4"]["enabled"] is True
+    assert providers["ga4"]["config_state"] == "Configured"
+    assert providers["ga4"]["output_state"] == "Output exists"
+    assert providers["gsc"]["enabled"] is True
+    assert providers["local_falcon"]["enabled"] is True
+    assert providers["google_ads_search"]["enabled"] is False
+    assert providers["google_ads_search"]["config_state"] == "Not enabled"
+    assert providers["callrail"]["output_state"] == "Not applicable"
+    assert payload["local_config"]["state"] == "Configured"
+    assert "demo-profile.local.json" in serialized
+    assert "do-not-return" not in serialized
+    assert "property-123" not in serialized
+    assert "C:/private" not in serialized
+    assert "lf-secret-value" not in serialized
+    assert str(tmp_path) not in serialized
+    after_files = sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file())
+    assert after_files == before_files
+
+
+def test_profile_detail_embeds_onboarding_status_without_raw_values(tmp_path):
+    registry = _registry(tmp_path)
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"LOCAL_FALCON_API_KEY": "real-api-key-value"},
+            local_profile_config_path=_local_profile_config(tmp_path),
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload["onboarding_status"])
+    assert payload["onboarding_status"]["providers"][0]["provider"] == "ga4"
+    assert "real-api-key-value" not in serialized
+    assert "configured_secret_value" not in serialized
+    assert str(tmp_path) not in serialized
+
+
 def test_profile_detail_setup_checklist_is_safe_and_profile_scoped(tmp_path):
     registry = _registry(tmp_path)
     client = TestClient(
