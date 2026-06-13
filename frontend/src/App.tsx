@@ -187,6 +187,7 @@ type ProviderSetupChecklistItem = {
   output_exists: boolean;
   local_output_state: string;
   dashboard_lab_writer_status: string;
+  credential_source?: string;
   required_config_items: string[];
   local_config_file_present: boolean;
   local_config_path_label: string;
@@ -1054,6 +1055,12 @@ function ProviderChecklistCard({
           <dt>Dashboard writer</dt>
           <dd>{item.dashboard_lab_writer_status || 'Not reported'}</dd>
         </div>
+        {item.credential_source ? (
+          <div>
+            <dt>Credentials</dt>
+            <dd>{item.credential_source}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Copy readiness</dt>
           <dd>{item.dashboard_copy_readiness || 'Not reported'}</dd>
@@ -1512,6 +1519,15 @@ function checklistStatusClass(status: string, severity: string) {
 }
 
 function humanizeKey(value: string) {
+  const labels: Record<string, string> = {
+    api_key_env_present: 'Configured via env var',
+    api_key_vault_configured: 'Configured via vault',
+    api_key_vault_locked: 'Vault locked',
+    api_key_visible: 'API key configured',
+  };
+  if (labels[value]) {
+    return labels[value];
+  }
   return value
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());

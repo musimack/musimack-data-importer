@@ -361,6 +361,191 @@ def test_profile_secret_env_override_does_not_create_default_vault_path(tmp_path
     assert "fake-local-falcon-api-key" not in serialized
 
 
+def test_local_falcon_readiness_uses_env_key_when_vault_is_missing(tmp_path):
+    registry = _registry(tmp_path)
+    local_config = _local_falcon_config_without_key(tmp_path)
+    vault_path = tmp_path / "missing-vault.local.json"
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"LOCAL_FALCON_API_KEY": "fake-local-falcon-api-key"},
+            local_profile_config_path=local_config,
+            secret_vault_path=vault_path,
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    local_falcon = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "local_falcon")
+    assert local_falcon["config_state"]["api_key_visible"] is True
+    assert local_falcon["config_state"]["api_key_env_present"] is True
+    assert local_falcon["config_state"]["api_key_vault_configured"] is False
+    assert local_falcon["credential_source"] == "Configured via env var"
+    readiness = next(item for item in payload["provider_readiness"] if item["provider"] == "local_falcon")
+    assert readiness["credentials_ready"] is True
+    assert readiness["readiness"]["api_key_env_present"] is True
+    assert readiness["readiness"]["api_key_vault_configured"] is False
+    serialized = json.dumps(payload)
+    assert "fake-local-falcon-api-key" not in serialized
+    assert not vault_path.exists()
+
+
+def test_local_falcon_readiness_prefers_env_when_env_and_vault_are_available(tmp_path):
+    registry = _registry(tmp_path)
+    local_config = _local_falcon_config_without_key(tmp_path)
+    vault_path = tmp_path / "vault.local.json"
+    fake_key = "fake-local-falcon-api-key"
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"LOCAL_FALCON_API_KEY": "fake-env-local-falcon-api-key"},
+            local_profile_config_path=local_config,
+            secret_vault_path=vault_path,
+        )
+    )
+    client.post("/api/secrets/unlock", json={"passphrase": "fake test passphrase", "create_if_missing": True})
+    client.post("/api/profiles/demo-profile/secrets/local_falcon/api_key", json={"value": fake_key})
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    local_falcon = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "local_falcon")
+    assert local_falcon["credential_source"] == "Configured via env var"
+    assert local_falcon["config_state"]["api_key_env_present"] is True
+    assert local_falcon["config_state"]["api_key_vault_configured"] is False
+    serialized = json.dumps(payload)
+    assert "fake-env-local-falcon-api-key" not in serialized
+    assert fake_key not in serialized
+    assert "ciphertext" not in serialized
+    assert str(vault_path) not in serialized
+
+
+def test_local_falcon_readiness_uses_unlocked_vault_key_metadata(tmp_path):
+    registry = _registry(tmp_path)
+    local_config = _local_falcon_config_without_key(tmp_path)
+    vault_path = tmp_path / "vault.local.json"
+    fake_key = "fake-local-falcon-api-key"
+    client = TestClient(
+        create_app(registry_path=registry, env={}, local_profile_config_path=local_config, secret_vault_path=vault_path)
+    )
+    client.post("/api/secrets/unlock", json={"passphrase": "fake test passphrase", "create_if_missing": True})
+    client.post("/api/profiles/demo-profile/secrets/local_falcon/api_key", json={"value": fake_key})
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    local_falcon = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "local_falcon")
+    assert local_falcon["config_state"]["api_key_visible"] is True
+    assert local_falcon["config_state"]["api_key_env_present"] is False
+    assert local_falcon["config_state"]["api_key_vault_configured"] is True
+    assert local_falcon["config_state"]["api_key_vault_locked"] is False
+    assert local_falcon["credential_source"] == "Configured via vault"
+    readiness = next(item for item in payload["provider_readiness"] if item["provider"] == "local_falcon")
+    assert readiness["credentials_ready"] is True
+    assert readiness["readiness"]["api_key_env_present"] is False
+    assert readiness["readiness"]["api_key_vault_configured"] is True
+    serialized = json.dumps(payload)
+    assert fake_key not in serialized
+    assert "ciphertext" not in serialized
+    assert str(vault_path) not in serialized
+
+
+def test_local_falcon_readiness_treats_locked_vault_as_needs_unlock_without_leaking_key(tmp_path):
+    registry = _registry(tmp_path)
+    local_config = _local_falcon_config_without_key(tmp_path)
+    vault_path = tmp_path / "vault.local.json"
+    fake_key = "fake-local-falcon-api-key"
+    vault = LocalSecretVault.create(vault_path, passphrase="fake test passphrase")
+    vault.set_secret(profile="demo-profile", provider="local_falcon", key="api_key", value=fake_key)
+    vault.lock()
+    client = TestClient(
+        create_app(registry_path=registry, env={}, local_profile_config_path=local_config, secret_vault_path=vault_path)
+    )
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    local_falcon = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "local_falcon")
+    assert local_falcon["config_state"]["api_key_visible"] is False
+    assert local_falcon["config_state"]["api_key_vault_configured"] is False
+    assert local_falcon["config_state"]["api_key_vault_locked"] is True
+    assert local_falcon["credential_source"] == "Vault locked"
+    assert "unlock vault" in json.dumps(local_falcon).lower()
+    serialized = json.dumps(payload)
+    assert fake_key not in serialized
+    assert "ciphertext" not in serialized
+    assert str(vault_path) not in serialized
+
+
+def test_local_falcon_readiness_reports_missing_when_env_and_vault_are_missing(tmp_path):
+    registry = _registry(tmp_path)
+    local_config = _local_falcon_config_without_key(tmp_path)
+    vault_path = tmp_path / "missing-vault.local.json"
+    client = TestClient(
+        create_app(registry_path=registry, env={}, local_profile_config_path=local_config, secret_vault_path=vault_path)
+    )
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    local_falcon = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "local_falcon")
+    assert local_falcon["config_state"]["api_key_visible"] is False
+    assert local_falcon["config_state"]["api_key_env_present"] is False
+    assert local_falcon["config_state"]["api_key_vault_configured"] is False
+    assert local_falcon["config_state"]["api_key_vault_locked"] is False
+    assert local_falcon["credential_source"] == "Missing"
+    assert "saved Local Falcon API key" in json.dumps(local_falcon)
+    assert not vault_path.exists()
+
+
+def test_local_falcon_readiness_handles_corrupt_temp_vault_safely(tmp_path):
+    registry = _registry(tmp_path)
+    local_config = _local_falcon_config_without_key(tmp_path)
+    vault_path = tmp_path / "vault.local.json"
+    vault_path.write_text("{raw corrupt vault contents", encoding="utf-8")
+    client = TestClient(
+        create_app(registry_path=registry, env={}, local_profile_config_path=local_config, secret_vault_path=vault_path)
+    )
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    local_falcon = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "local_falcon")
+    assert local_falcon["credential_source"] == "Vault locked"
+    assert local_falcon["config_state"]["api_key_visible"] is False
+    serialized = json.dumps(payload)
+    assert "raw corrupt vault contents" not in serialized
+    assert str(vault_path) not in serialized
+
+
+def test_non_local_falcon_profile_does_not_report_vault_key_readiness(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["ga4", "gsc"],
+        capabilities=[
+            {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+            {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        ],
+    )
+    vault_path = tmp_path / "missing-vault.local.json"
+    client = TestClient(create_app(registry_path=registry, env={}, secret_vault_path=vault_path))
+
+    response = client.get("/api/profiles/demo-profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert all(item["provider_key"] != "local_falcon" for item in payload["provider_setup_checklist"])
+    assert all(item.get("credential_source", "") == "" for item in payload["provider_setup_checklist"])
+    assert not vault_path.exists()
+
+
 def test_profiles_endpoint_returns_safe_profile_metadata(tmp_path):
     client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
 
@@ -1338,6 +1523,29 @@ def _local_profile_config(tmp_path: Path) -> Path:
                                 "manifest_path": str(tmp_path / "private-manifest.json"),
                                 "api_key_present": True,
                                 "private_note": "configured_secret_value",
+                            },
+                        }
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return local_config
+
+
+def _local_falcon_config_without_key(tmp_path: Path) -> Path:
+    manifest_path = tmp_path / "private-manifest.json"
+    _write_json(manifest_path, {"configured": "true"})
+    local_config = tmp_path / "dashboard_lab_profiles.local.json"
+    local_config.write_text(
+        json.dumps(
+            {
+                "profiles": {
+                    "demo-profile": {
+                        "providers": {
+                            "local_falcon": {
+                                "manifest_path": str(manifest_path),
                             },
                         }
                     }

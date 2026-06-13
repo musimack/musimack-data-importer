@@ -249,11 +249,18 @@ def provider_readiness(
         state = _safe_config_state(profile, "local_falcon", source, provider_config)
         manifest_label = provider_config.get("manifest_path_label") or manifest
         api_key_env = provider_config.get("api_key_env") or "LOCAL_FALCON_API_KEY"
+        api_key_source = provider_config.get("api_key_readiness_source") or ("env" if state.get("api_key_visible") else "missing")
+        api_key_detail = {
+            "env": f"API key env {api_key_env} present",
+            "vault": "API key configured via encrypted local vault",
+            "locked": f"API key env {api_key_env} missing; unlock vault to check saved key",
+            "missing": f"API key env {api_key_env} missing",
+        }.get(str(api_key_source), f"API key env {api_key_env} missing")
         rows.append(
             {
                 "provider": "Local Falcon",
                 "status": "configured" if state.get("manifest_exists") and state.get("api_key_visible") else "missing config",
-                "detail": f"API key env {api_key_env} {'present' if state.get('api_key_visible') else 'missing'}; manifest {manifest_label}",
+                "detail": f"{api_key_detail}; manifest {manifest_label}",
             }
         )
     rows.append(
@@ -968,6 +975,7 @@ def _setup_checklist_row(
         "output_exists": matrix_row["output_exists"],
         "local_output_state": matrix_row["local_output_status"],
         "dashboard_lab_writer_status": matrix_row["dashboard_lab_writer_status"],
+        "credential_source": _credential_source_label(provider, local_config, config_state),
         "required_config_items": required_items,
         "local_config_file_present": config_metadata["present"],
         "local_config_path_label": config_metadata["path_label"],
@@ -1029,7 +1037,7 @@ def _safe_config_state(
             state["oauth_token_file_exists"] = bool(local_config.get("oauth_token_file_exists", False))
         return state
     if provider == "local_falcon":
-        return {
+        state = {
             "manifest_exists": _local_falcon_manifest_configured(profile, local_config),
             "api_key_visible": _present(env.get("LOCAL_FALCON_API_KEY")) or _any_present(
                 local_config,
@@ -1040,6 +1048,13 @@ def _safe_config_state(
                 for item in _profile_capabilities(profile)
             ),
         }
+        if "api_key_env_present" in local_config:
+            state["api_key_env_present"] = bool(local_config.get("api_key_env_present"))
+        if "api_key_vault_configured" in local_config:
+            state["api_key_vault_configured"] = bool(local_config.get("api_key_vault_configured"))
+        if "api_key_vault_locked" in local_config:
+            state["api_key_vault_locked"] = bool(local_config.get("api_key_vault_locked"))
+        return state
     if provider == "google_ads_search":
         return {
             "customer_id_configured": _present(env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
@@ -1126,6 +1141,19 @@ def _safe_next_action(matrix_row: dict[str, Any], config_state: dict[str, bool])
     if missing:
         return "Add missing local provider config, then refresh this checklist."
     return "Create local output for this provider when operator-approved."
+
+
+def _credential_source_label(provider: str, local_config: dict[str, Any], config_state: dict[str, bool]) -> str:
+    if provider != "local_falcon":
+        return ""
+    source = str(local_config.get("api_key_readiness_source") or "")
+    if source == "env" or config_state.get("api_key_env_present"):
+        return "Configured via env var"
+    if source == "vault" or config_state.get("api_key_vault_configured"):
+        return "Configured via vault"
+    if source == "locked" or config_state.get("api_key_vault_locked"):
+        return "Vault locked"
+    return "Missing"
 
 
 def _blocked_reason(matrix_row: dict[str, Any], required_items: list[str]) -> str:

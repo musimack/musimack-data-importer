@@ -134,9 +134,12 @@ def create_app(
 
     def current_profile_config(profile: DashboardLabProfile) -> dict[str, Any]:
         aggregate = current_local_config().get(profile.slug)
-        if aggregate:
-            return aggregate
-        return load_profile_provider_config_map(profile.slug, config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR, env=current_env())
+        config = (
+            aggregate
+            if aggregate
+            else load_profile_provider_config_map(profile.slug, config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR, env=current_env())
+        )
+        return _with_secret_vault_readiness(profile, config, current_env(), secret_vault_state)
 
     def current_env() -> Mapping[str, str]:
         return os.environ if env is None else env
@@ -247,15 +250,13 @@ def create_app(
 
     @app.get("/api/profiles")
     def profiles() -> dict[str, Any]:
-        local_config = current_local_config()
         safe_env = current_env()
         return {
             "profiles": [
                 serialize_profile_summary(
                     profile,
                     safe_env=safe_env,
-                    local_config=local_config.get(profile.slug)
-                    or load_profile_provider_config_map(profile.slug, config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR, env=safe_env),
+                    local_config=current_profile_config(profile),
                 )
                 for profile in current_profiles()
             ]
@@ -448,6 +449,18 @@ class SecretVaultApiState:
                 key=key,
             ).as_safe_dict()
 
+    def local_falcon_api_key_readiness(self, profile: str) -> dict[str, Any]:
+        if not self.path.exists() or not self.path.is_file():
+            return {"configured": False, "source": "missing", "locked": False}
+        if self._vault is None or self._vault.locked:
+            return {"configured": False, "source": "locked", "locked": True}
+        status = self._vault.status(profile=profile, provider="local_falcon", key="api_key")
+        return {
+            "configured": status.configured,
+            "source": "vault" if status.configured else "missing",
+            "locked": False,
+        }
+
     def _require_unlocked_vault(self) -> LocalSecretVault:
         if self._vault is None or self._vault.locked:
             raise VaultLockedError("vault is locked")
@@ -470,6 +483,60 @@ def resolve_secret_vault_path(
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:
     if (provider, key) not in ALLOWED_VAULT_SECRET_KEYS:
         raise HTTPException(status_code=400, detail="secret key is not allowed")
+
+
+def _with_secret_vault_readiness(
+    profile: DashboardLabProfile,
+    local_config: Mapping[str, Any],
+    safe_env: Mapping[str, str],
+    secret_vault_state: SecretVaultApiState,
+) -> dict[str, Any]:
+    if "local_falcon" not in profile.data_sources:
+        return dict(local_config)
+
+    enriched = dict(local_config)
+    providers = enriched.get("providers")
+    if isinstance(providers, Mapping):
+        providers = dict(providers)
+        local_falcon_config = dict(providers.get("local_falcon") if isinstance(providers.get("local_falcon"), Mapping) else {})
+        providers["local_falcon"] = local_falcon_config
+        enriched["providers"] = providers
+    else:
+        local_falcon_config = dict(enriched.get("local_falcon") if isinstance(enriched.get("local_falcon"), Mapping) else {})
+        enriched["local_falcon"] = local_falcon_config
+
+    api_key_env = str(local_falcon_config.get("api_key_env") or "LOCAL_FALCON_API_KEY")
+    env_configured = bool(str(safe_env.get(api_key_env, "")).strip())
+    vault_readiness = secret_vault_state.local_falcon_api_key_readiness(profile.slug)
+    vault_configured = bool(vault_readiness["configured"]) and not env_configured
+    source = "env" if env_configured else str(vault_readiness["source"])
+    configured = env_configured or vault_configured
+
+    local_falcon_config["api_key_env_present"] = env_configured
+    local_falcon_config["api_key_vault_configured"] = vault_configured
+    local_falcon_config["api_key_vault_locked"] = source == "locked"
+    local_falcon_config["api_key_present"] = configured
+    local_falcon_config["api_key_configured"] = configured
+    local_falcon_config["api_key_readiness_source"] = source
+
+    missing = [
+        item
+        for item in _safe_string_list(local_falcon_config.get("_missing_config_items"))
+        if "api key" not in item.lower() and "local_falcon_api_key" not in item.lower()
+    ]
+    if not configured:
+        if source == "locked":
+            missing.append("LOCAL_FALCON_API_KEY or unlock vault to check saved key")
+        else:
+            missing.append("LOCAL_FALCON_API_KEY or saved Local Falcon API key")
+    local_falcon_config["_missing_config_items"] = missing
+    return enriched
+
+
+def _safe_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
 
 
 def _secret_vault_status(
@@ -1534,11 +1601,22 @@ def _provider_readiness_flags(
         return _readiness(site_present, credential_present)
     if provider == "local_falcon":
         manifest_present = _local_falcon_manifest_configured(profile, local_config)
-        credential_present = _present(safe_env.get("LOCAL_FALCON_API_KEY")) or _any_present(
+        env_present = _present(safe_env.get("LOCAL_FALCON_API_KEY")) or bool(local_config.get("api_key_env_present"))
+        vault_configured = bool(local_config.get("api_key_vault_configured"))
+        vault_locked = bool(local_config.get("api_key_vault_locked"))
+        credential_present = env_present or vault_configured or _any_present(
             local_config,
-            ("api_key_env_present", "api_key_present", "api_key_configured"),
+            ("api_key_present", "api_key_configured"),
         )
-        return _readiness(manifest_present, credential_present)
+        readiness = _readiness(manifest_present, credential_present)
+        readiness["readiness"].update(
+            {
+                "api_key_env_present": env_present,
+                "api_key_vault_configured": vault_configured,
+                "api_key_vault_locked": vault_locked,
+            }
+        )
+        return readiness
     return _readiness(False, False)
 
 
