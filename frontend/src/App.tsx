@@ -386,7 +386,7 @@ type OnboardingActionsResponse = {
 type OnboardingActionRunResult = {
   profile: string;
   action: OnboardingAction;
-  result: Record<string, boolean | number | string | null>;
+  result: Record<string, unknown>;
   safety: Record<string, boolean>;
 };
 
@@ -682,6 +682,8 @@ function App() {
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
               <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
+
+              <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
 
@@ -1035,6 +1037,66 @@ function StatusTile({ label, value, tone }: { label: string; value: string; tone
   );
 }
 
+function OnboardingFlowChecklist({ detail, copyPreview }: { detail: ProfileDetail; copyPreview: CopyPreview | null }) {
+  const enabledProviders = detail.onboarding_status.providers.filter((provider) => provider.enabled);
+  const readyProviders = enabledProviders.filter((provider) => provider.copy_state === 'Ready for dashboard-lab copy');
+  const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.some((item) => item.source_exists);
+  const steps = [
+    {
+      label: 'Profile shell',
+      state: 'Ready',
+      detail: detail.dashboard_lab_route,
+    },
+    {
+      label: 'Local config',
+      state: detail.onboarding_status.local_config.state,
+      detail: 'Ignored local config only',
+    },
+    {
+      label: 'Secrets/readiness',
+      state: detail.onboarding_status.vault.state,
+      detail: 'Vault metadata only',
+    },
+    {
+      label: 'Local imports',
+      state: `${readyProviders.length}/${enabledProviders.length || 0} ready`,
+      detail: 'Form Fills and CallRail can run locally when enabled',
+    },
+    {
+      label: 'Validation',
+      state: detail.onboarding_status.validation.state,
+      detail: 'No provider calls',
+    },
+    {
+      label: 'Fixture copy',
+      state: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Copied' : copyReady ? 'Ready to copy' : 'Needs output',
+      detail: 'Guarded local fixtures only',
+    },
+  ];
+  return (
+    <section className="onboarding-flow-card" aria-label="End-to-end onboarding checklist">
+      <div className="onboarding-flow-heading">
+        <div>
+          <span className="eyebrow">Onboarding workstation</span>
+          <h3>End-to-end checklist</h3>
+        </div>
+        <span className={detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'badge ok' : copyReady ? 'badge warn' : 'badge neutral'}>
+          {detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Copied' : copyReady ? 'Ready to copy' : 'In progress'}
+        </span>
+      </div>
+      <div className="onboarding-flow-steps">
+        {steps.map((step) => (
+          <div className="onboarding-flow-step" key={step.label}>
+            <span>{step.label}</span>
+            <strong>{step.state}</strong>
+            <small>{step.detail}</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus }) {
   return (
     <div className="onboarding-provider-row" role="row">
@@ -1076,7 +1138,7 @@ function OnboardingActionsPanel({
         <div>
           <span className="eyebrow">Guarded local actions</span>
           <h3>Onboarding Actions</h3>
-          <p>Safe checks and confirmed local aggregate imports are runnable here. Provider pulls, OAuth, and fixture copy remain disabled.</p>
+          <p>Safe checks, confirmed local aggregate imports, and guarded fixture copy are runnable here. Provider pulls, OAuth, and portal publishing remain disabled.</p>
         </div>
       </div>
       {message ? <p className="vault-message">{message}</p> : null}
@@ -1128,11 +1190,14 @@ function OnboardingActionCard({
 }) {
   const isFormFillsImport = action.id === 'form_fills.import-local';
   const isCallRailImport = action.id === 'callrail.import-local';
+  const isCopyPreview = action.id === 'dashboard_lab.preview-fixture-copy';
+  const isCopyAction = action.id === 'dashboard_lab.copy-validated-fixtures';
   const isLocalImport = isFormFillsImport || isCallRailImport;
-  const runnable = action.available && !action.external_api && !action.fixture_copy && (
-    (action.read_only && !action.writes_files) ||
-    (isLocalImport && action.writes_files && confirmed && inputValue.trim().length > 0)
-  );
+  const canRunReadOnly = action.available && action.read_only && !action.writes_files && !action.external_api && !action.fixture_copy;
+  const canRunLocalImport = action.available && isLocalImport && action.writes_files && !action.external_api && !action.fixture_copy && confirmed && inputValue.trim().length > 0;
+  const canPreviewCopy = action.available && isCopyPreview && action.read_only && action.fixture_copy && !action.external_api;
+  const canRunCopy = action.available && isCopyAction && action.writes_files && action.fixture_copy && !action.external_api && confirmed;
+  const runnable = canRunReadOnly || canRunLocalImport || canPreviewCopy || canRunCopy;
   const stateLabel = action.available ? 'Available' : action.label.startsWith('Future:') ? 'Planned' : 'Unavailable';
 
   return (
@@ -1180,11 +1245,41 @@ function OnboardingActionCard({
           </p>
         </div>
       ) : null}
+      {isCopyAction ? (
+        <div className="onboarding-import-controls">
+          <label className="confirmation-row compact-confirmation">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => onConfirmationChange(event.target.checked)}
+              disabled={busy || !action.available}
+            />
+            <span>I confirm this copies only eligible validated summaries to the guarded local fixture target.</span>
+          </label>
+          <p className="safe-copy-footnote">No GA4 snapshots, raw provider rows, secrets, local config, OAuth files, vault files, provider calls, or portal publishing.</p>
+        </div>
+      ) : null}
       <button type="button" className="copy-button" disabled={!runnable || busy} onClick={onRun}>
-        {busy ? 'Running...' : runnable ? (isCallRailImport ? 'Import aggregate export' : isFormFillsImport ? 'Import date-only file' : 'Run safe check') : 'Not runnable'}
+        {busy ? 'Running...' : runnable ? actionButtonLabel(action.id) : 'Not runnable'}
       </button>
     </article>
   );
+}
+
+function actionButtonLabel(actionId: string) {
+  if (actionId === 'callrail.import-local') {
+    return 'Import aggregate export';
+  }
+  if (actionId === 'form_fills.import-local') {
+    return 'Import date-only file';
+  }
+  if (actionId === 'dashboard_lab.preview-fixture-copy') {
+    return 'Preview fixture copy';
+  }
+  if (actionId === 'dashboard_lab.copy-validated-fixtures') {
+    return 'Copy validated fixtures';
+  }
+  return 'Run safe check';
 }
 
 function SecretVaultPanel({
@@ -1908,7 +2003,7 @@ function SafeCopyReadiness({
       </div>
 
       <p className="safe-copy-footnote">
-        Output folder: <code>{detail.paths.local_real_output_folder}</code>
+        Copy uses profile-scoped ignored local output and the guarded local fixture target.
       </p>
     </section>
   );
@@ -2832,7 +2927,14 @@ function runOnboardingAction(
       const status = String(payload.result.status ?? 'ok');
       const message = String(payload.result.message ?? 'Action completed.');
       setMessage(`${payload.action.provider_label}: ${safeOnboardingActionResultMessage(status, message)}`);
-      if ((payload.action.id === 'form_fills.import-local' || payload.action.id === 'callrail.import-local') && status === 'ok') {
+      if (
+        (
+          payload.action.id === 'form_fills.import-local' ||
+          payload.action.id === 'callrail.import-local' ||
+          payload.action.id === 'dashboard_lab.copy-validated-fixtures'
+        ) &&
+        status === 'ok'
+      ) {
         onComplete?.();
       }
     })
@@ -2852,6 +2954,12 @@ function safeOnboardingActionResultMessage(status: string, message: string) {
   }
   if (status === 'passed') {
     return 'Validation passed.';
+  }
+  if (status === 'ready') {
+    return message || 'Ready.';
+  }
+  if (status === 'not_ready') {
+    return message || 'Needs output or validation.';
   }
   return message;
 }
@@ -3304,8 +3412,6 @@ function CopyPreviewView({ copyPreview }: { copyPreview: CopyPreview }) {
           <thead>
             <tr>
               <th>File</th>
-              <th>Source</th>
-              <th>Destination</th>
               <th>Source exists</th>
               <th>Destination exists</th>
               <th>Action</th>
@@ -3317,8 +3423,6 @@ function CopyPreviewView({ copyPreview }: { copyPreview: CopyPreview }) {
             {copyPreview.items.map((item) => (
               <tr key={item.file}>
                 <td>{item.file}</td>
-                <td>{item.source}</td>
-                <td>{item.destination}</td>
                 <td>{yesNo(item.source_exists)}</td>
                 <td>{yesNo(item.destination_exists)}</td>
                 <td>{copyActionLabel(item.action)}</td>
@@ -3371,8 +3475,6 @@ function CopyResultView({ copyResult }: { copyResult: CopyRunResult }) {
             <tr>
               <th>File</th>
               <th>Status</th>
-              <th>Source</th>
-              <th>Destination</th>
               <th>Size</th>
               <th>Error</th>
             </tr>
@@ -3382,8 +3484,6 @@ function CopyResultView({ copyResult }: { copyResult: CopyRunResult }) {
               <tr key={item.file}>
                 <td>{item.file}</td>
                 <td>{copyStatusLabel(item.status)}</td>
-                <td>{item.source}</td>
-                <td>{item.destination}</td>
                 <td>{item.size}</td>
                 <td>{item.error}</td>
               </tr>

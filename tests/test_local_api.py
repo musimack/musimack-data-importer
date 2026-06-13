@@ -2400,6 +2400,119 @@ def test_copy_action_response_does_not_return_file_contents(tmp_path):
     assert "raw_value" not in serialized
 
 
+def test_onboarding_fixture_copy_preview_is_path_free_and_does_not_write(tmp_path):
+    registry = _registry(tmp_path)
+    source = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
+    _write_json(source / "client-profile.json", {"schema_version": "client.v1", "raw_value": "secret client payload"})
+    _write_json(source / "ga4-snapshot.json", {"schema_version": "ga4_snapshot.v1", "raw_value": "secret snapshot payload"})
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            dashboard_lab_fixture_target_dir=target,
+        )
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/dashboard_lab.preview-fixture-copy/run",
+        json={},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    result = payload["result"]
+    assert result["status"] == "ready"
+    assert any(item["file"] == "ga4-snapshot.json" and item["action"] == "excluded_by_policy" for item in result["items"])
+    assert not (target / "demo-profile" / "client-profile.json").exists()
+    assert str(tmp_path) not in serialized
+    assert "secret client payload" not in serialized
+    assert "secret snapshot payload" not in serialized
+    assert "source_folder" not in serialized
+    assert "destination_folder" not in serialized
+
+
+def test_onboarding_fixture_copy_requires_confirmation_and_copies_only_eligible_temp_files(tmp_path):
+    registry = _registry(tmp_path)
+    source = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
+    _write_json(source / "client-profile.json", {"schema_version": "client.v1", "raw_value": "secret client payload"})
+    _write_json(source / "ga4-summary.json", {"schema_version": "ga4.v1"})
+    _write_json(source / "gsc-summary.json", {"schema_version": "gsc.v1"})
+    _write_json(source / "combined-dashboard-summary.json", {"schema_version": "combined.v1"})
+    _write_json(source / "local-falcon-summary.json", {"schema_version": "local_falcon.v1"})
+    _write_json(source / "ga4-snapshot.json", {"schema_version": "ga4_snapshot.v1"})
+    _write_text(source / "raw-provider-rows.json", '{"raw": true}')
+    audit_path = tmp_path / "logs" / "local-action-runs.jsonl"
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            audit_log_path=audit_path,
+            dashboard_lab_fixture_target_dir=target,
+        )
+    )
+
+    missing_confirmation = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/dashboard_lab.copy-validated-fixtures/run",
+        json={},
+    )
+    copied = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/dashboard_lab.copy-validated-fixtures/run",
+        json={"confirmed": True},
+    )
+
+    assert missing_confirmation.status_code == 400
+    assert copied.status_code == 200
+    payload = copied.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] == "ok"
+    assert payload["result"]["counts"]["copied"] == len(EXPECTED_DASHBOARD_FILES)
+    for filename in EXPECTED_DASHBOARD_FILES:
+        assert (target / "demo-profile" / filename).exists()
+    assert not (target / "demo-profile" / "ga4-snapshot.json").exists()
+    assert not (target / "demo-profile" / "raw-provider-rows.json").exists()
+    assert str(tmp_path) not in serialized
+    assert "secret client payload" not in serialized
+    assert "raw-provider-rows" not in serialized
+    assert audit_path.exists()
+
+
+def test_onboarding_fixture_copy_skips_invalid_or_missing_outputs(tmp_path):
+    registry = _registry(tmp_path)
+    source = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
+    _write_json(source / "client-profile.json", {"schema_version": "client.v1"})
+    _write_text(source / "ga4-summary.json", "{not-json")
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            dashboard_lab_fixture_target_dir=target,
+        )
+    )
+
+    preview = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/dashboard_lab.preview-fixture-copy/run",
+        json={},
+    )
+    copied = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/dashboard_lab.copy-validated-fixtures/run",
+        json={"confirmed": True},
+    )
+
+    assert preview.status_code == 200
+    items = {item["file"]: item for item in preview.json()["result"]["items"]}
+    assert items["client-profile.json"]["eligible"] is True
+    assert items["ga4-summary.json"]["action"] == "skip_invalid_output"
+    assert items["gsc-summary.json"]["action"] == "skip_missing_output"
+    assert copied.status_code == 200
+    assert (target / "demo-profile" / "client-profile.json").exists()
+    assert not (target / "demo-profile" / "ga4-summary.json").exists()
+    assert str(tmp_path) not in json.dumps(copied.json())
+
+
 def test_copy_action_does_not_use_shell_or_subprocess():
     text = (Path(__file__).resolve().parents[1] / "server" / "main.py").read_text(encoding="utf-8")
     copy_section = text.split("def run_copy_to_dashboard_lab_action", 1)[1].split("def _copy_plan_item", 1)[0]

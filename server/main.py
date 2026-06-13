@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -65,6 +66,7 @@ LOCAL_CONFIG_DIR_ENV = "MUSIMACK_IMPORTER_LOCAL_CONFIG_DIR"
 PROFILE_REGISTRY_PATH_ENV = "MUSIMACK_IMPORTER_PROFILE_REGISTRY_PATH"
 FORM_FILLS_INPUT_DIR_ENV = "MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR"
 CALLRAIL_INPUT_DIR_ENV = "MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR"
+DASHBOARD_LAB_FIXTURE_TARGET_DIR_ENV = "MUSIMACK_IMPORTER_DASHBOARD_LAB_FIXTURE_TARGET_DIR"
 PROVIDER_OUTPUT_FILES = {
     "ga4": "ga4-summary.json",
     "gsc": "gsc-summary.json",
@@ -158,6 +160,7 @@ PROVIDER_LABELS = {
     "google_ads_search": "Google Ads Search",
     "callrail": "CallRail",
     "form_fills": "Form Fills",
+    "dashboard_lab": "Dashboard-lab Fixtures",
 }
 ALLOWED_VAULT_SECRET_KEYS = {("local_falcon", "api_key")}
 
@@ -172,6 +175,7 @@ def create_app(
     secret_vault_path: Path | None = None,
     form_fills_input_dir: Path | None = None,
     callrail_input_dir: Path | None = None,
+    dashboard_lab_fixture_target_dir: Path | None = None,
 ) -> FastAPI:
     if env is None:
         load_local_operator_config()
@@ -196,9 +200,19 @@ def create_app(
 
     def current_profiles() -> list[DashboardLabProfile]:
         try:
-            return load_dashboard_lab_profiles(current_registry_path())
+            profiles = load_dashboard_lab_profiles(current_registry_path())
         except OperatorConsoleError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+        target_dir = resolve_dashboard_lab_fixture_target_dir(
+            env=current_env(),
+            explicit_dir=dashboard_lab_fixture_target_dir,
+        )
+        if target_dir is None:
+            return profiles
+        return [
+            replace(profile, dashboard_lab_local_fixture_folder=target_dir / profile.slug)
+            for profile in profiles
+        ]
 
     def current_local_config() -> dict[str, dict[str, Any]]:
         return load_local_profile_config(local_profile_config_path or DEFAULT_LOCAL_PROFILE_CONFIG)
@@ -442,6 +456,7 @@ def create_app(
             local_config=current_profile_config(profile),
             form_fills_input_dir=current_form_fills_input_dir(),
             callrail_input_dir=current_callrail_input_dir(),
+            audit_log_path=current_audit_log_path(),
         )
 
     @app.get("/api/profiles/{profile_slug}/action-plan")
@@ -742,6 +757,20 @@ def resolve_callrail_input_dir(
     if override:
         return Path(override)
     return ROOT / "inputs" / "local-real" / "callrail"
+
+
+def resolve_dashboard_lab_fixture_target_dir(
+    *,
+    env: Mapping[str, str] | None = None,
+    explicit_dir: Path | None = None,
+) -> Path | None:
+    if explicit_dir is not None:
+        return explicit_dir
+    source_env = os.environ if env is None else env
+    override = str(source_env.get(DASHBOARD_LAB_FIXTURE_TARGET_DIR_ENV) or "").strip()
+    if override:
+        return Path(override)
+    return None
 
 
 def _require_allowed_vault_secret(*, provider: str, key: str) -> None:
@@ -1070,7 +1099,7 @@ def build_onboarding_actions(
                 "label": PROVIDER_LABELS.get(provider, provider),
                 "actions": [action for action in actions if action["provider"] == provider],
             }
-            for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills")
+            for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills", "dashboard_lab")
         ],
         "safety": _onboarding_action_safety(),
     }
@@ -1111,6 +1140,7 @@ def run_onboarding_action(
     local_config: Mapping[str, Any],
     form_fills_input_dir: Path | None = None,
     callrail_input_dir: Path | None = None,
+    audit_log_path: Path | None = None,
 ) -> dict[str, Any]:
     action = _find_onboarding_action(
         profile,
@@ -1138,6 +1168,10 @@ def run_onboarding_action(
         result = _run_onboarding_readiness_check(profile, action["provider"], safe_env=safe_env, local_config=local_config)
     elif action["kind"] == "validate_existing_output":
         result = _run_onboarding_output_check(profile, action["provider"])
+    elif action["kind"] == "dashboard_lab_copy_preview":
+        result = build_safe_dashboard_lab_copy_preview(profile)["result"]
+    elif action["kind"] == "dashboard_lab_copy_validated":
+        result = run_safe_dashboard_lab_copy_action(profile, audit_log_path=audit_log_path or DEFAULT_AUDIT_LOG)["result"]
     elif action["kind"] == "form_fills_import_local":
         result = _run_form_fills_import_action(
             profile,
@@ -1252,6 +1286,40 @@ def _onboarding_action_catalog(
                 )
             )
         actions.append(_future_onboarding_action(provider))
+    actions.append(
+        _onboarding_action(
+            action_id="dashboard_lab.preview-fixture-copy",
+            provider="dashboard_lab",
+            kind="dashboard_lab_copy_preview",
+            label="Preview dashboard-lab fixture copy",
+            description="Preview allowlisted validated summaries that are eligible for dashboard-lab local fixtures.",
+            available=True,
+            unavailable_reason="",
+            read_only=True,
+            writes_files=False,
+            external_api=False,
+            fixture_copy=True,
+            requires_confirmation=False,
+        )
+    )
+    safe_preview = build_safe_dashboard_lab_copy_preview(profile)
+    copy_available = any(item["eligible"] for item in safe_preview["result"]["items"])
+    actions.append(
+        _onboarding_action(
+            action_id="dashboard_lab.copy-validated-fixtures",
+            provider="dashboard_lab",
+            kind="dashboard_lab_copy_validated",
+            label="Copy validated fixtures",
+            description="Copy only eligible validated summary JSON files to the guarded dashboard-lab local fixture target.",
+            available=copy_available,
+            unavailable_reason="" if copy_available else "No validated dashboard-lab summary files are ready to copy.",
+            read_only=False,
+            writes_files=True,
+            external_api=False,
+            fixture_copy=True,
+            requires_confirmation=True,
+        )
+    )
     return actions
 
 
@@ -2393,6 +2461,182 @@ def run_copy_to_dashboard_lab_action(
     }
 
 
+def build_safe_dashboard_lab_copy_preview(profile: DashboardLabProfile) -> dict[str, Any]:
+    _validate_copy_guard(profile)
+    report_files = {item.file: item for item in validate_profile_output(profile).files}
+    items = [_safe_copy_plan_item(profile, filename, report_files) for filename in _expected_dashboard_files_for_profile(profile)]
+    snapshot = profile.importer_output_folder / "ga4-snapshot.json"
+    if snapshot.exists():
+        items.append(
+            {
+                "file": "ga4-snapshot.json",
+                "provider": "ga4",
+                "source_exists": True,
+                "destination_exists": False,
+                "validation_status": "excluded",
+                "eligible": False,
+                "action": "excluded_by_policy",
+                "reason": "Excluded by policy. GA4 snapshots are not copied to dashboard-lab fixtures.",
+                "size": _safe_file_size(snapshot),
+                "last_modified": _safe_modified_time(snapshot),
+            }
+        )
+    eligible_count = sum(1 for item in items if item["eligible"])
+    return {
+        "profile": profile.slug,
+        "action_id": "dashboard_lab.preview-fixture-copy",
+        "result": {
+            "status": "ready" if eligible_count else "not_ready",
+            "message": "Fixture copy preview ready." if eligible_count else "No validated summaries are ready to copy.",
+            "items": items,
+            "eligible_count": eligible_count,
+            "excluded_files": [item["file"] for item in items if item["action"] == "excluded_by_policy"],
+            "guardrails": _safe_copy_guardrails(),
+        },
+    }
+
+
+def run_safe_dashboard_lab_copy_action(profile: DashboardLabProfile, *, audit_log_path: Path) -> dict[str, Any]:
+    started = time.perf_counter()
+    preview = build_safe_dashboard_lab_copy_preview(profile)["result"]
+    destination_folder = profile.dashboard_lab_local_fixture_folder
+    destination_folder.mkdir(parents=True, exist_ok=True)
+    results = []
+    for item in preview["items"]:
+        if not item["eligible"]:
+            results.append({**item, "status": item["action"], "error": ""})
+            continue
+        source = profile.importer_output_folder / item["file"]
+        destination = destination_folder / item["file"]
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            existed = destination.exists()
+            shutil.copy2(source, destination)
+            results.append(
+                {
+                    **item,
+                    "destination_exists": True,
+                    "status": "overwritten" if existed else "copied",
+                    "size": _safe_file_size(destination),
+                    "last_modified": _safe_modified_time(destination),
+                    "error": "",
+                }
+            )
+        except OSError as exc:
+            results.append({**item, "status": "failed", "error": type(exc).__name__})
+    counts = _safe_copy_result_counts(results)
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    warnings = []
+    if counts["skipped"]:
+        warnings.append(f"skipped file(s): {counts['skipped']}")
+    if counts["failed"]:
+        warnings.append(f"failed file(s): {counts['failed']}")
+    status = "ok" if counts["failed"] == 0 else "failed"
+    audit = _write_audit_log(
+        audit_log_path,
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "action_id": "dashboard_lab.copy-validated-fixtures",
+            "profile_slug": profile.slug,
+            "status": status,
+            "file_counts": counts,
+            "warnings": warnings,
+            "duration_ms": duration_ms,
+        },
+    )
+    return {
+        "profile": profile.slug,
+        "action_id": "dashboard_lab.copy-validated-fixtures",
+        "result": {
+            "status": status,
+            "message": "Dashboard-lab fixture copy complete." if status == "ok" else "Dashboard-lab fixture copy completed with warnings.",
+            "duration_ms": duration_ms,
+            "items": results,
+            "counts": counts,
+            "warnings": warnings,
+            "audit_logged": bool(audit.get("logged")),
+            "guardrails": _safe_copy_guardrails(),
+        },
+    }
+
+
+def _safe_copy_plan_item(
+    profile: DashboardLabProfile,
+    filename: str,
+    report_files: Mapping[str, Any],
+) -> dict[str, Any]:
+    source = profile.importer_output_folder / filename
+    destination = profile.dashboard_lab_local_fixture_folder / filename
+    source_exists = source.exists() and source.is_file()
+    destination_exists = destination.exists()
+    status = report_files.get(filename)
+    json_valid = None if status is None else status.json_valid
+    validation_status = "valid" if json_valid is True else "invalid" if json_valid is False else "unknown"
+    eligible = source_exists and json_valid is not False
+    reason = "Ready to copy"
+    action = "copy" if not destination_exists else "overwrite"
+    if not source_exists:
+        eligible = False
+        action = "skip_missing_output"
+        reason = "Missing output"
+    elif json_valid is False:
+        eligible = False
+        action = "skip_invalid_output"
+        reason = "Validation failed"
+    return {
+        "file": filename,
+        "provider": _provider_for_dashboard_file(filename),
+        "source_exists": source_exists,
+        "destination_exists": destination_exists,
+        "validation_status": validation_status,
+        "eligible": eligible,
+        "action": action,
+        "reason": reason,
+        "size": _safe_file_size(source),
+        "last_modified": _safe_modified_time(source),
+    }
+
+
+def _safe_copy_result_counts(results: list[dict[str, Any]]) -> dict[str, int]:
+    copied = sum(1 for item in results if item["status"] == "copied")
+    overwritten = sum(1 for item in results if item["status"] == "overwritten")
+    failed = sum(1 for item in results if item["status"] == "failed")
+    skipped = len(results) - copied - overwritten - failed
+    return {
+        "copied": copied,
+        "overwritten": overwritten,
+        "skipped": skipped,
+        "failed": failed,
+        "eligible": sum(1 for item in results if item.get("eligible")),
+        "total": len(results),
+    }
+
+
+def _provider_for_dashboard_file(filename: str) -> str:
+    mapping = {
+        "client-profile.json": "profile",
+        "combined-dashboard-summary.json": "profile",
+        "ga4-summary.json": "ga4",
+        "gsc-summary.json": "gsc",
+        "local-falcon-summary.json": "local_falcon",
+        "google-ads-summary.json": "google_ads_search",
+        "callrail-summary.json": "callrail",
+        "form-fills-summary.json": "form_fills",
+        "ga4-snapshot.json": "ga4",
+    }
+    return mapping.get(filename, "dashboard_lab")
+
+
+def _safe_copy_guardrails() -> list[str]:
+    return [
+        "copies allowlisted dashboard summary JSON files only",
+        "ga4-snapshot.json is excluded",
+        "no raw provider rows, local config, secrets, OAuth files, or vault files",
+        "copy requires explicit confirmation",
+        "no provider API calls or portal publishing",
+    ]
+
+
 def serialize_validation_result(profile: DashboardLabProfile, report: Any) -> dict[str, Any]:
     expected_files = _expected_dashboard_files_for_profile(profile)
     required_files = _required_dashboard_files_for_profile(profile)
@@ -2482,10 +2726,13 @@ def _validate_copy_guard(profile: DashboardLabProfile) -> None:
     destination_posix = destination.as_posix()
     if not source_posix.endswith(f"exports/local-real/dashboard-lab/{profile.slug}"):
         raise HTTPException(status_code=400, detail="copy source must be under exports/local-real/dashboard-lab/{profile}")
-    if not destination_posix.endswith(f"public/local-fixtures/{profile.slug}"):
-        raise HTTPException(status_code=400, detail="copy destination must be under dashboard-lab public/local-fixtures/{profile}")
     if "/public/fixtures/" in destination_posix:
         raise HTTPException(status_code=400, detail="copy destination must not point to committed public/fixtures")
+    if not (
+        destination_posix.endswith(f"public/local-fixtures/{profile.slug}")
+        or ".tmp" in destination.parts
+    ):
+        raise HTTPException(status_code=400, detail="copy destination must be under dashboard-lab public/local-fixtures/{profile} or repo .tmp")
 
 
 def _copy_plan_item(profile: DashboardLabProfile, filename: str) -> dict[str, Any]:
@@ -2592,7 +2839,7 @@ def build_last_action_summary(profile: DashboardLabProfile, audit_log_path: Path
     history = read_action_runs(audit_log_path, profile_slug=profile.slug, limit=100)
     entries = history["entries"]
     last_validation = _first_action(entries, "validate-output")
-    last_copy = _first_action(entries, "copy-to-dashboard-lab")
+    last_copy = _first_action(entries, "dashboard_lab.copy-validated-fixtures") or _first_action(entries, "copy-to-dashboard-lab")
     return {
         "last_action": entries[0] if entries else None,
         "last_validation": last_validation,

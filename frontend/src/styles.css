@@ -194,6 +194,7 @@ code {
 }
 
 .simple-summary-card,
+.onboarding-flow-card,
 .onboarding-status-card,
 .onboarding-actions-card,
 .secret-vault-card,
@@ -222,6 +223,55 @@ code {
   border-color: #c6d5e5;
   display: grid;
   gap: 14px;
+}
+
+.onboarding-flow-card {
+  background: #ffffff;
+  border-color: #ccd8e4;
+  display: grid;
+  gap: 12px;
+}
+
+.onboarding-flow-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.onboarding-flow-heading h3 {
+  font-size: 20px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.onboarding-flow-steps {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.onboarding-flow-step {
+  background: #f8fafb;
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.onboarding-flow-step span,
+.onboarding-flow-step small {
+  color: #687181;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-flow-step strong {
+  color: #253043;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .onboarding-status-strip {
@@ -1399,6 +1449,7 @@ pre {
   .topbar,
   .section-heading,
   .simple-summary-main,
+  .onboarding-flow-heading,
   .onboarding-status-heading,
   .onboarding-actions-heading,
   .secret-vault-heading,
@@ -1420,6 +1471,7 @@ pre {
   .readiness-grid,
   .provider-grid,
   .summary-counts,
+  .onboarding-flow-steps,
   .onboarding-status-strip,
   .onboarding-action-groups,
   .vault-status-grid,
