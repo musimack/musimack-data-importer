@@ -346,6 +346,14 @@ code {
   gap: 14px;
 }
 
+.local-readiness-card,
+.acceleration-card {
+  background: #ffffff;
+  border-color: #cbd7e5;
+  display: grid;
+  gap: 14px;
+}
+
 .onboarding-flow-card {
   background: #ffffff;
   border-color: #ccd8e4;
@@ -552,8 +560,17 @@ code {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.local-readiness-grid,
+.acceleration-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .preflight-panel,
-.operator-guidance-box {
+.operator-guidance-box,
+.local-readiness-panel,
+.acceleration-panel {
   background: #f8fafb;
   border: 1px solid #e1e7ec;
   border-radius: 8px;
@@ -565,6 +582,41 @@ code {
 .operator-guidance-box {
   background: #f4fbf7;
   border-color: #c8dfd1;
+}
+
+.local-readiness-panel {
+  background: #f8fbff;
+  border-color: #d5e2ef;
+}
+
+.acceleration-panel {
+  align-content: start;
+}
+
+.local-readiness-meta,
+.guidance-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acceleration-list {
+  display: grid;
+  gap: 8px;
+}
+
+.acceleration-item {
+  background: #ffffff;
+  border: 1px solid #e3e8ee;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.panel-empty {
+  color: #5a6b7c;
+  margin: 0;
 }
 
 .preflight-checks {
@@ -1337,6 +1389,12 @@ code {
   gap: 2px;
 }
 
+.setup-chip.active {
+  background: #e6f4ea;
+  border-color: #9ec7a8;
+  color: #214b2f;
+}
+
 .checklist-heading,
 .action-group-heading {
   align-items: flex-start;
@@ -1962,6 +2020,8 @@ pre {
   .onboarding-flow-steps,
   .onboarding-status-strip,
   .preflight-grid,
+  .local-readiness-grid,
+  .acceleration-grid,
     .onboarding-action-groups,
     .provider-setup-grid,
     .provider-setup-meta,
@@ -1998,6 +2058,8 @@ pre {
   .new-onboarding-card,
   .onboarding-flow-card,
   .onboarding-preflight-card,
+  .local-readiness-card,
+  .acceleration-card,
   .onboarding-status-card,
   .onboarding-actions-card,
   .completion-summary-card,

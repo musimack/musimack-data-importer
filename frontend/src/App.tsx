@@ -150,6 +150,7 @@ type RuntimeSafetyStatus = {
     vault_override_active: boolean;
     form_fills_input_override_active: boolean;
     callrail_input_override_active: boolean;
+    local_falcon_manifest_dir_override_active: boolean;
     dashboard_lab_fixture_target_override_active: boolean;
   };
   active_labels: string[];
@@ -347,11 +348,29 @@ type OnboardingPreflightProvider = {
   next_step: string;
 };
 
+type LocalFileReadinessItem = {
+  provider: string;
+  label: string;
+  state: string;
+  detail: string;
+  configured: boolean;
+  detected: boolean;
+  action_state: string;
+  action_label: string;
+  step_label: string;
+};
+
 type NextActionItem = {
   id: string;
   label: string;
   status: string;
   detail: string;
+};
+
+type GuidanceItem = {
+  label: string;
+  count: number;
+  active: boolean;
 };
 
 type OnboardingStatus = {
@@ -388,9 +407,16 @@ type OnboardingStatus = {
     last_copy: string;
   };
   providers: OnboardingProviderStatus[];
+  local_file_readiness: LocalFileReadinessItem[];
   preflight: {
     state: string;
     providers: OnboardingPreflightProvider[];
+  };
+  acceleration: {
+    ready_now: NextActionItem[];
+    blocked: NextActionItem[];
+    planned_live: NextActionItem[];
+    guidance: GuidanceItem[];
   };
   next_action_stack: {
     primary: NextActionItem;
@@ -832,7 +858,7 @@ function App() {
                     disabled={refreshing}
                     onClick={() => refreshSelectedProfile()}
                   >
-                    {refreshing ? 'Refreshing...' : 'Refresh profile status'}
+                    {refreshing ? 'Refreshing...' : 'Refresh local readiness'}
                   </button>
                 </div>
               </div>
@@ -843,6 +869,10 @@ function App() {
               <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
 
               <OnboardingPreflightPanel status={detail.onboarding_status} />
+
+              <LocalReadinessPanel status={detail.onboarding_status} />
+
+              <OnboardingAccelerationPanel status={detail.onboarding_status} />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
 
@@ -1240,6 +1270,8 @@ function MetricPill({ label, value }: { label: string; value: string | number })
 }
 
 function OnboardingPreflightPanel({ status }: { status: OnboardingStatus }) {
+  const preflight = status.preflight ?? { state: 'In progress', providers: [] };
+  const operatorGuidance = status.operator_guidance ?? [];
   return (
     <section className="onboarding-preflight-card" aria-label="Provider onboarding preflight">
       <div className="onboarding-status-heading">
@@ -1250,11 +1282,11 @@ function OnboardingPreflightPanel({ status }: { status: OnboardingStatus }) {
             Safe setup checks only. This keeps local config values, vault contents, raw file paths, and provider payloads out of view.
           </p>
         </div>
-        <span className={statusBadgeClass(status.preflight.state)}>{status.preflight.state}</span>
+        <span className={statusBadgeClass(preflight.state)}>{preflight.state}</span>
       </div>
 
       <div className="preflight-grid">
-        {status.preflight.providers.map((provider) => (
+        {preflight.providers.map((provider) => (
           <article className="preflight-panel" key={provider.provider}>
             <div className="card-heading">
               <div>
@@ -1285,7 +1317,7 @@ function OnboardingPreflightPanel({ status }: { status: OnboardingStatus }) {
           </div>
         </div>
         <ul className="status-list">
-          {status.operator_guidance.map((item) => (
+          {operatorGuidance.map((item) => (
             <li key={item}>
               <span className="tiny-dot neutral" />
               <span>{item}</span>
@@ -1293,6 +1325,104 @@ function OnboardingPreflightPanel({ status }: { status: OnboardingStatus }) {
           ))}
         </ul>
       </article>
+    </section>
+  );
+}
+
+function LocalReadinessPanel({ status }: { status: OnboardingStatus }) {
+  const items = status.local_file_readiness ?? [];
+  if (!items.length) {
+    return null;
+  }
+  return (
+    <section className="local-readiness-card" aria-label="Local file readiness">
+      <div className="onboarding-status-heading">
+        <div>
+          <span className="eyebrow">Local file readiness</span>
+          <h3>Approved local inputs</h3>
+          <p>Read-only detection only. This checks approved local input or disposable override locations without exposing raw paths.</p>
+        </div>
+      </div>
+      <div className="local-readiness-grid">
+        {items.map((item) => (
+          <article className="local-readiness-panel" key={item.provider}>
+            <div className="card-heading">
+              <div>
+                <h4>{item.label}</h4>
+                <p>{item.detail}</p>
+              </div>
+              <span className={statusBadgeClass(item.state)}>{item.state}</span>
+            </div>
+            <div className="local-readiness-meta">
+              <span className={statusBadgeClass(item.action_label)}>{item.action_label}</span>
+              <span>{item.step_label}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OnboardingAccelerationPanel({ status }: { status: OnboardingStatus }) {
+  const acceleration = status.acceleration ?? { ready_now: [], blocked: [], planned_live: [], guidance: [] };
+  const groups = [
+    {
+      title: 'Ready local steps',
+      items: acceleration.ready_now,
+      empty: 'Nothing is ready to run yet.',
+    },
+    {
+      title: 'Blocked local steps',
+      items: acceleration.blocked,
+      empty: 'No local blockers are currently visible.',
+    },
+    {
+      title: 'Planned live steps',
+      items: acceleration.planned_live,
+      empty: 'No planned live steps are currently queued.',
+    },
+  ];
+  return (
+    <section className="acceleration-card" aria-label="Onboarding acceleration">
+      <div className="onboarding-status-heading">
+        <div>
+          <span className="eyebrow">Operator flow</span>
+          <h3>Onboarding acceleration</h3>
+          <p>Batch the next local steps safely. Nothing here runs automatically, and live provider work remains separately approved.</p>
+        </div>
+      </div>
+      <div className="guidance-chip-row" aria-label="Batching guidance">
+        {acceleration.guidance.map((item) => (
+          <span className={item.active ? 'setup-chip active' : 'setup-chip'} key={item.label}>
+            {item.label}: {item.count}
+          </span>
+        ))}
+      </div>
+      <div className="acceleration-grid">
+        {groups.map((group) => (
+          <article className="acceleration-panel" key={group.title}>
+            <div className="card-heading">
+              <div>
+                <h4>{group.title}</h4>
+              </div>
+            </div>
+            {group.items.length ? (
+              <div className="acceleration-list">
+                {group.items.map((item) => (
+                  <div className="acceleration-item" key={item.id}>
+                    <strong>{item.label}</strong>
+                    <span>{item.detail}</span>
+                    <span className={statusBadgeClass(item.status)}>{item.status}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="panel-empty">{group.empty}</p>
+            )}
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -2504,8 +2634,13 @@ function PrimaryNextAction({
 }: {
   status: OnboardingStatus;
 }) {
-  const primary = status.next_action_stack.primary;
-  const queue = status.next_action_stack.queue;
+  const primary = status.next_action_stack?.primary ?? {
+    id: 'review',
+    label: 'Review local readiness',
+    status: 'Complete',
+    detail: 'All visible local onboarding gates are currently satisfied.',
+  };
+  const queue = status.next_action_stack?.queue ?? [];
   return (
     <section className="next-action-card" aria-label="Recommended next actions">
       <div>
@@ -3436,10 +3571,10 @@ function checklistStatusClass(status: string, severity: string) {
 }
 
 function statusTone(value: string) {
-  if (value.includes('Configured') || value.includes('created') || value.includes('exists') || value.includes('Ready')) {
+  if (value.includes('Configured') || value.includes('created') || value.includes('exists') || value.includes('Ready') || value.includes('Complete') || value.includes('detected')) {
     return 'ok';
   }
-  if (value.includes('Not enabled') || value.includes('Not applicable') || value.includes('unknown') || value.includes('Not configured')) {
+  if (value.includes('Not enabled') || value.includes('Not applicable') || value.includes('unknown') || value.includes('Not configured') || value.includes('Planned')) {
     return 'neutral';
   }
   return 'warn';

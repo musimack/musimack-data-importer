@@ -62,7 +62,13 @@ def test_runtime_safety_status_reports_overrides_without_paths(tmp_path):
     payload = response.json()
     serialized = json.dumps(payload)
     assert payload["mode"] == "qa_override"
-    assert all(payload["overrides"].values())
+    assert payload["overrides"]["profile_registry_override_active"] is True
+    assert payload["overrides"]["local_config_override_active"] is True
+    assert payload["overrides"]["vault_override_active"] is True
+    assert payload["overrides"]["form_fills_input_override_active"] is True
+    assert payload["overrides"]["callrail_input_override_active"] is True
+    assert payload["overrides"]["dashboard_lab_fixture_target_override_active"] is True
+    assert payload["overrides"]["local_falcon_manifest_dir_override_active"] is False
     assert "Profile registry override active" in payload["active_labels"]
     assert "Fixture target override active" in payload["active_labels"]
     for path in (registry, config_dir, vault, form_input, callrail_input, fixture_target, tmp_path):
@@ -1142,10 +1148,13 @@ def test_onboarding_status_endpoint_returns_safe_read_only_matrix(tmp_path):
     assert providers["callrail"]["output_state"] == "Not applicable"
     assert payload["local_config"]["state"] == "Configured"
     assert payload["preflight"]["state"] == "In progress"
+    assert payload["local_file_readiness"][0]["provider"] == "local_falcon"
+    assert payload["local_file_readiness"][0]["state"] == "Configured local file not found"
+    assert payload["acceleration"]["blocked"][0]["label"] == "Add Local Falcon manifest file"
     assert payload["next_action_stack"]["primary"]["label"] == "Add Local Falcon manifest file"
     local_falcon_preflight = next(item for item in payload["preflight"]["providers"] if item["provider"] == "local_falcon")
     assert local_falcon_preflight["overall_state"] == "Missing setup"
-    assert any(check["label"] == "Manifest" and check["status"] == "Needs manifest" for check in local_falcon_preflight["checks"])
+    assert any(check["label"] == "Manifest" and check["status"] == "Configured local file not found" for check in local_falcon_preflight["checks"])
     assert "Portal publishing is separate." in payload["operator_guidance"]
     assert "demo-profile.local.json" in serialized
     assert "do-not-return" not in serialized
@@ -1307,11 +1316,92 @@ def test_onboarding_status_sequences_local_falcon_and_local_file_blockers_safely
         "Add CallRail local file",
         "Add Form Fills local file",
     ]
+    local_file_states = {item["provider"]: item for item in payload["local_file_readiness"]}
+    assert local_file_states["local_falcon"]["state"] == "File detected"
+    assert local_file_states["callrail"]["state"] == "File not configured"
     local_falcon = next(item for item in payload["preflight"]["providers"] if item["provider"] == "local_falcon")
-    assert any(check["label"] == "Manifest" and check["status"] == "Complete" for check in local_falcon["checks"])
+    assert any(check["label"] == "Manifest" and check["status"] == "File detected" for check in local_falcon["checks"])
+    assert any(check["label"] == "Manifest validation" and check["status"] == "Ready to validate manifest" for check in local_falcon["checks"])
     assert any(check["label"] == "Vault or env key" and check["status"] == "Needs secret" for check in local_falcon["checks"])
     assert str(tmp_path) not in serialized
     assert manifest_name not in serialized
+
+
+def test_onboarding_status_detects_local_files_and_groups_ready_steps_without_path_leakage(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["local_falcon", "callrail", "form_fills"],
+        capabilities=[
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json"},
+        ],
+    )
+    manifest_root = tmp_path / "manifest-override"
+    form_fills_root = tmp_path / "form-fills-inputs"
+    callrail_root = tmp_path / "callrail-inputs"
+    manifest_root.mkdir(parents=True, exist_ok=True)
+    (form_fills_root / "demo-profile").mkdir(parents=True, exist_ok=True)
+    (callrail_root / "demo-profile").mkdir(parents=True, exist_ok=True)
+    _write_json(
+        manifest_root / "steadfast.json",
+        {
+            "profile": "demo-profile",
+            "reports": [{"source": "Google Maps", "keyword": "safe keyword", "report_id": "report-1"}],
+        },
+    )
+    (form_fills_root / "demo-profile" / "steadfast-form-fills.csv").write_text("date\n2024-01-01\n", encoding="utf-8")
+    (callrail_root / "demo-profile" / "steadfast-callrail.csv").write_text("call_time\n2024-01-01\n", encoding="utf-8")
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "local_falcon": {"manifest_path": "steadfast.json", "api_key_env": "DEMO_LOCAL_FALCON_KEY"},
+                    "callrail": {"local_input_filename": "demo-profile/steadfast-callrail.csv"},
+                    "form_fills": {"local_input_filename": "demo-profile/steadfast-form-fills.csv"},
+                }
+            }
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={
+                "DEMO_LOCAL_FALCON_KEY": "real-secret-not-returned",
+                "MUSIMACK_IMPORTER_LOCAL_FALCON_MANIFEST_DIR": str(manifest_root),
+                "MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR": str(form_fills_root),
+                "MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR": str(callrail_root),
+            },
+            local_profile_config_path=config_path,
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    states = {item["provider"]: item["state"] for item in payload["local_file_readiness"]}
+    assert states == {
+        "local_falcon": "File detected",
+        "form_fills": "File detected",
+        "callrail": "File detected",
+    }
+    assert [item["label"] for item in payload["acceleration"]["ready_now"][:3]] == [
+        "Validate Local Falcon manifest",
+        "Import Form Fills",
+        "Import CallRail",
+    ]
+    assert payload["next_action_stack"]["primary"]["label"] == "Validate Local Falcon manifest"
+    assert payload["acceleration"]["guidance"][0] == {"label": "Ready now", "count": 3, "active": True}
+    assert str(tmp_path) not in serialized
+    assert "steadfast.json" not in serialized
+    assert "steadfast-form-fills.csv" not in serialized
+    assert "steadfast-callrail.csv" not in serialized
+    assert "real-secret-not-returned" not in serialized
 
 
 def test_local_falcon_manifest_validation_action_returns_sanitized_metadata_only(tmp_path):
@@ -1369,6 +1459,48 @@ def test_local_falcon_manifest_validation_action_returns_sanitized_metadata_only
     assert "report-1" not in serialized
     assert str(tmp_path) not in serialized
     assert manifest_name not in serialized
+
+
+def test_onboarding_completion_summary_blocks_on_configured_missing_local_file_safely(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["callrail"],
+        capabilities=[
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+        ],
+    )
+    callrail_root = tmp_path / "callrail-inputs"
+    callrail_root.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "callrail": {"local_input_filename": "demo-profile/steadfast-callrail.csv"},
+                }
+            }
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR": str(callrail_root)},
+            local_profile_config_path=config_path,
+            audit_log_path=tmp_path / "logs" / "missing.jsonl",
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-completion-summary")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["profile"]["readiness_state"] == "Blocked"
+    assert "Configured CallRail local file not found" in payload["blockers"]
+    assert str(tmp_path) not in serialized
+    assert "steadfast-callrail.csv" not in serialized
 
 
 def test_onboarding_validation_action_runs_allowlisted_script_with_sanitized_failure(tmp_path):
