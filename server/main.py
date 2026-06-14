@@ -1092,6 +1092,18 @@ def build_onboarding_status(
         execution=execution,
         last_actions=last_actions,
     )
+    command_center = _build_operator_command_center(
+        profile=profile,
+        providers=providers,
+        local_config_state=local_config_state["state"],
+        vault_state=vault_state["state"],
+        local_file_readiness=local_file_readiness,
+        validation_state=validation_state,
+        dashboard_copy_state=dashboard_copy_state,
+        execution=execution,
+        acceleration=acceleration,
+        next_safe_action=next_safe_action,
+    )
 
     return {
         "profile": {
@@ -1125,6 +1137,7 @@ def build_onboarding_status(
         "acceleration": acceleration,
         "next_action_stack": next_action_stack,
         "next_safe_action": next_safe_action,
+        "command_center": command_center,
         "operator_guidance": _real_operator_guidance(),
         "safety": {
             "read_only": True,
@@ -1240,6 +1253,9 @@ def build_onboarding_completion_summary(
         planned_live_actions=planned_live_actions,
         validation=validation,
         fixture_copy=fixture_copy,
+        local_config=onboarding_status["local_config"],
+        vault=onboarding_status["vault"],
+        local_file_readiness=onboarding_status["local_file_readiness"],
         recommended_next_actions=recommended_next_actions,
     )
     return {
@@ -2171,6 +2187,101 @@ def _build_next_safe_action(
     }
 
 
+def _build_operator_command_center(
+    *,
+    profile: DashboardLabProfile,
+    providers: list[dict[str, Any]],
+    local_config_state: str,
+    vault_state: str,
+    local_file_readiness: list[dict[str, Any]],
+    validation_state: str,
+    dashboard_copy_state: str,
+    execution: Mapping[str, Any],
+    acceleration: Mapping[str, Any],
+    next_safe_action: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    enabled_providers = [item for item in providers if item["enabled"]]
+    execution_steps = {item["id"]: item for item in execution.get("steps", []) if isinstance(item, Mapping)}
+    file_items = [item for item in local_file_readiness if isinstance(item, Mapping)]
+    detected_file_count = sum(1 for item in file_items if bool(item.get("detected")))
+    file_blocker_count = sum(1 for item in file_items if not bool(item.get("detected")))
+    output_ready_count = sum(1 for item in enabled_providers if item["output_state"] == "Output exists")
+    local_falcon_enabled = any(item["provider"] == "local_falcon" for item in enabled_providers)
+    local_falcon_key_step = execution_steps.get("local_falcon_key")
+
+    if local_falcon_key_step:
+        secret_state = "Needs secret"
+        secret_detail = "Local Falcon key status needs attention."
+    elif local_falcon_enabled:
+        secret_state = "Known"
+        secret_detail = "Local Falcon key status is known for this local session."
+    else:
+        secret_state = "Not required"
+        secret_detail = "Local Falcon is not enabled for this profile."
+
+    if not file_items:
+        local_file_state = "Not required"
+        local_file_detail = "No local-only input files are required for enabled providers."
+    elif file_blocker_count:
+        local_file_state = "Blocked"
+        local_file_detail = f"{file_blocker_count} approved local input check(s) still need attention."
+    else:
+        local_file_state = "Detected"
+        local_file_detail = f"{detected_file_count} approved local input check(s) are ready."
+
+    ready_now = [item for item in acceleration.get("ready_now", []) if isinstance(item, Mapping)]
+    blocked = [item for item in acceleration.get("blocked", []) if isinstance(item, Mapping)]
+    planned_live = [item for item in acceleration.get("planned_live", []) if isinstance(item, Mapping)]
+    dashboard_ready = dashboard_copy_state == "Dashboard-lab ready"
+    next_step_label = str((next_safe_action or {}).get("label") or (blocked[0].get("label") if blocked else "Review local readiness"))
+    next_step_detail = str(
+        (next_safe_action or {}).get("detail")
+        or (blocked[0].get("detail") if blocked else "All visible local onboarding gates are currently satisfied.")
+    )
+
+    return {
+        "headline": f"{profile.display_name} local onboarding command center",
+        "readiness_state": "Dashboard-lab ready" if dashboard_ready else "Blocked" if blocked else "Ready for local action" if ready_now else "In progress",
+        "next_step_label": next_step_label,
+        "next_step_detail": next_step_detail,
+        "metrics": [
+            {"label": "Enabled providers", "value": str(len(enabled_providers)), "tone": "neutral"},
+            {"label": "Outputs ready", "value": f"{output_ready_count}/{len(enabled_providers)}", "tone": "ok" if enabled_providers and output_ready_count == len(enabled_providers) else "warn"},
+            {"label": "Ready now", "value": str(len(ready_now)), "tone": "ok" if ready_now else "neutral"},
+            {"label": "Blocked", "value": str(len(blocked)), "tone": "warn" if blocked else "ok"},
+            {"label": "Planned live", "value": str(len(planned_live)), "tone": "neutral"},
+        ],
+        "ladder": [
+            {"label": "Profile verified", "status": "Complete", "detail": "Tracked profile shell is saved.", "tone": "ok"},
+            {"label": "Local config saved", "status": local_config_state, "detail": "Ignored local config only.", "tone": _command_center_tone(local_config_state)},
+            {"label": "Local Falcon key status", "status": secret_state, "detail": secret_detail, "tone": _command_center_tone(secret_state)},
+            {"label": "Local file readiness", "status": local_file_state, "detail": local_file_detail, "tone": _command_center_tone(local_file_state)},
+            {"label": "Ready local actions", "status": "Ready now" if ready_now else "None ready", "detail": f"{len(ready_now)} safe local step(s) currently runnable.", "tone": "ok" if ready_now else "neutral"},
+            {"label": "Local imports", "status": "Complete" if enabled_providers and output_ready_count == len(enabled_providers) else "Waiting on output", "detail": "Enabled provider summary outputs are present." if enabled_providers and output_ready_count == len(enabled_providers) else "One or more enabled providers still need local output.", "tone": "ok" if enabled_providers and output_ready_count == len(enabled_providers) else "warn"},
+            {"label": "Validation", "status": validation_state, "detail": str(execution_steps.get("validate-output", {}).get("detail") or "Validation state is tracked without file contents."), "tone": _command_center_tone(validation_state)},
+            {"label": "Fixture preview", "status": str(execution_steps.get("dashboard_lab.preview-fixture-copy", {}).get("status") or "Not ready"), "detail": str(execution_steps.get("dashboard_lab.preview-fixture-copy", {}).get("detail") or "Preview is required before guarded copy."), "tone": _command_center_tone(str(execution_steps.get("dashboard_lab.preview-fixture-copy", {}).get("status") or ""))},
+            {"label": "Fixture copy", "status": str(execution_steps.get("dashboard_lab.copy-validated-fixtures", {}).get("status") or "Not ready"), "detail": str(execution_steps.get("dashboard_lab.copy-validated-fixtures", {}).get("detail") or "Guarded fixture copy remains confirmation-gated."), "tone": _command_center_tone(str(execution_steps.get("dashboard_lab.copy-validated-fixtures", {}).get("status") or ""))},
+            {"label": "Dashboard-lab ready", "status": dashboard_copy_state, "detail": "Ready to open dashboard-lab manually." if dashboard_ready else "Portal publishing remains separate.", "tone": _command_center_tone(dashboard_copy_state)},
+        ],
+        "lanes": {
+            "ready_now": ready_now[:4],
+            "blocked": blocked[:4],
+            "planned_live": planned_live[:4],
+        },
+    }
+
+
+def _command_center_tone(status: str) -> str:
+    normalized = status.lower()
+    if "unknown" in normalized:
+        return "neutral"
+    if any(token in normalized for token in ("complete", "configured", "detected", "known", "ready", "passed", "copied")):
+        return "ok"
+    if any(token in normalized for token in ("missing", "needs", "blocked", "failed", "waiting", "required", "not found", "output missing")):
+        return "warn"
+    return "neutral"
+
+
 def _completion_final_checklist(
     *,
     profile: DashboardLabProfile,
@@ -2232,6 +2343,9 @@ def _build_operator_handoff_text(
     planned_live_actions: list[str],
     validation: Mapping[str, Any],
     fixture_copy: Mapping[str, Any],
+    local_config: Mapping[str, Any],
+    vault: Mapping[str, Any],
+    local_file_readiness: list[dict[str, Any]],
     recommended_next_actions: list[str],
 ) -> str:
     execution_completed = [
@@ -2252,6 +2366,13 @@ def _build_operator_handoff_text(
         lines.append("")
         lines.append("Completed local execution:")
         lines.extend(f"- {item}" for item in execution_completed)
+    detected_files = sum(1 for item in local_file_readiness if bool(item.get("detected")))
+    blocked_files = sum(1 for item in local_file_readiness if not bool(item.get("detected")))
+    lines.append("")
+    lines.append("Local setup status:")
+    lines.append(f"- Local config: {local_config['state']}")
+    lines.append(f"- Local Falcon key status: {vault['local_falcon_api_key_metadata']}")
+    lines.append(f"- Approved local files: {detected_files} detected, {blocked_files} needing attention")
     lines.append("")
     lines.append("Still pending:")
     lines.extend(f"- {item['label']}: {item['detail']}" for item in incomplete_steps)
@@ -2499,11 +2620,11 @@ def _onboarding_action_catalog(
         )
         actions.append(
             _onboarding_action(
-                    action_id=f"{provider}-check-readiness",
-                    provider=provider,
-                    kind="readiness_check",
-                    label="Refresh local readiness",
-                    description="Refresh safe setup, local file readiness, output readiness, and next-step metadata.",
+                action_id=f"{provider}-check-readiness",
+                provider=provider,
+                kind="readiness_check",
+                label="Refresh local readiness",
+                description=_onboarding_readiness_description(provider),
                 available=enabled,
                 unavailable_reason="" if enabled else "Provider is not enabled for this profile.",
                 read_only=True,
@@ -2672,6 +2793,15 @@ def _onboarding_action(
         "external_api": external_api,
         "fixture_copy": fixture_copy,
     }
+
+
+def _onboarding_readiness_description(provider: str) -> str:
+    if provider == "google_ads_search":
+        return (
+            "Refresh read-only Google Ads Search reporting readiness. "
+            "No campaign, budget, bid, keyword, ad, asset, conversion, or account-setting mutations."
+        )
+    return "Refresh safe setup, local file readiness, output readiness, and next-step metadata."
 
 
 def _future_onboarding_action(provider: str) -> dict[str, Any]:

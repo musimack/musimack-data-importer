@@ -373,6 +373,19 @@ type GuidanceItem = {
   active: boolean;
 };
 
+type CommandCenterMetric = {
+  label: string;
+  value: string;
+  tone: string;
+};
+
+type ReadinessLadderItem = {
+  label: string;
+  status: string;
+  detail: string;
+  tone: string;
+};
+
 type ExecutionStep = {
   id: string;
   provider: string;
@@ -456,6 +469,19 @@ type OnboardingStatus = {
     requires_confirmation: boolean;
     auto_chain: boolean;
   } | null;
+  command_center?: {
+    headline: string;
+    readiness_state: string;
+    next_step_label: string;
+    next_step_detail: string;
+    metrics: CommandCenterMetric[];
+    ladder: ReadinessLadderItem[];
+    lanes: {
+      ready_now: NextActionItem[];
+      blocked: NextActionItem[];
+      planned_live: NextActionItem[];
+    };
+  };
   operator_guidance: string[];
   safety: {
     read_only: boolean;
@@ -902,6 +928,38 @@ function App() {
               </div>
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
+              <OperatorCommandCenter
+                status={detail.onboarding_status}
+                actions={onboardingActions}
+                actionInputs={onboardingActionInputs}
+                actionConfirmations={onboardingActionConfirmations}
+                busyActionId={onboardingActionBusyId}
+                onInputChange={(actionId, value) =>
+                  setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }))
+                }
+                onConfirmationChange={(actionId, confirmed) =>
+                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
+                }
+                onRun={(actionId) =>
+                  runOnboardingAction(
+                    detail.slug,
+                    actionId,
+                    {
+                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
+                      inputFile: onboardingActionInputs[actionId] ?? '',
+                    },
+                    setOnboardingActionBusyId,
+                    setOnboardingActionMessage,
+                    (result) =>
+                      setSessionActionResults((current) => [
+                        result,
+                        ...current.filter((item) => item.id !== result.id),
+                      ].slice(0, 8)),
+                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
+                  )
+                }
+              />
+
               <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
 
               <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
@@ -957,38 +1015,6 @@ function App() {
                     completionSummary?.operator_handoff_text ?? '',
                     setCopiedHandoff,
                     setCompletionSummaryMessage,
-                  )
-                }
-              />
-
-              <PrimaryNextAction
-                status={detail.onboarding_status}
-                actions={onboardingActions}
-                actionInputs={onboardingActionInputs}
-                actionConfirmations={onboardingActionConfirmations}
-                busyActionId={onboardingActionBusyId}
-                onInputChange={(actionId, value) =>
-                  setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }))
-                }
-                onConfirmationChange={(actionId, confirmed) =>
-                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
-                }
-                onRun={(actionId) =>
-                  runOnboardingAction(
-                    detail.slug,
-                    actionId,
-                    {
-                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
-                      inputFile: onboardingActionInputs[actionId] ?? '',
-                    },
-                    setOnboardingActionBusyId,
-                    setOnboardingActionMessage,
-                    (result) =>
-                      setSessionActionResults((current) => [
-                        result,
-                        ...current.filter((item) => item.id !== result.id),
-                      ].slice(0, 8)),
-                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
                   )
                 }
               />
@@ -1320,6 +1346,213 @@ function NewClientOnboardingGuide({ runtimeSafetyStatus }: { runtimeSafetyStatus
         ))}
       </div>
     </section>
+  );
+}
+
+function OperatorCommandCenter({
+  status,
+  actions,
+  actionInputs,
+  actionConfirmations,
+  busyActionId,
+  onInputChange,
+  onConfirmationChange,
+  onRun,
+}: {
+  status: OnboardingStatus;
+  actions: OnboardingActionsResponse | null;
+  actionInputs: Record<string, string>;
+  actionConfirmations: Record<string, boolean>;
+  busyActionId: string;
+  onInputChange: (actionId: string, value: string) => void;
+  onConfirmationChange: (actionId: string, confirmed: boolean) => void;
+  onRun: (actionId: string) => void;
+}) {
+  const commandCenter = status.command_center ?? commandCenterFallback(status);
+  const nextSafeAction = status.next_safe_action;
+  const actionMap = new Map((actions?.actions ?? []).map((action) => [action.id, action]));
+  const actionable = nextSafeAction ? actionMap.get(nextSafeAction.action_id) : undefined;
+  const localFileMap = new Map((status.local_file_readiness ?? []).map((item) => [item.provider, item]));
+  const configuredInputDetected = actionable?.id === 'form_fills.import-local'
+    ? Boolean(localFileMap.get('form_fills')?.detected)
+    : actionable?.id === 'callrail.import-local'
+      ? Boolean(localFileMap.get('callrail')?.detected)
+      : false;
+  const hasOverrideInput = actionable ? Boolean((actionInputs[actionable.id] ?? '').trim()) : false;
+  const confirmed = actionable ? Boolean(actionConfirmations[actionable.id]) : false;
+  const runnable = actionable
+    ? actionable.requires_confirmation
+      ? actionable.id === 'dashboard_lab.copy-validated-fixtures'
+        ? confirmed
+        : actionable.id === 'form_fills.import-local' || actionable.id === 'callrail.import-local'
+          ? confirmed && (configuredInputDetected || hasOverrideInput)
+          : confirmed
+      : actionable.available
+    : false;
+
+  return (
+    <section className="operator-command-center" aria-label="Steadfast local onboarding command center">
+      <div className="command-center-header">
+        <div>
+          <span className="eyebrow">Operator command center</span>
+          <h3>{commandCenter.headline}</h3>
+          <p>{commandCenter.next_step_detail}</p>
+        </div>
+        <span className={statusBadgeClass(commandCenter.readiness_state)}>{commandCenter.readiness_state}</span>
+      </div>
+
+      <div className="command-metric-strip" aria-label="Command center summary">
+        {commandCenter.metrics.map((metric) => (
+          <StatusTile key={metric.label} label={metric.label} value={metric.value} tone={metric.tone} />
+        ))}
+      </div>
+
+      <div className="command-center-body">
+        <div className="next-safe-step-card">
+          <span className="eyebrow">Next Safe Step</span>
+          <h4>{nextSafeAction?.label ?? commandCenter.next_step_label}</h4>
+          <p>{nextSafeAction?.detail ?? commandCenter.next_step_detail}</p>
+          {actionable && (actionable.id === 'form_fills.import-local' || actionable.id === 'callrail.import-local') ? (
+            <label className="local-config-field">
+              <span>Optional local input override</span>
+              <input
+                type="text"
+                value={actionInputs[actionable.id] ?? ''}
+                placeholder={actionable.id === 'callrail.import-local' ? 'Optional override: qa-callrail.csv' : 'Optional override: qa-form-fills.csv'}
+                onChange={(event) => onInputChange(actionable.id, event.target.value)}
+                disabled={busyActionId === actionable.id}
+              />
+            </label>
+          ) : null}
+          {actionable?.requires_confirmation ? (
+            <label className="confirmation-row compact-confirmation">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                disabled={busyActionId === actionable.id}
+                onChange={(event) => onConfirmationChange(actionable.id, event.target.checked)}
+              />
+              <span>{nextSafeConfirmationLabel(actionable.id, configuredInputDetected)}</span>
+            </label>
+          ) : null}
+          {actionable ? (
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!runnable || busyActionId === actionable.id}
+              onClick={() => onRun(actionable.id)}
+            >
+              {busyActionId === actionable.id ? 'Running...' : nextSafeActionButtonLabel(actionable.id)}
+            </button>
+          ) : (
+            <p className="safe-copy-footnote">No single safe local step is runnable yet.</p>
+          )}
+        </div>
+
+        <div className="command-lanes">
+          <CommandLane title="Ready now" items={commandCenter.lanes.ready_now} empty="No local step is runnable yet." />
+          <CommandLane title="Blocked" items={commandCenter.lanes.blocked} empty="No local blockers are visible." />
+          <CommandLane title="Planned live work" items={commandCenter.lanes.planned_live} empty="No planned live work is queued." />
+        </div>
+      </div>
+
+      <div className="readiness-ladder" aria-label="Steadfast readiness ladder">
+        {commandCenter.ladder.map((item) => (
+          <article className={`readiness-ladder-item ${item.tone}`} key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.status}</strong>
+            <p>{item.detail}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function commandCenterFallback(status: OnboardingStatus) {
+  const readyNow = status.acceleration?.ready_now ?? [];
+  const blocked = status.acceleration?.blocked ?? [];
+  const plannedLive = status.acceleration?.planned_live ?? [];
+  const enabledProviders = status.providers.filter((provider) => provider.enabled);
+  const outputReadyCount = enabledProviders.filter((provider) => provider.output_state === 'Output exists').length;
+  const localFiles = status.local_file_readiness ?? [];
+  const detectedFileCount = localFiles.filter((item) => item.detected).length;
+  const blockedFileCount = localFiles.length - detectedFileCount;
+  const primary = status.next_safe_action ?? status.next_action_stack?.primary;
+
+  return {
+    headline: `${status.profile.display_name} local onboarding command center`,
+    readiness_state: status.dashboard_copy.state === 'Dashboard-lab ready'
+      ? 'Dashboard-lab ready'
+      : blocked.length
+        ? 'Blocked'
+        : readyNow.length
+          ? 'Ready for local action'
+          : 'In progress',
+    next_step_label: primary?.label ?? 'Review local readiness',
+    next_step_detail: primary?.detail ?? 'All visible local onboarding gates are currently satisfied.',
+    metrics: [
+      { label: 'Enabled providers', value: String(enabledProviders.length), tone: 'neutral' },
+      {
+        label: 'Outputs ready',
+        value: `${outputReadyCount}/${enabledProviders.length}`,
+        tone: enabledProviders.length && outputReadyCount === enabledProviders.length ? 'ok' : 'warn',
+      },
+      { label: 'Ready now', value: String(readyNow.length), tone: readyNow.length ? 'ok' : 'neutral' },
+      { label: 'Blocked', value: String(blocked.length), tone: blocked.length ? 'warn' : 'ok' },
+      { label: 'Planned live', value: String(plannedLive.length), tone: 'neutral' },
+    ],
+    ladder: [
+      { label: 'Profile verified', status: status.profile.shell_state, detail: 'Tracked profile shell is saved.', tone: 'ok' },
+      { label: 'Local config saved', status: status.local_config.state, detail: 'Ignored local config only.', tone: statusTone(status.local_config.state) },
+      { label: 'Local Falcon key status', status: status.vault.state, detail: 'Local Falcon key status is tracked without exposing values.', tone: statusTone(status.vault.state) },
+      {
+        label: 'Local file readiness',
+        status: blockedFileCount ? 'Blocked' : localFiles.length ? 'Detected' : 'Not required',
+        detail: localFiles.length
+          ? `${detectedFileCount} detected, ${blockedFileCount} needing attention.`
+          : 'No local-only input files are required for enabled providers.',
+        tone: blockedFileCount ? 'warn' : 'ok',
+      },
+      { label: 'Ready local actions', status: readyNow.length ? 'Ready now' : 'None ready', detail: `${readyNow.length} safe local step(s) currently runnable.`, tone: readyNow.length ? 'ok' : 'neutral' },
+      {
+        label: 'Local imports',
+        status: enabledProviders.length && outputReadyCount === enabledProviders.length ? 'Complete' : 'Waiting on output',
+        detail: enabledProviders.length && outputReadyCount === enabledProviders.length
+          ? 'Enabled provider summary outputs are present.'
+          : 'One or more enabled providers still need local output.',
+        tone: enabledProviders.length && outputReadyCount === enabledProviders.length ? 'ok' : 'warn',
+      },
+      { label: 'Validation', status: status.validation.state, detail: 'Validation state is tracked without file contents.', tone: statusTone(status.validation.state) },
+      { label: 'Fixture preview', status: status.dashboard_copy.state, detail: 'Preview is required before guarded copy.', tone: statusTone(status.dashboard_copy.state) },
+      { label: 'Fixture copy', status: status.dashboard_copy.state, detail: 'Guarded fixture copy remains confirmation-gated.', tone: statusTone(status.dashboard_copy.state) },
+      { label: 'Dashboard-lab ready', status: status.dashboard_copy.state, detail: 'Portal publishing remains separate.', tone: statusTone(status.dashboard_copy.state) },
+    ],
+    lanes: {
+      ready_now: readyNow.slice(0, 4),
+      blocked: blocked.slice(0, 4),
+      planned_live: plannedLive.slice(0, 4),
+    },
+  };
+}
+
+function CommandLane({ title, items, empty }: { title: string; items: NextActionItem[]; empty: string }) {
+  return (
+    <article className="command-lane">
+      <h4>{title}</h4>
+      {items.length ? (
+        <div className="command-lane-list">
+          {items.map((item) => (
+            <div className="command-lane-item" key={item.id}>
+              <strong>{item.label}</strong>
+              <span>{item.detail}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>{empty}</p>
+      )}
+    </article>
   );
 }
 

@@ -1406,6 +1406,16 @@ def test_onboarding_status_detects_local_files_and_groups_ready_steps_without_pa
         "requires_confirmation": False,
         "auto_chain": False,
     }
+    command_center = payload["command_center"]
+    assert command_center["headline"] == "Demo Profile local onboarding command center"
+    assert command_center["next_step_label"] == "Validate Local Falcon manifest"
+    assert command_center["metrics"][2] == {"label": "Ready now", "value": "3", "tone": "ok"}
+    ladder = {item["label"]: item for item in command_center["ladder"]}
+    assert ladder["Local Falcon key status"]["status"] == "Known"
+    assert ladder["Local file readiness"]["status"] == "Detected"
+    assert ladder["Validation"]["status"] == "Validation unknown"
+    assert ladder["Validation"]["tone"] == "neutral"
+    assert command_center["lanes"]["ready_now"][0]["id"] == "local_falcon.validate-manifest"
     assert payload["acceleration"]["guidance"][0] == {"label": "Ready now", "count": 3, "active": True}
     assert str(tmp_path) not in serialized
     assert "steadfast.json" not in serialized
@@ -1565,6 +1575,9 @@ def test_onboarding_status_includes_recent_execution_results_and_dashboard_ready
     assert steps["dashboard_lab_ready"]["status"] == "Complete"
     assert payload["dashboard_copy"]["state"] == "Dashboard-lab ready"
     assert payload["next_safe_action"] is None
+    assert payload["command_center"]["readiness_state"] == "Dashboard-lab ready"
+    ladder = {item["label"]: item for item in payload["command_center"]["ladder"]}
+    assert ladder["Dashboard-lab ready"]["status"] == "Dashboard-lab ready"
     assert payload["acceleration"]["ready_now"] == []
     assert payload["execution"]["recent_results"][0]["label"] == "Copy validated fixtures"
     assert str(tmp_path) not in serialized
@@ -2185,9 +2198,11 @@ def test_profile_detail_includes_current_enabled_provider_files_and_actions(tmp_
 
     response = client.get("/api/profiles/demo-profile")
     preview = client.get("/api/profiles/demo-profile/actions/copy-to-dashboard-lab/preview")
+    onboarding_actions = client.get("/api/profiles/demo-profile/onboarding-actions")
 
     assert response.status_code == 200
     assert preview.status_code == 200
+    assert onboarding_actions.status_code == 200
     payload = response.json()
     expected_files = [
         "client-profile.json",
@@ -2204,6 +2219,13 @@ def test_profile_detail_includes_current_enabled_provider_files_and_actions(tmp_
     assert "ga4-snapshot.json" not in payload["output_status"]["expected_files"]
     assert "ga4-snapshot.json" not in [item["file"] for item in preview.json()["items"]]
     assert _action(payload["action_plan"], "google-ads-search-read-only-export")["provider"] == "google_ads_search"
+    ads_panel = next(item for item in payload["provider_setup_checklist"] if item["provider_key"] == "google_ads_search")
+    ads_action = _action(onboarding_actions.json(), "google_ads_search-check-readiness")
+    ads_copy = json.dumps({"panel": ads_panel, "action": ads_action})
+    assert "read-only" in ads_copy.lower()
+    assert "No campaign, budget, bid, keyword, ad, asset, conversion, or account-setting mutations." in ads_copy
+    assert ads_action["external_api"] is False
+    assert ads_action["writes_files"] is False
     assert _action(payload["action_plan"], "callrail-csv-import")["provider"] == "callrail"
     assert _action(payload["action_plan"], "form-fills-date-only-import")["provider"] == "form_fills"
     serialized = json.dumps({"profile": payload, "preview": preview.json()})
@@ -2494,6 +2516,10 @@ def test_onboarding_completion_summary_returns_safe_metadata_and_handoff_text(tm
     assert payload["fixture_copy"]["copied_file_count"] == 2
     assert "Operator handoff: Demo Profile" in payload["operator_handoff_text"]
     assert "Completed local execution:" in payload["operator_handoff_text"]
+    assert "Local setup status:" in payload["operator_handoff_text"]
+    assert "Local config: Needs config" in payload["operator_handoff_text"]
+    assert "Local Falcon key status: not configured" in payload["operator_handoff_text"]
+    assert "Approved local files: 0 detected, 2 needing attention" in payload["operator_handoff_text"]
     assert "Portal publishing is separate" in payload["operator_handoff_text"]
     assert "CallRail" in json.dumps(payload["provider_outputs"])
     assert "hidden" not in serialized
