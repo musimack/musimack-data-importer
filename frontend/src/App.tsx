@@ -360,6 +360,20 @@ type LocalFileReadinessItem = {
   step_label: string;
 };
 
+type LocalFileUploadResponse = {
+  profile: string;
+  provider: string;
+  provider_label: string;
+  saved: boolean;
+  size_bucket: string;
+  readiness: {
+    state: string;
+    detected: boolean;
+    action_label: string;
+    step_label: string;
+  };
+};
+
 type NextActionItem = {
   id: string;
   label: string;
@@ -686,6 +700,10 @@ function App() {
   const [onboardingActionBusyId, setOnboardingActionBusyId] = useState<string>('');
   const [onboardingActionInputs, setOnboardingActionInputs] = useState<Record<string, string>>({});
   const [onboardingActionConfirmations, setOnboardingActionConfirmations] = useState<Record<string, boolean>>({});
+  const [localFileUploads, setLocalFileUploads] = useState<Record<string, File | null>>({});
+  const [localFileUploadConfirmations, setLocalFileUploadConfirmations] = useState<Record<string, boolean>>({});
+  const [localFileUploadBusyProvider, setLocalFileUploadBusyProvider] = useState<string>('');
+  const [localFileUploadMessage, setLocalFileUploadMessage] = useState<string>('');
   const [runtimeSafetyStatus, setRuntimeSafetyStatus] = useState<RuntimeSafetyStatus | null>(null);
   const [sessionActionResults, setSessionActionResults] = useState<SessionActionResult[]>([]);
   const selectedProfile = useMemo(
@@ -728,7 +746,7 @@ function App() {
 
   useEffect(() => {
     if (!selectedSlug) {
-        setDetail(null);
+      setDetail(null);
       setValidationConfirmed(false);
       setValidationResult(null);
       setCopyPreview(null);
@@ -749,6 +767,10 @@ function App() {
       setOnboardingActionBusyId('');
       setOnboardingActionInputs({});
       setOnboardingActionConfirmations({});
+      setLocalFileUploads({});
+      setLocalFileUploadConfirmations({});
+      setLocalFileUploadBusyProvider('');
+      setLocalFileUploadMessage('');
       return;
     }
     setValidationConfirmed(false);
@@ -771,6 +793,10 @@ function App() {
     setOnboardingActionBusyId('');
     setOnboardingActionInputs({});
     setOnboardingActionConfirmations({});
+    setLocalFileUploads({});
+    setLocalFileUploadConfirmations({});
+    setLocalFileUploadBusyProvider('');
+    setLocalFileUploadMessage('');
     refreshProfileStatus(
       selectedSlug,
       setDetail,
@@ -960,41 +986,32 @@ function App() {
                 }
               />
 
-              <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
+              <WizardProviderOverview detail={detail} actions={onboardingActions} />
 
-              <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
-
-              <OnboardingPreflightPanel status={detail.onboarding_status} />
-
-              <LocalReadinessPanel status={detail.onboarding_status} />
-
-              <OnboardingAccelerationPanel status={detail.onboarding_status} />
-
-              <LocalExecutionPanel
+              <LocalFileIntakePanel
                 status={detail.onboarding_status}
-                actions={onboardingActions}
-                busyActionId={onboardingActionBusyId}
-                onRun={(actionId) =>
-                  runOnboardingAction(
+                uploads={localFileUploads}
+                confirmations={localFileUploadConfirmations}
+                busyProvider={localFileUploadBusyProvider}
+                message={localFileUploadMessage}
+                onFileChange={(provider, file) =>
+                  setLocalFileUploads((current) => ({ ...current, [provider]: file }))
+                }
+                onConfirmationChange={(provider, confirmed) =>
+                  setLocalFileUploadConfirmations((current) => ({ ...current, [provider]: confirmed }))
+                }
+                onUpload={(provider) =>
+                  uploadLocalFile(
                     detail.slug,
-                    actionId,
-                    {
-                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
-                      inputFile: onboardingActionInputs[actionId] ?? '',
-                    },
-                    setOnboardingActionBusyId,
-                    setOnboardingActionMessage,
-                    (result) =>
-                      setSessionActionResults((current) => [
-                        result,
-                        ...current.filter((item) => item.id !== result.id),
-                      ].slice(0, 8)),
-                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
+                    provider,
+                    localFileUploads[provider] ?? null,
+                    Boolean(localFileUploadConfirmations[provider]),
+                    setLocalFileUploadBusyProvider,
+                    setLocalFileUploadMessage,
+                    () => refreshSelectedProfile('Local file readiness refreshed after file intake', false),
                   )
                 }
               />
-
-              <OnboardingStatusDashboard status={detail.onboarding_status} />
 
               <CompletionSummaryPanel
                 summary={completionSummary}
@@ -1017,12 +1034,6 @@ function App() {
                     setCompletionSummaryMessage,
                   )
                 }
-              />
-
-              <ProviderSetupWorkbench
-                detail={detail}
-                actions={onboardingActions}
-                runtimeSafetyStatus={runtimeSafetyStatus}
               />
 
               <OnboardingActionsPanel
@@ -1057,8 +1068,6 @@ function App() {
                   )
                 }
               />
-
-              <SessionActionHistoryPanel results={sessionActionResults} />
 
               <SecretVaultPanel
                 passphrase={vaultPassphrase}
@@ -1159,8 +1168,6 @@ function App() {
                 }
               />
 
-              <ProviderChecklist detail={detail} />
-
               <SafeCopyReadiness
                 detail={detail}
                 copyPreview={copyPreview}
@@ -1195,6 +1202,52 @@ function App() {
               <details className="advanced-panel">
                 <summary>Advanced / Operator Diagnostics</summary>
                 <div className="advanced-content">
+                  <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
+
+                  <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
+
+                  <OnboardingPreflightPanel status={detail.onboarding_status} />
+
+                  <LocalReadinessPanel status={detail.onboarding_status} />
+
+                  <OnboardingAccelerationPanel status={detail.onboarding_status} />
+
+                  <LocalExecutionPanel
+                    status={detail.onboarding_status}
+                    actions={onboardingActions}
+                    busyActionId={onboardingActionBusyId}
+                    onRun={(actionId) =>
+                      runOnboardingAction(
+                        detail.slug,
+                        actionId,
+                        {
+                          confirmed: Boolean(onboardingActionConfirmations[actionId]),
+                          inputFile: onboardingActionInputs[actionId] ?? '',
+                        },
+                        setOnboardingActionBusyId,
+                        setOnboardingActionMessage,
+                        (result) =>
+                          setSessionActionResults((current) => [
+                            result,
+                            ...current.filter((item) => item.id !== result.id),
+                          ].slice(0, 8)),
+                        () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
+                      )
+                    }
+                  />
+
+                  <OnboardingStatusDashboard status={detail.onboarding_status} />
+
+                  <ProviderSetupWorkbench
+                    detail={detail}
+                    actions={onboardingActions}
+                    runtimeSafetyStatus={runtimeSafetyStatus}
+                  />
+
+                  <ProviderChecklist detail={detail} />
+
+                  <SessionActionHistoryPanel results={sessionActionResults} />
+
                   <LastActionSummary lastActions={detail.last_actions} />
 
                   <h3>Expected Dashboard Files</h3>
@@ -2205,6 +2258,141 @@ function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus })
       <span className={statusBadgeClass(provider.copy_state)} role="cell">{provider.copy_state}</span>
       <span role="cell">{provider.next_step}</span>
     </div>
+  );
+}
+
+function WizardProviderOverview({
+  detail,
+  actions,
+}: {
+  detail: ProfileDetail;
+  actions: OnboardingActionsResponse | null;
+}) {
+  const actionMap = new Map((actions?.groups ?? []).flatMap((group) => group.actions.map((action) => [action.id, action])));
+  return (
+    <section className="wizard-card" aria-label="Steadfast onboarding wizard">
+      <div className="wizard-heading">
+        <div>
+          <span className="eyebrow">Steadfast-first onboarding</span>
+          <h3>Setup wizard</h3>
+          <p>Work top to bottom: provider readiness, approved local files, local secrets, safe imports, then dashboard-lab handoff.</p>
+        </div>
+        <span className="badge neutral">No live provider pulls</span>
+      </div>
+      <div className="wizard-provider-grid">
+        {providerSetupItems(detail).map((item) => {
+          const importAction = actionMap.get(`${item.provider_key}.import-local`);
+          return (
+            <article className="wizard-provider-card" key={item.provider_key}>
+              <div className="card-heading">
+                <div>
+                  <h4>{item.provider_label}</h4>
+                  <p>{setupHeadline(item)}</p>
+                </div>
+                <span className={statusBadgeClass(item.status)}>{item.status}</span>
+              </div>
+              <div className="wizard-provider-meta">
+                <span>Config: {localConfigStatusLabel(item)}</span>
+                <span>Secret: {providerSecretStatusLabel(item)}</span>
+                <span>Import: {providerImportStatusLabel(item, importAction)}</span>
+              </div>
+              <p className="safe-copy-footnote">{item.safe_next_action || item.blocked_reason || providerPlannedActionNote(item.provider_key)}</p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function LocalFileIntakePanel({
+  status,
+  uploads,
+  confirmations,
+  busyProvider,
+  message,
+  onFileChange,
+  onConfirmationChange,
+  onUpload,
+}: {
+  status: OnboardingStatus;
+  uploads: Record<string, File | null>;
+  confirmations: Record<string, boolean>;
+  busyProvider: string;
+  message: string;
+  onFileChange: (provider: string, file: File | null) => void;
+  onConfirmationChange: (provider: string, confirmed: boolean) => void;
+  onUpload: (provider: string) => void;
+}) {
+  const items = (status.local_file_readiness ?? []).filter((item) => ['local_falcon', 'form_fills', 'callrail'].includes(item.provider));
+  return (
+    <section className="local-file-intake-card" aria-label="Local file intake">
+      <div className="wizard-heading">
+        <div>
+          <span className="eyebrow">Approved local file intake</span>
+          <h3>Upload or select local files</h3>
+          <p>Use disposable files in automated QA. David can manually upload real approved files here during onboarding.</p>
+        </div>
+        <span className="badge neutral">Ignored local storage</span>
+      </div>
+      {message ? <p className="vault-message">{message}</p> : null}
+      {items.length ? (
+        <div className="local-file-upload-grid">
+          {items.map((item) => {
+            const busy = busyProvider === item.provider;
+            const selectedFile = uploads[item.provider];
+            const confirmed = Boolean(confirmations[item.provider]);
+            return (
+              <article className="local-file-upload-card" key={item.provider}>
+                <div className="card-heading">
+                  <div>
+                    <h4>{item.label}</h4>
+                    <p>{item.detail}</p>
+                  </div>
+                  <span className={statusBadgeClass(item.state)}>{item.state}</span>
+                </div>
+                <div className="action-safety-row">
+                  <span>{localFileAcceptLabel(item.provider)}</span>
+                  <span>Stored under approved local intake</span>
+                  <span>No content preview</span>
+                </div>
+                <label className="file-picker-row">
+                  <span>Choose file</span>
+                  <input
+                    type="file"
+                    accept={localFileAcceptAttribute(item.provider)}
+                    disabled={busy}
+                    onChange={(event) => onFileChange(item.provider, event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label className="confirmation-row compact-confirmation">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    disabled={busy}
+                    onChange={(event) => onConfirmationChange(item.provider, event.target.checked)}
+                  />
+                  <span>I confirm this is an approved local-only {item.label} file and should be saved to ignored local intake.</span>
+                </label>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={busy || !selectedFile || !confirmed}
+                  onClick={() => onUpload(item.provider)}
+                >
+                  {busy ? 'Saving...' : item.detected ? 'Replace local file' : 'Save local file'}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="vault-message">No enabled providers require local intake files for this profile.</p>
+      )}
+      <p className="safe-copy-footnote">
+        Upload responses return safe status only. The UI does not print file contents, paths, provider rows, call details, form submissions, or secret values.
+      </p>
+    </section>
   );
 }
 
@@ -4081,6 +4269,26 @@ function providerPlannedActionNote(provider: string) {
   return 'Live provider pulls require separate operator approval outside this panel.';
 }
 
+function localFileAcceptAttribute(provider: string) {
+  if (provider === 'local_falcon') {
+    return '.json,application/json';
+  }
+  if (provider === 'callrail') {
+    return '.csv,text/csv';
+  }
+  return '.csv,.json,text/csv,application/json';
+}
+
+function localFileAcceptLabel(provider: string) {
+  if (provider === 'local_falcon') {
+    return 'JSON manifest';
+  }
+  if (provider === 'callrail') {
+    return 'CSV aggregate export';
+  }
+  return 'CSV or JSON local file';
+}
+
 function RealProfileGuardrails({ detail }: { detail: ProfileDetail }) {
   const enabledProviders = activeProviderItems(detail).map((item) => item.provider_label);
   const items = [
@@ -4587,6 +4795,45 @@ function runOnboardingAction(
     .finally(() => setBusyActionId(''));
 }
 
+function uploadLocalFile(
+  profileSlug: string,
+  provider: string,
+  file: File | null,
+  confirmed: boolean,
+  setBusyProvider: (provider: string) => void,
+  setMessage: (message: string) => void,
+  onComplete: () => void,
+) {
+  if (!file) {
+    setMessage('Choose a local file before uploading.');
+    return;
+  }
+  if (!confirmed) {
+    setMessage('Confirm this is an approved local-only file before uploading.');
+    return;
+  }
+  const body = new FormData();
+  body.append('file', file);
+  body.append('confirmed', String(confirmed));
+  setBusyProvider(provider);
+  fetch(`${API_BASE}/api/profiles/${profileSlug}/local-files/${provider}/upload`, {
+    method: 'POST',
+    body,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      return response.json() as Promise<LocalFileUploadResponse>;
+    })
+    .then((payload) => {
+      setMessage(`${payload.provider_label}: approved local file saved. Readiness is ${payload.readiness.state}.`);
+      onComplete();
+    })
+    .catch((fetchError: Error) => setMessage(safeLocalFileUploadErrorMessage(fetchError)))
+    .finally(() => setBusyProvider(''));
+}
+
 function safeOnboardingActionResultMessage(status: string, message: string) {
   if (status === 'input_missing') {
     return 'Input missing.';
@@ -4821,6 +5068,17 @@ function safeLocalConfigErrorMessage(error: Error) {
     return 'Profile was not found.';
   }
   return status ? `Local config request failed with status ${status}.` : 'Local config request failed.';
+}
+
+function safeLocalFileUploadErrorMessage(error: Error) {
+  const status = error.message.match(/\d{3}/)?.[0] ?? '';
+  if (status === '400') {
+    return 'Local file upload was blocked by safety validation.';
+  }
+  if (status === '404') {
+    return 'Local file provider or profile was not found.';
+  }
+  return status ? `Local file upload failed with status ${status}.` : 'Local file upload failed.';
 }
 
 function safeProfileRegistryErrorMessage(error: Error) {

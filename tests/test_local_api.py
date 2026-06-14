@@ -1424,6 +1424,138 @@ def test_onboarding_status_detects_local_files_and_groups_ready_steps_without_pa
     assert "real-secret-not-returned" not in serialized
 
 
+def test_local_file_upload_saves_configured_form_fills_file_safely(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["form_fills"],
+        capabilities=[
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json"},
+        ],
+    )
+    form_fills_root = tmp_path / "form-fills-inputs"
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "form_fills": {"local_input_filename": "demo-profile/steadfast-form-fills.csv"},
+                }
+            }
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"MUSIMACK_IMPORTER_FORM_FILLS_INPUT_DIR": str(form_fills_root)},
+            local_profile_config_path=config_path,
+        )
+    )
+
+    blocked = client.post(
+        "/api/profiles/demo-profile/local-files/form_fills/upload",
+        data={"confirmed": "false"},
+        files={"file": ("upload.csv", b"date\n2024-01-01\n", "text/csv")},
+    )
+    response = client.post(
+        "/api/profiles/demo-profile/local-files/form_fills/upload",
+        data={"confirmed": "true"},
+        files={"file": ("upload.csv", b"date\n2024-01-01\n", "text/csv")},
+    )
+
+    assert blocked.status_code == 400
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["saved"] is True
+    assert payload["provider"] == "form_fills"
+    assert payload["readiness"]["state"] == "File detected"
+    assert payload["readiness"]["detected"] is True
+    assert (form_fills_root / "demo-profile" / "steadfast-form-fills.csv").is_file()
+    assert str(tmp_path) not in serialized
+    assert "steadfast-form-fills.csv" not in serialized
+    assert "2024-01-01" not in serialized
+
+
+def test_local_file_upload_rejects_traversal_and_wrong_type_safely(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["callrail"],
+        capabilities=[
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+        ],
+    )
+    callrail_root = tmp_path / "callrail-inputs"
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"MUSIMACK_IMPORTER_CALLRAIL_INPUT_DIR": str(callrail_root)},
+        )
+    )
+
+    traversal = client.post(
+        "/api/profiles/demo-profile/local-files/callrail/upload",
+        data={"confirmed": "true"},
+        files={"file": ("../callrail.csv", b"call_time\n2024-01-01\n", "text/csv")},
+    )
+    wrong_type = client.post(
+        "/api/profiles/demo-profile/local-files/callrail/upload",
+        data={"confirmed": "true"},
+        files={"file": ("callrail.json", b"{}", "application/json")},
+    )
+
+    assert traversal.status_code == 400
+    assert wrong_type.status_code == 400
+    assert not callrail_root.exists()
+
+
+def test_local_file_upload_saves_local_falcon_manifest_without_content_echo(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["local_falcon"],
+        capabilities=[
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+        ],
+    )
+    manifest_root = tmp_path / "manifest-inputs"
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "local_falcon": {"manifest_path": "steadfast-local-falcon-manifest.json"},
+                }
+            }
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={"MUSIMACK_IMPORTER_LOCAL_FALCON_MANIFEST_DIR": str(manifest_root)},
+            local_profile_config_path=config_path,
+        )
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/local-files/local_falcon/upload",
+        data={"confirmed": "true"},
+        files={"file": ("manifest.json", b'{"profile":"demo-profile","secretish":"not-returned"}', "application/json")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["provider"] == "local_falcon"
+    assert payload["readiness"]["state"] == "File detected"
+    assert (manifest_root / "steadfast-local-falcon-manifest.json").is_file()
+    assert str(tmp_path) not in serialized
+    assert "steadfast-local-falcon-manifest.json" not in serialized
+    assert "not-returned" not in serialized
+
+
 def test_local_falcon_manifest_validation_action_returns_sanitized_metadata_only(tmp_path):
     registry = _registry(
         tmp_path,

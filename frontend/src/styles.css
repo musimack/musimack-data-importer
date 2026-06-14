@@ -2110,6 +2110,87 @@ tr:last-child td {
   margin-top: 4px;
 }
 
+.wizard-card,
+.local-file-intake-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f7faf6 58%, #eef6ef 100%);
+  border: 1px solid #cfd9cf;
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(32, 49, 39, 0.08);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.wizard-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.wizard-heading h3,
+.wizard-heading p,
+.wizard-provider-card h4,
+.wizard-provider-card p,
+.local-file-upload-card h4,
+.local-file-upload-card p {
+  margin: 0;
+}
+
+.wizard-heading p,
+.wizard-provider-card p,
+.local-file-upload-card p {
+  color: #657181;
+}
+
+.wizard-provider-grid,
+.local-file-upload-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wizard-provider-card,
+.local-file-upload-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #dce4dc;
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.wizard-provider-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.wizard-provider-meta span,
+.file-picker-row {
+  background: #f5f8f5;
+  border: 1px solid #dfe7df;
+  border-radius: 10px;
+  color: #3b4856;
+  font-size: 13px;
+  padding: 9px 10px;
+}
+
+.file-picker-row {
+  display: grid;
+  gap: 8px;
+}
+
+.file-picker-row span {
+  color: #566172;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.file-picker-row input {
+  font-size: 13px;
+}
+
 .blocked-reason {
   background: #fff8e7;
   border: 1px solid #dfc477;
@@ -2196,6 +2277,7 @@ pre {
   .runtime-safety-banner,
   .new-onboarding-heading,
   .command-center-header,
+  .wizard-heading,
   .section-heading,
   .simple-summary-main,
   .completion-summary-heading,
@@ -2231,6 +2313,8 @@ pre {
   .command-metric-strip,
   .command-lanes,
   .readiness-ladder,
+  .wizard-provider-grid,
+  .local-file-upload-grid,
   .onboarding-flow-steps,
   .onboarding-status-strip,
   .preflight-grid,
@@ -2272,6 +2356,8 @@ pre {
   .runtime-safety-banner,
   .new-onboarding-card,
   .operator-command-center,
+  .wizard-card,
+  .local-file-intake-card,
   .onboarding-flow-card,
   .onboarding-preflight-card,
   .local-readiness-card,

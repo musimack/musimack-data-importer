@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
@@ -115,6 +115,8 @@ BASE_REQUIRED_DASHBOARD_FILES = [
     "combined-dashboard-summary.json",
 ]
 ACTION_ALLOWLIST = {"validate-output", "copy-to-dashboard-lab"}
+LOCAL_FILE_UPLOAD_PROVIDERS = {"local_falcon", "form_fills", "callrail"}
+LOCAL_FILE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
 
 
 class ActionRunRequest(BaseModel):
@@ -431,6 +433,31 @@ def create_app(
             local_config=current_profile_config(profile),
             audit_log_path=current_audit_log_path(),
         )
+
+    @app.post("/api/profiles/{profile_slug}/local-files/{provider}/upload")
+    async def profile_local_file_upload(
+        profile_slug: str,
+        provider: str,
+        file: UploadFile = File(...),
+        confirmed: bool = Form(False),
+    ) -> dict[str, Any]:
+        try:
+            profile = profile_by_slug(profile_slug, current_profiles())
+        except OperatorConsoleError as exc:
+            raise HTTPException(status_code=404, detail="profile not found") from exc
+        try:
+            return await store_local_file_upload(
+                profile,
+                provider,
+                file=file,
+                confirmed=confirmed,
+                safe_env=current_env(),
+                local_config=current_profile_config(profile),
+                form_fills_input_dir=current_form_fills_input_dir(),
+                callrail_input_dir=current_callrail_input_dir(),
+            )
+        except OSError as exc:
+            raise HTTPException(status_code=400, detail="local file could not be saved safely") from exc
 
     @app.get("/api/profiles/{profile_slug}/onboarding-completion-summary")
     def profile_onboarding_completion_summary(profile_slug: str) -> dict[str, Any]:
@@ -1008,6 +1035,129 @@ def serialize_profile_detail(
             "dashboard_lab_local_fixtures_only": True,
         },
     }
+
+
+async def store_local_file_upload(
+    profile: DashboardLabProfile,
+    provider: str,
+    *,
+    file: UploadFile,
+    confirmed: bool,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+    form_fills_input_dir: Path,
+    callrail_input_dir: Path,
+) -> dict[str, Any]:
+    if provider not in LOCAL_FILE_UPLOAD_PROVIDERS:
+        raise HTTPException(status_code=404, detail="local file provider not supported")
+    if provider not in profile.data_sources:
+        raise HTTPException(status_code=400, detail="provider is not enabled for this profile")
+    if not confirmed:
+        raise HTTPException(status_code=400, detail="local file upload requires confirmation")
+    upload_name = _safe_upload_filename(file.filename)
+    if Path(upload_name).suffix.lower() not in _local_file_upload_suffixes(provider):
+        raise HTTPException(status_code=400, detail="local file type is not supported for this provider")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="local file is empty")
+    if len(content) > LOCAL_FILE_UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="local file is too large")
+
+    provider_config = _provider_config(local_config, provider)
+    target = _local_file_upload_target(
+        profile,
+        provider,
+        provider_config,
+        upload_name=upload_name,
+        safe_env=safe_env,
+        form_fills_input_dir=form_fills_input_dir,
+        callrail_input_dir=callrail_input_dir,
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(content)
+
+    readiness = _provider_local_file_readiness(
+        profile=profile,
+        provider=provider,
+        safe_env=safe_env,
+        local_config=provider_config,
+    )
+    return {
+        "profile": profile.slug,
+        "provider": provider,
+        "provider_label": PROVIDER_LABELS.get(provider, provider),
+        "saved": True,
+        "size_bucket": _upload_size_bucket(len(content)),
+        "readiness": {
+            "state": readiness["state"],
+            "detected": readiness["detected"],
+            "action_label": readiness["action_label"],
+            "step_label": readiness["step_label"],
+        },
+    }
+
+
+def _safe_upload_filename(filename: str | None) -> str:
+    raw = str(filename or "").strip()
+    if not raw or raw in {".", ".."}:
+        raise HTTPException(status_code=400, detail="local file name is required")
+    if "/" in raw or "\\" in raw or Path(raw).name != raw:
+        raise HTTPException(status_code=400, detail="local file name must not contain a path")
+    if raw.startswith("."):
+        raise HTTPException(status_code=400, detail="local file name is not allowed")
+    return raw
+
+
+def _local_file_upload_suffixes(provider: str) -> set[str]:
+    if provider == "local_falcon":
+        return {".json"}
+    if provider == "callrail":
+        return {".csv"}
+    return {".csv", ".json"}
+
+
+def _local_file_upload_target(
+    profile: DashboardLabProfile,
+    provider: str,
+    local_config: Mapping[str, Any],
+    *,
+    upload_name: str,
+    safe_env: Mapping[str, str],
+    form_fills_input_dir: Path,
+    callrail_input_dir: Path,
+) -> Path:
+    if provider == "local_falcon":
+        target = _resolve_local_falcon_manifest_path(profile, local_config, safe_env=safe_env)
+        if target is None:
+            target = resolve_local_falcon_manifest_dir(env=safe_env) / _default_local_upload_filename(profile, provider, upload_name)
+        return target
+    configured = _safe_local_input_filename(local_config)
+    if provider == "form_fills":
+        return _resolve_form_fills_input_file(
+            input_root=form_fills_input_dir,
+            input_file=configured or _default_local_upload_filename(profile, provider, upload_name),
+        )["path"]
+    return _resolve_callrail_input_file(
+        input_root=callrail_input_dir,
+        input_file=configured or _default_local_upload_filename(profile, provider, upload_name),
+    )["path"]
+
+
+def _default_local_upload_filename(profile: DashboardLabProfile, provider: str, upload_name: str) -> str:
+    suffix = Path(upload_name).suffix.lower()
+    if provider == "local_falcon":
+        return f"{profile.slug}-local-falcon-manifest.json"
+    if provider == "callrail":
+        return f"{profile.slug}-callrail.csv"
+    return f"{profile.slug}-form-fills{suffix if suffix in {'.csv', '.json'} else '.csv'}"
+
+
+def _upload_size_bucket(size: int) -> str:
+    if size <= 16 * 1024:
+        return "small"
+    if size <= 1024 * 1024:
+        return "medium"
+    return "large"
 
 
 def build_onboarding_status(
