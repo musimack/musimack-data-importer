@@ -1301,7 +1301,14 @@ def test_onboarding_status_sequences_local_falcon_and_local_file_blockers_safely
             }
         },
     )
-    client = TestClient(create_app(registry_path=registry, env={}, local_profile_config_path=config_path))
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=config_path,
+            secret_vault_path=tmp_path / "vault.local.json",
+        )
+    )
 
     try:
         response = client.get("/api/profiles/demo-profile/onboarding-status")

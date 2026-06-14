@@ -712,6 +712,7 @@ function App() {
   const [localFileUploadConfirmations, setLocalFileUploadConfirmations] = useState<Record<string, boolean>>({});
   const [localFileUploadBusyProvider, setLocalFileUploadBusyProvider] = useState<string>('');
   const [localFileUploadMessage, setLocalFileUploadMessage] = useState<string>('');
+  const [activeProfileTab, setActiveProfileTab] = useState<string>('overview');
   const [runtimeSafetyStatus, setRuntimeSafetyStatus] = useState<RuntimeSafetyStatus | null>(null);
   const [sessionActionResults, setSessionActionResults] = useState<SessionActionResult[]>([]);
   const selectedProfile = useMemo(
@@ -779,8 +780,10 @@ function App() {
       setLocalFileUploadConfirmations({});
       setLocalFileUploadBusyProvider('');
       setLocalFileUploadMessage('');
+      setActiveProfileTab('overview');
       return;
     }
+    setActiveProfileTab('overview');
     setValidationConfirmed(false);
     setValidationResult(null);
     setCopyPreview(null);
@@ -854,6 +857,37 @@ function App() {
       '',
     );
     refreshOnboardingActions(selectedSlug, setOnboardingActions, setOnboardingActionMessage, clearOnboardingMessage);
+  };
+
+  const updateActionInput = (actionId: string, value: string) =>
+    setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }));
+
+  const updateActionConfirmation = (actionId: string, confirmed: boolean) =>
+    setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }));
+
+  const runSelectedOnboardingAction = (actionId: string, inputFile = onboardingActionInputs[actionId] ?? '') => {
+    if (!detail) {
+      return;
+    }
+    runOnboardingAction(
+      detail.slug,
+      actionId,
+      {
+        confirmed: Boolean(onboardingActionConfirmations[actionId]),
+        inputFile,
+      },
+      setOnboardingActionBusyId,
+      setOnboardingActionMessage,
+      (result) =>
+        setSessionActionResults((current) => [
+          result,
+          ...current.filter((item) => item.id !== result.id),
+        ].slice(0, 8)),
+      () => refreshSelectedProfile(
+        inputFile ? 'Onboarding status refreshed after local action' : 'Onboarding status refreshed after action',
+        false,
+      ),
+    );
   };
 
   return (
@@ -962,281 +996,271 @@ function App() {
               </div>
               {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
 
-              <OperatorCommandCenter
-                status={detail.onboarding_status}
-                actions={onboardingActions}
-                actionInputs={onboardingActionInputs}
-                actionConfirmations={onboardingActionConfirmations}
-                busyActionId={onboardingActionBusyId}
-                onInputChange={(actionId, value) =>
-                  setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }))
-                }
-                onConfirmationChange={(actionId, confirmed) =>
-                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
-                }
-                onRun={(actionId) =>
-                  runOnboardingAction(
-                    detail.slug,
-                    actionId,
-                    {
-                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
-                      inputFile: onboardingActionInputs[actionId] ?? '',
-                    },
-                    setOnboardingActionBusyId,
-                    setOnboardingActionMessage,
-                    (result) =>
-                      setSessionActionResults((current) => [
-                        result,
-                        ...current.filter((item) => item.id !== result.id),
-                      ].slice(0, 8)),
-                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
-                  )
-                }
-              />
+              <ProfileHeaderSummary status={detail.onboarding_status} runtimeSafetyStatus={runtimeSafetyStatus} />
 
-              <WizardProviderOverview detail={detail} actions={onboardingActions} />
+              <nav className="profile-tab-bar" aria-label="Selected profile workspace tabs">
+                {PROFILE_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={activeProfileTab === tab.id ? 'profile-tab active' : 'profile-tab'}
+                    onClick={() => setActiveProfileTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
 
-              <LocalFileIntakePanel
-                status={detail.onboarding_status}
-                uploads={localFileUploads}
-                confirmations={localFileUploadConfirmations}
-                busyProvider={localFileUploadBusyProvider}
-                message={localFileUploadMessage}
-                onFileChange={(provider, file) =>
-                  setLocalFileUploads((current) => ({ ...current, [provider]: file }))
-                }
-                onConfirmationChange={(provider, confirmed) =>
-                  setLocalFileUploadConfirmations((current) => ({ ...current, [provider]: confirmed }))
-                }
-                onUpload={(provider) =>
-                  uploadLocalFile(
-                    detail.slug,
-                    provider,
-                    localFileUploads[provider] ?? null,
-                    Boolean(localFileUploadConfirmations[provider]),
-                    setLocalFileUploadBusyProvider,
-                    setLocalFileUploadMessage,
-                    () => refreshSelectedProfile('Local file readiness refreshed after file intake', false),
-                  )
-                }
-              />
+              <div className="profile-tab-panel">
+                {activeProfileTab === 'overview' ? (
+                  <>
+                    <OperatorCommandCenter
+                      status={detail.onboarding_status}
+                      actions={onboardingActions}
+                      actionInputs={onboardingActionInputs}
+                      actionConfirmations={onboardingActionConfirmations}
+                      busyActionId={onboardingActionBusyId}
+                      onInputChange={updateActionInput}
+                      onConfirmationChange={updateActionConfirmation}
+                      onRun={runSelectedOnboardingAction}
+                    />
+                    <WizardProviderOverview detail={detail} actions={onboardingActions} />
+                    <OverviewTabShortcuts status={detail.onboarding_status} setActiveTab={setActiveProfileTab} />
+                  </>
+                ) : null}
 
-              <CompletionSummaryPanel
-                summary={completionSummary}
-                busy={completionSummaryBusy}
-                message={completionSummaryMessage}
-                copied={copiedHandoff}
-                onRefresh={() => {
-                  refreshCompletionSummary(
-                    detail.slug,
-                    setCompletionSummary,
-                    setCompletionSummaryBusy,
-                    setCompletionSummaryMessage,
-                    'Completion summary refreshed.',
-                  );
-                }}
-                onCopy={() =>
-                  copyHandoffSummary(
-                    completionSummary?.operator_handoff_text ?? '',
-                    setCopiedHandoff,
-                    setCompletionSummaryMessage,
-                  )
-                }
-              />
+                {activeProfileTab === 'credentials' ? (
+                  <>
+                    <CredentialGuidancePanel detail={detail} />
+                    <SecretVaultPanel
+                      passphrase={vaultPassphrase}
+                      setPassphrase={setVaultPassphrase}
+                      status={vaultStatus}
+                      profileSlug={detail.slug}
+                      message={vaultMessage}
+                      busy={vaultBusy}
+                      localFalconStatus={localFalconSecretStatus}
+                      localFalconApiKey={localFalconApiKey}
+                      localFalconBusy={localFalconSecretBusy}
+                      localFalconMessage={localFalconSecretMessage}
+                      setLocalFalconApiKey={setLocalFalconApiKey}
+                      onRefresh={() => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy, 'Vault status refreshed')}
+                      onUnlock={(createIfMissing) =>
+                        unlockVault(
+                          vaultPassphrase,
+                          createIfMissing,
+                          setVaultStatus,
+                          setVaultMessage,
+                          setVaultBusy,
+                          setVaultPassphrase,
+                        )
+                      }
+                      onLock={() => lockVault(setVaultStatus, setVaultMessage, setVaultBusy)}
+                      onSaveLocalFalconKey={() =>
+                        saveLocalFalconApiKey(
+                          detail.slug,
+                          localFalconApiKey,
+                          setLocalFalconSecretStatus,
+                          setLocalFalconSecretMessage,
+                          setLocalFalconSecretBusy,
+                          setLocalFalconApiKey,
+                          () => {
+                            refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
+                            refreshSelectedProfile('Secret readiness refreshed');
+                          },
+                        )
+                      }
+                      onDeleteLocalFalconKey={() =>
+                        deleteLocalFalconApiKey(
+                          detail.slug,
+                          setLocalFalconSecretStatus,
+                          setLocalFalconSecretMessage,
+                          setLocalFalconSecretBusy,
+                          () => {
+                            refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
+                            refreshSelectedProfile('Secret readiness refreshed');
+                          },
+                        )
+                      }
+                    />
+                  </>
+                ) : null}
 
-              <OnboardingActionsPanel
-                actions={onboardingActions}
-                status={detail.onboarding_status}
-                actionInputs={onboardingActionInputs}
-                actionConfirmations={onboardingActionConfirmations}
-                busyActionId={onboardingActionBusyId}
-                message={onboardingActionMessage}
-                onInputChange={(actionId, value) =>
-                  setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }))
-                }
-                onConfirmationChange={(actionId, confirmed) =>
-                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
-                }
-                onRun={(actionId) =>
-                  runOnboardingAction(
-                    detail.slug,
-                    actionId,
-                    {
-                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
-                      inputFile: onboardingActionInputs[actionId] ?? '',
-                    },
-                    setOnboardingActionBusyId,
-                    setOnboardingActionMessage,
-                    (result) =>
-                      setSessionActionResults((current) => [
-                        result,
-                        ...current.filter((item) => item.id !== result.id),
-                      ].slice(0, 8)),
-                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
-                  )
-                }
-              />
-
-              <LiveReadOnlyActionsPanel
-                actions={onboardingActions}
-                actionConfirmations={onboardingActionConfirmations}
-                busyActionId={onboardingActionBusyId}
-                onConfirmationChange={(actionId, confirmed) =>
-                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
-                }
-                onRun={(actionId) =>
-                  runOnboardingAction(
-                    detail.slug,
-                    actionId,
-                    {
-                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
-                      inputFile: '',
-                    },
-                    setOnboardingActionBusyId,
-                    setOnboardingActionMessage,
-                    (result) =>
-                      setSessionActionResults((current) => [
-                        result,
-                        ...current.filter((item) => item.id !== result.id),
-                      ].slice(0, 8)),
-                    () => refreshSelectedProfile('Live read-only output readiness refreshed', false),
-                  )
-                }
-              />
-
-              <SecretVaultPanel
-                passphrase={vaultPassphrase}
-                setPassphrase={setVaultPassphrase}
-                status={vaultStatus}
-                profileSlug={detail.slug}
-                message={vaultMessage}
-                busy={vaultBusy}
-                localFalconStatus={localFalconSecretStatus}
-                localFalconApiKey={localFalconApiKey}
-                localFalconBusy={localFalconSecretBusy}
-                localFalconMessage={localFalconSecretMessage}
-                setLocalFalconApiKey={setLocalFalconApiKey}
-                onRefresh={() => refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy, 'Vault status refreshed')}
-                onUnlock={(createIfMissing) =>
-                  unlockVault(
-                    vaultPassphrase,
-                    createIfMissing,
-                    setVaultStatus,
-                    setVaultMessage,
-                    setVaultBusy,
-                    setVaultPassphrase,
-                  )
-                }
-                onLock={() => lockVault(setVaultStatus, setVaultMessage, setVaultBusy)}
-                onSaveLocalFalconKey={() =>
-                  saveLocalFalconApiKey(
-                    detail.slug,
-                    localFalconApiKey,
-                    setLocalFalconSecretStatus,
-                    setLocalFalconSecretMessage,
-                    setLocalFalconSecretBusy,
-                    setLocalFalconApiKey,
-                    () => {
-                      refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
-                      refreshSelectedProfile('Secret readiness refreshed');
-                    },
-                  )
-                }
-                onDeleteLocalFalconKey={() =>
-                  deleteLocalFalconApiKey(
-                    detail.slug,
-                    setLocalFalconSecretStatus,
-                    setLocalFalconSecretMessage,
-                    setLocalFalconSecretBusy,
-                    () => {
-                      refreshVaultStatus(setVaultStatus, setVaultMessage, setVaultBusy);
-                      refreshSelectedProfile('Secret readiness refreshed');
-                    },
-                  )
-                }
-              />
-
-              <LocalConfigEditor
-                busy={localConfigBusy}
-                confirmed={localConfigConfirmed}
-                draft={localConfigDraft}
-                form={localConfigForm}
-                message={localConfigDirty && !localConfigMessage ? 'Unsaved local config edits are in progress.' : localConfigMessage}
-                preview={localConfigPreview}
-                setConfirmed={setLocalConfigConfirmed}
-                setForm={(nextForm) => {
-                  setLocalConfigForm(nextForm);
-                  setLocalConfigDirty(true);
-                }}
-                onPreview={() =>
-                  previewLocalConfig(
-                    detail.slug,
-                    localConfigForm,
-                    setLocalConfigPreview,
-                    setLocalConfigMessage,
-                    setLocalConfigBusy,
-                    setLocalConfigConfirmed,
-                  )
-                }
-                onSave={() =>
-                  saveLocalConfig(
-                    detail.slug,
-                    localConfigForm,
-                    localConfigConfirmed,
-                    setLocalConfigPreview,
-                    setLocalConfigMessage,
-                    setLocalConfigBusy,
-                    setLocalConfigConfirmed,
-                    () => {
-                      refreshLocalConfigDraft(
+                {activeProfileTab === 'config' ? (
+                  <LocalConfigEditor
+                    busy={localConfigBusy}
+                    confirmed={localConfigConfirmed}
+                    draft={localConfigDraft}
+                    form={localConfigForm}
+                    message={localConfigDirty && !localConfigMessage ? 'Unsaved local config edits are in progress.' : localConfigMessage}
+                    preview={localConfigPreview}
+                    setConfirmed={setLocalConfigConfirmed}
+                    setForm={(nextForm) => {
+                      setLocalConfigForm(nextForm);
+                      setLocalConfigDirty(true);
+                    }}
+                    onPreview={() =>
+                      previewLocalConfig(
                         detail.slug,
-                        setLocalConfigDraft,
-                        setLocalConfigForm,
+                        localConfigForm,
                         setLocalConfigPreview,
                         setLocalConfigMessage,
                         setLocalConfigBusy,
-                        setLocalConfigDirty,
+                        setLocalConfigConfirmed,
+                      )
+                    }
+                    onSave={() =>
+                      saveLocalConfig(
+                        detail.slug,
+                        localConfigForm,
+                        localConfigConfirmed,
+                        setLocalConfigPreview,
+                        setLocalConfigMessage,
+                        setLocalConfigBusy,
+                        setLocalConfigConfirmed,
+                        () => {
+                          refreshLocalConfigDraft(
+                            detail.slug,
+                            setLocalConfigDraft,
+                            setLocalConfigForm,
+                            setLocalConfigPreview,
+                            setLocalConfigMessage,
+                            setLocalConfigBusy,
+                            setLocalConfigDirty,
+                          );
+                          refreshSelectedProfile('Local profile config saved');
+                        },
+                      )
+                    }
+                  />
+                ) : null}
+
+                {activeProfileTab === 'files' ? (
+                  <LocalFileIntakePanel
+                    status={detail.onboarding_status}
+                    uploads={localFileUploads}
+                    confirmations={localFileUploadConfirmations}
+                    busyProvider={localFileUploadBusyProvider}
+                    message={localFileUploadMessage}
+                    onFileChange={(provider, file) =>
+                      setLocalFileUploads((current) => ({ ...current, [provider]: file }))
+                    }
+                    onConfirmationChange={(provider, confirmed) =>
+                      setLocalFileUploadConfirmations((current) => ({ ...current, [provider]: confirmed }))
+                    }
+                    onUpload={(provider) =>
+                      uploadLocalFile(
+                        detail.slug,
+                        provider,
+                        localFileUploads[provider] ?? null,
+                        Boolean(localFileUploadConfirmations[provider]),
+                        setLocalFileUploadBusyProvider,
+                        setLocalFileUploadMessage,
+                        () => refreshSelectedProfile('Local file readiness refreshed after file intake', false),
+                      )
+                    }
+                  />
+                ) : null}
+
+                {activeProfileTab === 'local-actions' ? (
+                  <>
+                    <PrimaryNextAction
+                      status={detail.onboarding_status}
+                      actions={onboardingActions}
+                      actionInputs={onboardingActionInputs}
+                      actionConfirmations={onboardingActionConfirmations}
+                      busyActionId={onboardingActionBusyId}
+                      onInputChange={updateActionInput}
+                      onConfirmationChange={updateActionConfirmation}
+                      onRun={runSelectedOnboardingAction}
+                    />
+                    <OnboardingActionsPanel
+                      actions={onboardingActions}
+                      status={detail.onboarding_status}
+                      actionInputs={onboardingActionInputs}
+                      actionConfirmations={onboardingActionConfirmations}
+                      busyActionId={onboardingActionBusyId}
+                      message={onboardingActionMessage}
+                      onInputChange={updateActionInput}
+                      onConfirmationChange={updateActionConfirmation}
+                      onRun={runSelectedOnboardingAction}
+                    />
+                    <SessionActionHistoryPanel results={sessionActionResults} />
+                  </>
+                ) : null}
+
+                {activeProfileTab === 'live-readonly' ? (
+                  <LiveReadOnlyActionsPanel
+                    actions={onboardingActions}
+                    actionConfirmations={onboardingActionConfirmations}
+                    busyActionId={onboardingActionBusyId}
+                    onConfirmationChange={updateActionConfirmation}
+                    onRun={(actionId) => runSelectedOnboardingAction(actionId, '')}
+                  />
+                ) : null}
+
+                {activeProfileTab === 'dashboard-lab' ? (
+                  <SafeCopyReadiness
+                    detail={detail}
+                    copyPreview={copyPreview}
+                    validationConfirmed={validationConfirmed}
+                    setValidationConfirmed={setValidationConfirmed}
+                    validationRunning={validationRunning}
+                    validationResult={validationResult}
+                    copyConfirmed={copyConfirmed}
+                    setCopyConfirmed={setCopyConfirmed}
+                    copyRunning={copyRunning}
+                    copyResult={copyResult}
+                    onValidate={() =>
+                      runValidation(
+                        detail.slug,
+                        setValidationRunning,
+                        setValidationResult,
+                        setError,
+                        () => refreshSelectedProfile('Status refreshed after validation'),
+                      )
+                    }
+                    onCopy={() =>
+                      runCopy(
+                        detail.slug,
+                        setCopyRunning,
+                        setCopyResult,
+                        setError,
+                        () => refreshSelectedProfile('Status refreshed after copy'),
+                      )
+                    }
+                  />
+                ) : null}
+
+                {activeProfileTab === 'handoff' ? (
+                  <CompletionSummaryPanel
+                    summary={completionSummary}
+                    busy={completionSummaryBusy}
+                    message={completionSummaryMessage}
+                    copied={copiedHandoff}
+                    onRefresh={() => {
+                      refreshCompletionSummary(
+                        detail.slug,
+                        setCompletionSummary,
+                        setCompletionSummaryBusy,
+                        setCompletionSummaryMessage,
+                        'Completion summary refreshed.',
                       );
-                      refreshSelectedProfile('Local profile config saved');
-                    },
-                  )
-                }
-              />
+                    }}
+                    onCopy={() =>
+                      copyHandoffSummary(
+                        completionSummary?.operator_handoff_text ?? '',
+                        setCopiedHandoff,
+                        setCompletionSummaryMessage,
+                      )
+                    }
+                  />
+                ) : null}
 
-              <SafeCopyReadiness
-                detail={detail}
-                copyPreview={copyPreview}
-                validationConfirmed={validationConfirmed}
-                setValidationConfirmed={setValidationConfirmed}
-                validationRunning={validationRunning}
-                validationResult={validationResult}
-                copyConfirmed={copyConfirmed}
-                setCopyConfirmed={setCopyConfirmed}
-                copyRunning={copyRunning}
-                copyResult={copyResult}
-                onValidate={() =>
-                  runValidation(
-                    detail.slug,
-                    setValidationRunning,
-                    setValidationResult,
-                    setError,
-                    () => refreshSelectedProfile('Status refreshed after validation'),
-                  )
-                }
-                onCopy={() =>
-                  runCopy(
-                    detail.slug,
-                    setCopyRunning,
-                    setCopyResult,
-                    setError,
-                    () => refreshSelectedProfile('Status refreshed after copy'),
-                  )
-                }
-              />
-
-              <details className="advanced-panel">
-                <summary>Advanced / Operator Diagnostics</summary>
-                <div className="advanced-content">
+                {activeProfileTab === 'advanced' ? (
+                  <details className="advanced-panel" open>
+                    <summary>Advanced / Operator Diagnostics</summary>
+                    <div className="advanced-content">
                   <SimpleOnboardingSummary detail={detail} copyPreview={copyPreview} />
 
                   <OnboardingFlowChecklist detail={detail} copyPreview={copyPreview} actions={onboardingActions} />
@@ -1324,8 +1348,10 @@ function App() {
                   <GroupedActionPlan
                     actions={detail.action_plan.actions}
                   />
-                </div>
-              </details>
+                    </div>
+                  </details>
+                ) : null}
+              </div>
             </>
           ) : (
             <div className="empty-state">
@@ -1347,6 +1373,18 @@ const PROVIDER_ORDER = [
   'form_fills',
   'profile',
   'dashboard_lab',
+];
+
+const PROFILE_TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'credentials', label: 'Credentials' },
+  { id: 'config', label: 'Config' },
+  { id: 'files', label: 'Files' },
+  { id: 'local-actions', label: 'Local Actions' },
+  { id: 'live-readonly', label: 'Live Read-only Pulls' },
+  { id: 'dashboard-lab', label: 'Dashboard-lab' },
+  { id: 'handoff', label: 'Handoff' },
+  { id: 'advanced', label: 'Advanced' },
 ];
 
 const STANDARD_PROVIDER_KEYS = ['ga4', 'gsc', 'local_falcon', 'google_ads_search', 'callrail', 'form_fills'];
@@ -1431,6 +1469,106 @@ function NewClientOnboardingGuide({ runtimeSafetyStatus }: { runtimeSafetyStatus
             <span>{index + 1}</span>
             <strong>{step}</strong>
           </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProfileHeaderSummary({
+  status,
+  runtimeSafetyStatus,
+}: {
+  status: OnboardingStatus;
+  runtimeSafetyStatus: RuntimeSafetyStatus | null;
+}) {
+  const commandCenter = status.command_center ?? commandCenterFallback(status);
+  const nextAction = status.next_safe_action;
+  const enabledProviderCount = status.profile.enabled_provider_count;
+  return (
+    <section className="profile-workspace-header" aria-label="Selected profile workspace summary">
+      <div>
+        <span className="eyebrow">Selected client workspace</span>
+        <h3>{status.profile.display_name}</h3>
+        <p>{nextAction?.label ?? commandCenter.next_step_label}: {nextAction?.detail ?? commandCenter.next_step_detail}</p>
+      </div>
+      <div className="profile-header-metrics">
+        <MetricPill label="Readiness" value={commandCenter.readiness_state} />
+        <MetricPill label="Enabled providers" value={enabledProviderCount} />
+        <MetricPill label="Mode" value={runtimeSafetyStatus?.mode === 'qa_override' ? 'Disposable QA' : 'Local operator'} />
+      </div>
+    </section>
+  );
+}
+
+function OverviewTabShortcuts({
+  status,
+  setActiveTab,
+}: {
+  status: OnboardingStatus;
+  setActiveTab: (tab: string) => void;
+}) {
+  const fileBlockers = (status.local_file_readiness ?? []).filter((item) => !item.detected).length;
+  const nextProvider = status.next_safe_action?.provider ?? '';
+  const suggestedTab = nextProvider === 'callrail' || nextProvider === 'form_fills' || nextProvider === 'local_falcon'
+    ? 'local-actions'
+    : status.dashboard_copy.state === 'Ready to copy'
+      ? 'dashboard-lab'
+      : fileBlockers
+        ? 'files'
+        : 'local-actions';
+  const shortcuts = [
+    { tab: suggestedTab, label: 'Go to next step' },
+    { tab: 'credentials', label: 'Credentials' },
+    { tab: 'config', label: 'Config' },
+    { tab: 'files', label: 'Files' },
+    { tab: 'local-actions', label: 'Local Actions' },
+    { tab: 'live-readonly', label: 'Live Read-only Pulls' },
+    { tab: 'dashboard-lab', label: 'Dashboard-lab' },
+    { tab: 'handoff', label: 'Handoff' },
+  ];
+  return (
+    <section className="overview-shortcuts" aria-label="Overview tab shortcuts">
+      <div>
+        <span className="eyebrow">Move around this profile</span>
+        <h3>Jump to the work area you need</h3>
+        <p>Overview stays compact. Use these buttons or the tabs above when the next step needs files, config, secrets, actions, or handoff.</p>
+      </div>
+      <div className="overview-shortcut-row">
+        {shortcuts.map((shortcut) => (
+          <button type="button" className="copy-button" key={`${shortcut.tab}-${shortcut.label}`} onClick={() => setActiveTab(shortcut.tab)}>
+            {shortcut.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CredentialGuidancePanel({ detail }: { detail: ProfileDetail }) {
+  const items = providerSetupItems(detail).filter((item) => ['ga4', 'gsc', 'local_falcon', 'google_ads_search'].includes(item.provider_key));
+  return (
+    <section className="credential-guidance-card" aria-label="Credential setup guidance">
+      <div className="wizard-heading">
+        <div>
+          <span className="eyebrow">Credentials</span>
+          <h3>Secrets stay local and write-only</h3>
+          <p>David is the sole operator for credential setup. The importer stores safe references and Local Falcon key metadata only; secret values are never displayed after save.</p>
+        </div>
+        <span className="badge neutral">No raw secrets</span>
+      </div>
+      <div className="credential-guidance-grid">
+        {items.map((item) => (
+          <article className="credential-guidance-item" key={item.provider_key}>
+            <div className="card-heading">
+              <div>
+                <h4>{item.provider_label}</h4>
+                <p>{credentialGuidanceText(item.provider_key)}</p>
+              </div>
+              <span className={statusBadgeClass(providerSecretStatusLabel(item))}>{providerSecretStatusLabel(item)}</span>
+            </div>
+            <p className="safe-copy-footnote">{providerWorkflowNote(item.provider_key, providerSecretStatusLabel(item))}</p>
+          </article>
         ))}
       </div>
     </section>
@@ -2312,7 +2450,7 @@ function WizardProviderOverview({
           <h3>Setup wizard</h3>
           <p>Work top to bottom: provider readiness, approved local files, local secrets, safe imports, then dashboard-lab handoff.</p>
         </div>
-        <span className="badge neutral">No live provider pulls</span>
+        <span className="badge neutral">Live pulls separated</span>
       </div>
       <div className="wizard-provider-grid">
         {providerSetupItems(detail).map((item) => {
@@ -2388,6 +2526,7 @@ function LocalFileIntakePanel({
                 </div>
                 <div className="action-safety-row">
                   <span>{localFileAcceptLabel(item.provider)}</span>
+                  <span>Expected: {expectedLocalFileName(item.provider)}</span>
                   <span>Stored under approved local intake</span>
                   <span>No content preview</span>
                 </div>
@@ -4373,6 +4512,22 @@ function providerWorkflowNote(provider: string, secretStatus: string) {
   return 'Local-only setup guidance. Live provider execution remains separate.';
 }
 
+function credentialGuidanceText(provider: string) {
+  if (provider === 'local_falcon') {
+    return 'Use the local encrypted vault or env setup for the API key; the saved value remains write-only.';
+  }
+  if (provider === 'google_ads_search') {
+    return 'Configure read-only reporting credentials only; mutation workflows are intentionally not present.';
+  }
+  if (provider === 'ga4') {
+    return 'Use local env references for analytics access; OAuth values and raw provider payloads are not displayed.';
+  }
+  if (provider === 'gsc') {
+    return 'Use local env references for Search Console access; query payloads and OAuth values stay outside the UI.';
+  }
+  return 'Credential setup is local-only and secret values are never printed after save.';
+}
+
 function providerPlannedActionNote(provider: string) {
   if (provider === 'google_ads_search') {
     return 'Read-only reporting only. Live fetch stays planned or unavailable, and mutation workflows are not present.';
@@ -4407,6 +4562,19 @@ function localFileAcceptLabel(provider: string) {
     return 'CSV aggregate export';
   }
   return 'CSV or JSON local file';
+}
+
+function expectedLocalFileName(provider: string) {
+  if (provider === 'form_fills') {
+    return 'steadfast-form-fills.csv';
+  }
+  if (provider === 'callrail') {
+    return 'steadfast-callrail.csv';
+  }
+  if (provider === 'local_falcon') {
+    return 'steadfast-local-falcon-manifest.json';
+  }
+  return 'approved local file';
 }
 
 function RealProfileGuardrails({ detail }: { detail: ProfileDetail }) {

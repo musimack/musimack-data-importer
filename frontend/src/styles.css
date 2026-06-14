@@ -2110,6 +2110,139 @@ tr:last-child td {
   margin-top: 4px;
 }
 
+.profile-workspace-header {
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at top left, rgba(45, 92, 83, 0.15), transparent 34%),
+    linear-gradient(135deg, #f9fbf8 0%, #edf5f0 100%);
+  border: 1px solid #cbded4;
+  border-radius: 18px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin: 18px 0 12px;
+  padding: 18px;
+}
+
+.profile-workspace-header h3,
+.profile-workspace-header p,
+.overview-shortcuts h3,
+.overview-shortcuts p,
+.credential-guidance-item h4,
+.credential-guidance-item p {
+  margin: 0;
+}
+
+.profile-workspace-header p,
+.overview-shortcuts p,
+.credential-guidance-item p {
+  color: #596676;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+.profile-header-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  min-width: min(520px, 100%);
+}
+
+.profile-tab-bar {
+  align-items: center;
+  background: #f4f7f5;
+  border: 1px solid #d8e2d9;
+  border-radius: 18px;
+  display: flex;
+  gap: 8px;
+  margin: 0 0 18px;
+  overflow-x: auto;
+  padding: 8px;
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+}
+
+.profile-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #4b5665;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 750;
+  padding: 9px 12px;
+  white-space: nowrap;
+}
+
+.profile-tab:hover {
+  background: #ffffff;
+  border-color: #c6d4cd;
+}
+
+.profile-tab.active {
+  background: #244f4a;
+  border-color: #244f4a;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(36, 79, 74, 0.18);
+}
+
+.profile-tab-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.overview-shortcuts,
+.credential-guidance-card {
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 18px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.overview-shortcut-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.credential-guidance-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.credential-guidance-item {
+  background: #f8faf8;
+  border: 1px solid #dce6dd;
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.advanced-panel {
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.advanced-panel summary {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.advanced-content {
+  display: grid;
+  gap: 18px;
+  margin-top: 14px;
+}
+
 .wizard-card,
 .local-file-intake-card,
 .live-readonly-card {
@@ -2282,6 +2415,7 @@ pre {
   .topbar,
   .runtime-safety-banner,
   .new-onboarding-heading,
+  .profile-workspace-header,
   .command-center-header,
   .wizard-heading,
   .section-heading,
@@ -2315,6 +2449,8 @@ pre {
   .provider-grid,
   .new-onboarding-steps,
   .summary-counts,
+  .profile-header-metrics,
+  .credential-guidance-grid,
   .command-center-body,
   .command-metric-strip,
   .command-lanes,
@@ -2362,6 +2498,10 @@ pre {
   .simple-summary-card,
   .runtime-safety-banner,
   .new-onboarding-card,
+  .profile-workspace-header,
+  .overview-shortcuts,
+  .credential-guidance-card,
+  .advanced-panel,
   .operator-command-center,
   .wizard-card,
   .local-file-intake-card,
