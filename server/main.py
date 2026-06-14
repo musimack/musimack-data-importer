@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -110,6 +110,7 @@ PROVIDER_VALIDATION_TARGETS = {
 }
 LOCAL_VALIDATION_TIMEOUT_SECONDS = 20
 LOCAL_IMPORT_TIMEOUT_SECONDS = 30
+LIVE_READONLY_TIMEOUT_SECONDS = 90
 BASE_REQUIRED_DASHBOARD_FILES = [
     "client-profile.json",
     "combined-dashboard-summary.json",
@@ -131,6 +132,9 @@ class ConfirmedActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     confirmed: bool = False
+    confirm_write: bool = False
+    confirm_live_readonly: bool = False
+    confirm_authorized_operator: bool = False
     input_file: str | None = None
 
 
@@ -507,6 +511,9 @@ def create_app(
             profile,
             action_id,
             confirmed=request.confirmed,
+            confirm_write=request.confirm_write,
+            confirm_live_readonly=request.confirm_live_readonly,
+            confirm_authorized_operator=request.confirm_authorized_operator,
             input_file=request.input_file,
             safe_env=current_env(),
             local_config=current_profile_config(profile),
@@ -2654,6 +2661,9 @@ def run_onboarding_action(
     action_id: str,
     *,
     confirmed: bool,
+    confirm_write: bool = False,
+    confirm_live_readonly: bool = False,
+    confirm_authorized_operator: bool = False,
     input_file: str | None = None,
     safe_env: Mapping[str, str],
     local_config: Mapping[str, Any],
@@ -2667,8 +2677,11 @@ def run_onboarding_action(
         safe_env=safe_env,
         local_config=local_config,
     )
-    if action["writes_files"] and not confirmed:
+    write_confirmed = confirmed or confirm_write
+    if action["writes_files"] and not write_confirmed:
         raise HTTPException(status_code=400, detail="onboarding action requires explicit confirmation")
+    if action["kind"] == "live_readonly_provider_pull" and (not confirm_live_readonly or not confirm_authorized_operator):
+        raise HTTPException(status_code=400, detail="live read-only action requires David confirmation")
     if not action["available"]:
         if action["kind"] == "validate_existing_output":
             result = _run_onboarding_output_check(profile, action["provider"])
@@ -2726,6 +2739,13 @@ def run_onboarding_action(
             input_root=callrail_input_dir or resolve_callrail_input_dir(env=safe_env),
             local_config=_provider_config(local_config, "callrail"),
         )
+    elif action["kind"] == "live_readonly_provider_pull":
+        result = _run_live_readonly_provider_action(
+            profile,
+            action,
+            safe_env=safe_env,
+            local_config=local_config,
+        )
     else:
         return {
             "profile": profile.slug,
@@ -2782,6 +2802,7 @@ def _onboarding_action_catalog(
                 external_api=False,
                 fixture_copy=False,
                 requires_confirmation=False,
+                classification="local_readonly",
             )
         )
         actions.append(
@@ -2798,6 +2819,7 @@ def _onboarding_action_catalog(
                 external_api=False,
                 fixture_copy=False,
                 requires_confirmation=False,
+                classification="local_readonly",
             )
         )
         if provider == "local_falcon":
@@ -2821,6 +2843,7 @@ def _onboarding_action_catalog(
                     external_api=False,
                     fixture_copy=False,
                     requires_confirmation=False,
+                    classification="local_readonly",
                 )
             )
         if provider == "form_fills":
@@ -2838,6 +2861,7 @@ def _onboarding_action_catalog(
                     external_api=False,
                     fixture_copy=False,
                     requires_confirmation=True,
+                    classification="local_write",
                 )
             )
         if provider == "callrail":
@@ -2855,8 +2879,18 @@ def _onboarding_action_catalog(
                     external_api=False,
                     fixture_copy=False,
                     requires_confirmation=True,
+                    classification="local_write",
                 )
             )
+        live_action = _live_readonly_onboarding_action(
+            profile,
+            provider,
+            enabled=enabled,
+            safe_env=safe_env,
+            local_config=_provider_config(local_config, provider),
+        )
+        if live_action is not None:
+            actions.append(live_action)
         actions.append(_future_onboarding_action(provider))
     actions.append(
         _onboarding_action(
@@ -2872,6 +2906,7 @@ def _onboarding_action_catalog(
             external_api=False,
             fixture_copy=False,
             requires_confirmation=False,
+            classification="local_readonly",
         )
     )
     actions.append(
@@ -2888,6 +2923,7 @@ def _onboarding_action_catalog(
             external_api=False,
             fixture_copy=True,
             requires_confirmation=False,
+            classification="local_readonly",
         )
     )
     safe_preview = build_safe_dashboard_lab_copy_preview(profile)
@@ -2906,6 +2942,7 @@ def _onboarding_action_catalog(
             external_api=False,
             fixture_copy=True,
             requires_confirmation=True,
+            classification="local_write",
         )
     )
     return actions
@@ -2925,6 +2962,7 @@ def _onboarding_action(
     external_api: bool,
     fixture_copy: bool,
     requires_confirmation: bool,
+    classification: str,
 ) -> dict[str, Any]:
     return {
         "id": action_id,
@@ -2942,7 +2980,169 @@ def _onboarding_action(
         "writes_files": writes_files,
         "external_api": external_api,
         "fixture_copy": fixture_copy,
+        "classification": classification,
+        "live_readonly": external_api and read_only,
+        "confirm_live_readonly_required": external_api and read_only,
+        "confirm_authorized_operator_required": external_api and read_only,
     }
+
+
+def _live_readonly_onboarding_action(
+    profile: DashboardLabProfile,
+    provider: str,
+    *,
+    enabled: bool,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    specs = _live_readonly_action_specs(profile, safe_env=safe_env, local_config=local_config)
+    spec = specs.get(provider)
+    if spec is None:
+        return None
+    unavailable_reason = "" if enabled and spec["ready"] else spec["blocked_reason"]
+    if not enabled:
+        unavailable_reason = "Provider is not enabled for this profile."
+    return _onboarding_action(
+        action_id=spec["action_id"],
+        provider=provider,
+        kind="live_readonly_provider_pull",
+        label=spec["label"],
+        description=spec["description"],
+        available=enabled and bool(spec["ready"]),
+        unavailable_reason=unavailable_reason,
+        read_only=True,
+        writes_files=True,
+        external_api=True,
+        fixture_copy=False,
+        requires_confirmation=True,
+        classification="live_readonly",
+    ) | {
+        "output_file": spec["output_file"],
+        "setup_required": spec["setup_required"],
+        "credential_setup": spec["credential_setup"],
+        "non_mutating_guarantee": spec["non_mutating_guarantee"],
+    }
+
+
+def _live_readonly_action_specs(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    ga4 = _provider_config(local_config, "ga4")
+    gsc = _provider_config(local_config, "gsc")
+    local_falcon = _provider_config(local_config, "local_falcon")
+    google_ads = _provider_config(local_config, "google_ads_search")
+    ga4_ready = _ga4_live_ready(safe_env, ga4)
+    gsc_ready = _gsc_live_ready(safe_env, gsc)
+    local_falcon_ready = _local_falcon_live_ready(profile, safe_env=safe_env, local_config=local_falcon)
+    google_ads_ready = _google_ads_live_ready(safe_env, google_ads)
+    return {
+        "ga4": {
+            "action_id": "ga4.pull-readonly",
+            "label": "Pull GA4 traffic overview",
+            "description": "David-confirmed live read-only GA4 reporting pull, followed by a local summary writer when the snapshot succeeds.",
+            "ready": ga4_ready,
+            "blocked_reason": "Credential setup required: GA4 property and local OAuth token references must be configured.",
+            "output_file": "ga4-summary.json",
+            "setup_required": ["GA4 property reference", "OAuth client secrets env reference", "OAuth token file env reference"],
+            "credential_setup": "Create GA4 OAuth credentials in the managed account, save ignored local token files/env references, then run this read-only pull.",
+            "non_mutating_guarantee": "Read-only reporting pull only. No portal publishing, dashboard-lab copy, or tracked config write.",
+        },
+        "gsc": {
+            "action_id": "gsc.fetch-readonly",
+            "label": "Fetch GSC summary",
+            "description": "David-confirmed live read-only Search Console summary fetch into ignored local output.",
+            "ready": gsc_ready,
+            "blocked_reason": "Credential setup required: GSC site URL and local OAuth token references must be configured.",
+            "output_file": "gsc-summary.json",
+            "setup_required": ["GSC site URL", "OAuth client secrets env reference", "OAuth token file env reference"],
+            "credential_setup": "Create Search Console OAuth credentials in the managed account, save ignored local token files/env references, then run this read-only fetch.",
+            "non_mutating_guarantee": "Read-only Search Analytics query only. No dashboard-lab copy or portal publishing.",
+        },
+        "local_falcon": {
+            "action_id": "local_falcon.fetch-readonly",
+            "label": "Fetch Local Falcon scans",
+            "description": "David-confirmed live read-only Local Falcon report retrieval from an approved local manifest.",
+            "ready": local_falcon_ready,
+            "blocked_reason": "Local Falcon needs a detected manifest and API key availability through env or unlocked vault metadata.",
+            "output_file": "local-falcon-summary.json",
+            "setup_required": ["Local Falcon manifest", "API key via env or unlocked local vault metadata"],
+            "credential_setup": "Save the Local Falcon key in env or the encrypted local vault. The key is never displayed or returned.",
+            "non_mutating_guarantee": "Read-only existing report retrieval only. On-demand scan creation and provider mutations stay disabled.",
+        },
+        "google_ads_search": {
+            "action_id": "google_ads_search.fetch-readonly",
+            "label": "Fetch Google Ads Search read-only summary",
+            "description": "David-confirmed Google Ads Search reporting pull. No campaign, budget, bid, keyword, ad, asset, conversion, or account-setting mutations.",
+            "ready": google_ads_ready,
+            "blocked_reason": "Credential setup required: customer metadata, developer token env reference, and local OAuth references must be configured.",
+            "output_file": "google-ads-summary.json",
+            "setup_required": ["Customer/account metadata", "Developer token env reference", "OAuth client/token env references"],
+            "credential_setup": "Create Google Ads API/OAuth credentials in the managed account, save env references in ignored local config, then run this read-only summary fetch.",
+            "non_mutating_guarantee": "Read-only reporting only. No campaign, bid, budget, keyword, ad, asset, conversion, billing, upload, or account-setting mutations.",
+        },
+    }
+
+
+def _ga4_live_ready(safe_env: Mapping[str, str], local_config: Mapping[str, Any]) -> bool:
+    property_present = _present(safe_env.get("MUSIMACK_GA4_PROPERTY_ID")) or _any_present(
+        local_config,
+        ("property_id", "ga4_property_id", "property_id_env_present", "property_id_configured"),
+    )
+    auth_present = (
+        _present(safe_env.get("MUSIMACK_GA4_OAUTH_CLIENT_SECRETS"))
+        and _present(safe_env.get("MUSIMACK_GA4_OAUTH_TOKEN_FILE"))
+    ) or _any_present(local_config, ("oauth_client_secrets", "oauth_token_file", "credentials_configured"))
+    return property_present and auth_present
+
+
+def _gsc_live_ready(safe_env: Mapping[str, str], local_config: Mapping[str, Any]) -> bool:
+    site_present = _present(safe_env.get("MUSIMACK_GSC_SITE_URL")) or _any_present(
+        local_config,
+        ("site_url", "_safe_site_url", "gsc_site_url", "site_url_configured"),
+    )
+    auth_present = (
+        _present(safe_env.get("MUSIMACK_GSC_OAUTH_CLIENT_SECRETS"))
+        and _present(safe_env.get("MUSIMACK_GSC_OAUTH_TOKEN_FILE"))
+    ) or _any_present(local_config, ("oauth_client_secrets", "oauth_token_file", "credentials_configured"))
+    return site_present and auth_present
+
+
+def _local_falcon_live_ready(
+    profile: DashboardLabProfile,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> bool:
+    manifest_path = _resolve_local_falcon_manifest_path(profile, local_config, safe_env=safe_env)
+    key_present = _present(safe_env.get("LOCAL_FALCON_API_KEY")) or _any_present(
+        local_config,
+        ("api_key_env_present", "api_key_present", "api_key_configured", "api_key_vault_configured"),
+    )
+    return bool(manifest_path and manifest_path.is_file() and key_present)
+
+
+def _google_ads_live_ready(safe_env: Mapping[str, str], local_config: Mapping[str, Any]) -> bool:
+    customer_present = _present(safe_env.get("MUSIMACK_GOOGLE_ADS_CUSTOMER_ID")) or _any_present(
+        local_config,
+        ("customer_id", "google_ads_customer_id", "customer_id_env_present", "customer_id_configured"),
+    )
+    auth_present = _any_present(
+        local_config,
+        (
+            "credentials_configured",
+            "developer_token_env_present",
+            "oauth_client_secrets_env_present",
+            "oauth_token_file_env_present",
+        ),
+    ) or (
+        _present(safe_env.get("GOOGLE_ADS_DEVELOPER_TOKEN"))
+        and _present(safe_env.get("GOOGLE_ADS_OAUTH_CLIENT_SECRETS"))
+        and _present(safe_env.get("GOOGLE_ADS_OAUTH_TOKEN_FILE"))
+    )
+    return customer_present and auth_present
 
 
 def _onboarding_readiness_description(provider: str) -> str:
@@ -2976,6 +3176,7 @@ def _future_onboarding_action(provider: str) -> dict[str, Any]:
         external_api=provider in {"ga4", "gsc", "local_falcon", "google_ads_search"},
         fixture_copy=False,
         requires_confirmation=True,
+        classification="unsafe_or_not_ready" if provider in {"callrail", "form_fills"} else "interactive_manual",
     )
 
 
@@ -3292,6 +3493,150 @@ def _run_form_fills_import_action(
     }
 
 
+def _run_live_readonly_provider_action(
+    profile: DashboardLabProfile,
+    action: Mapping[str, Any],
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    action_id = str(action.get("id") or "")
+    provider = str(action.get("provider") or "")
+    command = _live_readonly_command(profile, action_id, safe_env=safe_env, local_config=local_config)
+    output_file = str(action.get("output_file") or PROVIDER_OUTPUT_FILES.get(provider, ""))
+    if command is None:
+        return {
+            "status": "unavailable",
+            "message": "Live read-only action is not allowlisted.",
+            "provider": provider,
+            "action": action_id,
+            "result_category": "not_allowlisted",
+            "output_file": output_file,
+        }
+    completed = _run_allowlisted_subprocess(command)
+    if completed["status"] != "ok":
+        return {
+            "status": "failed",
+            "message": "Live read-only provider pull failed safely.",
+            "provider": provider,
+            "action": action_id,
+            "result_category": "live_readonly_failed",
+            "return_code": completed["return_code"],
+            "output_file": output_file,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    validation = _run_onboarding_output_check(profile, provider)
+    return {
+        "status": "ok",
+        "message": "Live read-only provider pull completed. Local output readiness refreshed.",
+        "provider": provider,
+        "action": action_id,
+        "result_category": "live_readonly_completed",
+        "output_file": output_file,
+        "validation_status": validation.get("status"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _run_allowlisted_subprocess(command: list[str]) -> dict[str, Any]:
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=LIVE_READONLY_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"status": "timeout", "return_code": None}
+    return {"status": "ok" if completed.returncode == 0 else "failed", "return_code": completed.returncode}
+
+
+def _live_readonly_command(
+    profile: DashboardLabProfile,
+    action_id: str,
+    *,
+    safe_env: Mapping[str, str],
+    local_config: Mapping[str, Any],
+) -> list[str] | None:
+    start_date, end_date = _default_reporting_window()
+    if action_id == "ga4.pull-readonly":
+        return [
+            sys.executable,
+            str(ROOT / "scripts" / "pull_ga4_traffic_overview.py"),
+            "--profile",
+            profile.slug,
+            "--start-date",
+            start_date,
+            "--end-date",
+            end_date,
+            "--real-output",
+        ]
+    if action_id == "gsc.fetch-readonly":
+        return [
+            sys.executable,
+            str(ROOT / "scripts" / "fetch_gsc_api.py"),
+            "--profile",
+            profile.slug,
+            "--site-url",
+            _safe_gsc_site_url(profile, _provider_config(local_config, "gsc"), safe_env=safe_env),
+            "--start-date",
+            start_date,
+            "--end-date",
+            end_date,
+            "--real-output",
+        ]
+    if action_id == "local_falcon.fetch-readonly":
+        manifest_path = _resolve_local_falcon_manifest_path(
+            profile,
+            _provider_config(local_config, "local_falcon"),
+            safe_env=safe_env,
+        )
+        if manifest_path is None:
+            return None
+        return [
+            sys.executable,
+            str(ROOT / "scripts" / "fetch_local_falcon_api.py"),
+            "--profile",
+            profile.slug,
+            "--manifest",
+            str(manifest_path),
+            "--transport",
+            "live",
+            "--execute",
+            "--write",
+        ]
+    if action_id == "google_ads_search.fetch-readonly":
+        return [
+            sys.executable,
+            str(ROOT / "scripts" / "fetch_google_ads_api.py"),
+            "--profile",
+            profile.slug,
+            "--start-date",
+            start_date,
+            "--end-date",
+            end_date,
+            "--real-output",
+        ]
+    return None
+
+
+def _default_reporting_window() -> tuple[str, str]:
+    end = datetime.now(timezone.utc).date()
+    start = end - timedelta(days=30)
+    return start.isoformat(), end.isoformat()
+
+
+def _safe_gsc_site_url(profile: DashboardLabProfile, local_config: Mapping[str, Any], *, safe_env: Mapping[str, str]) -> str:
+    configured = str(local_config.get("_safe_site_url") or local_config.get("site_url") or "").strip()
+    env_value = str(safe_env.get("MUSIMACK_GSC_SITE_URL") or "").strip()
+    return configured or env_value or f"https://{profile.domain}/"
+
+
 def _resolve_form_fills_input_file(*, input_root: Path, input_file: str | None) -> dict[str, Any]:
     raw = str(input_file or "").strip()
     if not raw:
@@ -3532,6 +3877,10 @@ def _onboarding_action_safety() -> dict[str, bool]:
         "no_live_api_calls": True,
         "no_provider_execution": True,
         "no_fixture_copy": True,
+        "live_readonly_requires_david_confirmation": True,
+        "no_live_actions_in_automated_qa": True,
+        "no_provider_mutations": True,
+        "fixture_copy_requires_confirmation": True,
         "no_secret_values": True,
         "no_file_contents": True,
     }

@@ -2226,6 +2226,109 @@ def test_onboarding_actions_reject_unknown_and_guard_future_actions(tmp_path):
     assert str(tmp_path) not in serialized
 
 
+def test_live_readonly_actions_require_david_confirmation_and_are_sanitized(tmp_path, monkeypatch):
+    registry = _registry(tmp_path)
+    _write_json(tmp_path / "private-manifest.json", {"profile": "demo-profile", "reports": []})
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={
+                "MUSIMACK_GA4_PROPERTY_ID": "property-123",
+                "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS": "C:/private/client-secret.json",
+                "MUSIMACK_GA4_OAUTH_TOKEN_FILE": "C:/private/token.json",
+            },
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+        )
+    )
+    calls = []
+
+    class Completed:
+        returncode = 0
+        stdout = "raw provider stdout should not return"
+        stderr = "raw provider stderr should not return"
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return Completed()
+
+    monkeypatch.setattr("server.main.subprocess.run", fake_run)
+
+    missing_confirmation = client.post("/api/profiles/demo-profile/onboarding-actions/ga4.pull-readonly/run", json={"confirmed": True})
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/ga4.pull-readonly/run",
+        json={"confirmed": True, "confirm_live_readonly": True, "confirm_authorized_operator": True},
+    )
+
+    assert missing_confirmation.status_code == 400
+    assert missing_confirmation.json()["detail"] == "live read-only action requires David confirmation"
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["action"]["classification"] == "live_readonly"
+    assert payload["action"]["live_readonly"] is True
+    assert payload["result"]["status"] == "ok"
+    assert payload["result"]["result_category"] == "live_readonly_completed"
+    assert calls
+    command, kwargs = calls[0]
+    assert isinstance(command, list)
+    assert "shell" not in kwargs
+    assert kwargs["timeout"] > 0
+    assert "stdout" not in serialized
+    assert "stderr" not in serialized
+    assert "raw provider" not in serialized
+    assert "property-123" not in serialized
+    assert "C:/private" not in serialized
+    assert str(tmp_path) not in serialized
+
+
+def test_google_ads_live_readonly_action_metadata_is_non_mutating(tmp_path):
+    registry = _registry(tmp_path)
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-actions")
+
+    assert response.status_code == 200
+    actions = {item["id"]: item for item in response.json()["actions"]}
+    action = actions["google_ads_search.fetch-readonly"]
+    assert action["classification"] == "live_readonly"
+    assert action["external_api"] is True
+    assert action["live_readonly"] is True
+    assert action["requires_confirmation"] is True
+    assert action["confirm_live_readonly_required"] is True
+    assert "No campaign, budget, bid, keyword, ad, asset, conversion, or account-setting mutations" in action["description"]
+    assert "No campaign, bid, budget, keyword, ad, asset, conversion" in action["non_mutating_guarantee"]
+
+
+def test_run_next_safe_step_metadata_never_selects_live_action(tmp_path):
+    registry = _registry(tmp_path)
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={
+                "MUSIMACK_GA4_PROPERTY_ID": "property-123",
+                "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS": "C:/private/client-secret.json",
+                "MUSIMACK_GA4_OAUTH_TOKEN_FILE": "C:/private/token.json",
+            },
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-status")
+
+    assert response.status_code == 200
+    action = response.json()["next_safe_action"]
+    if action is not None:
+        assert action["provider"] not in {"ga4", "gsc", "google_ads_search"}
+        assert "fetch-readonly" not in action["action_id"]
+        assert "pull-readonly" not in action["action_id"]
+
+
 def test_profile_detail_setup_checklist_is_safe_and_profile_scoped(tmp_path):
     registry = _registry(tmp_path)
     client = TestClient(

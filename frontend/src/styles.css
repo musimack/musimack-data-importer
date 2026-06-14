@@ -2111,7 +2111,8 @@ tr:last-child td {
 }
 
 .wizard-card,
-.local-file-intake-card {
+.local-file-intake-card,
+.live-readonly-card {
   background: linear-gradient(135deg, #ffffff 0%, #f7faf6 58%, #eef6ef 100%);
   border: 1px solid #cfd9cf;
   border-radius: 18px;
@@ -2133,25 +2134,30 @@ tr:last-child td {
 .wizard-provider-card h4,
 .wizard-provider-card p,
 .local-file-upload-card h4,
-.local-file-upload-card p {
+.local-file-upload-card p,
+.live-readonly-action-card h4,
+.live-readonly-action-card p {
   margin: 0;
 }
 
 .wizard-heading p,
 .wizard-provider-card p,
-.local-file-upload-card p {
+.local-file-upload-card p,
+.live-readonly-action-card p {
   color: #657181;
 }
 
 .wizard-provider-grid,
-.local-file-upload-grid {
+.local-file-upload-grid,
+.live-readonly-grid {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .wizard-provider-card,
-.local-file-upload-card {
+.local-file-upload-card,
+.live-readonly-action-card {
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid #dce4dc;
   border-radius: 14px;
@@ -2315,6 +2321,7 @@ pre {
   .readiness-ladder,
   .wizard-provider-grid,
   .local-file-upload-grid,
+  .live-readonly-grid,
   .onboarding-flow-steps,
   .onboarding-status-strip,
   .preflight-grid,
@@ -2358,6 +2365,7 @@ pre {
   .operator-command-center,
   .wizard-card,
   .local-file-intake-card,
+  .live-readonly-card,
   .onboarding-flow-card,
   .onboarding-preflight-card,
   .local-readiness-card,

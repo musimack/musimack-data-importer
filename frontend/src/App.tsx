@@ -522,6 +522,14 @@ type OnboardingAction = {
   writes_files: boolean;
   external_api: boolean;
   fixture_copy: boolean;
+  classification?: string;
+  live_readonly?: boolean;
+  confirm_live_readonly_required?: boolean;
+  confirm_authorized_operator_required?: boolean;
+  output_file?: string;
+  setup_required?: string[];
+  credential_setup?: string;
+  non_mutating_guarantee?: string;
 };
 
 type OnboardingActionGroup = {
@@ -1065,6 +1073,33 @@ function App() {
                         ...current.filter((item) => item.id !== result.id),
                       ].slice(0, 8)),
                     () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
+                  )
+                }
+              />
+
+              <LiveReadOnlyActionsPanel
+                actions={onboardingActions}
+                actionConfirmations={onboardingActionConfirmations}
+                busyActionId={onboardingActionBusyId}
+                onConfirmationChange={(actionId, confirmed) =>
+                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
+                }
+                onRun={(actionId) =>
+                  runOnboardingAction(
+                    detail.slug,
+                    actionId,
+                    {
+                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
+                      inputFile: '',
+                    },
+                    setOnboardingActionBusyId,
+                    setOnboardingActionMessage,
+                    (result) =>
+                      setSessionActionResults((current) => [
+                        result,
+                        ...current.filter((item) => item.id !== result.id),
+                      ].slice(0, 8)),
+                    () => refreshSelectedProfile('Live read-only output readiness refreshed', false),
                   )
                 }
               />
@@ -2396,6 +2431,91 @@ function LocalFileIntakePanel({
   );
 }
 
+function LiveReadOnlyActionsPanel({
+  actions,
+  actionConfirmations,
+  busyActionId,
+  onConfirmationChange,
+  onRun,
+}: {
+  actions: OnboardingActionsResponse | null;
+  actionConfirmations: Record<string, boolean>;
+  busyActionId: string;
+  onConfirmationChange: (actionId: string, confirmed: boolean) => void;
+  onRun: (actionId: string) => void;
+}) {
+  const liveActions = (actions?.actions ?? []).filter((action) => action.external_api && action.live_readonly);
+  return (
+    <section className="live-readonly-card" aria-label="Live read-only provider pulls">
+      <div className="wizard-heading">
+        <div>
+          <span className="eyebrow">David-approved live work</span>
+          <h3>Live read-only provider pulls</h3>
+          <p>
+            These actions can call provider APIs only after David confirms he is the authorized operator. They are not
+            part of Run Next Safe Step and Codex QA must not run them against real accounts.
+          </p>
+        </div>
+        <span className="badge neutral">Manual confirmation required</span>
+      </div>
+      <div className="live-readonly-grid">
+        {liveActions.length ? liveActions.map((action) => {
+          const confirmed = Boolean(actionConfirmations[action.id]);
+          const busy = busyActionId === action.id;
+          return (
+            <article className="live-readonly-action-card" key={action.id}>
+              <div className="card-heading">
+                <div>
+                  <h4>{action.label}</h4>
+                  <p>{action.description}</p>
+                </div>
+                <span className={action.available ? 'badge ok' : 'badge warn'}>
+                  {action.available ? 'Ready' : 'Setup needed'}
+                </span>
+              </div>
+              {action.unavailable_reason ? <p className="blocked-reason">{action.unavailable_reason}</p> : null}
+              <div className="action-safety-row">
+                <span>Live API</span>
+                <span>Read-only reporting</span>
+                <span>{action.output_file ?? 'Local summary output'}</span>
+              </div>
+              {action.setup_required?.length ? (
+                <div className="mini-section">
+                  <h5>Required setup</h5>
+                  <ul>
+                    {action.setup_required.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+              {action.credential_setup ? <p className="safe-copy-footnote">{action.credential_setup}</p> : null}
+              {action.non_mutating_guarantee ? <p className="safe-copy-footnote">{action.non_mutating_guarantee}</p> : null}
+              <label className="confirmation-row compact-confirmation">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  disabled={busy || !action.available}
+                  onChange={(event) => onConfirmationChange(action.id, event.target.checked)}
+                />
+                <span>I confirm David is authorizing this read-only provider reporting pull and no mutation workflow is being run.</span>
+              </label>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!action.available || !confirmed || busy}
+                onClick={() => onRun(action.id)}
+              >
+                {busy ? 'Running...' : 'Run read-only pull'}
+              </button>
+            </article>
+          );
+        }) : (
+          <p className="vault-message">Live read-only provider pulls are loading or not enabled for this profile.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function OnboardingActionsPanel({
   actions,
   status,
@@ -2420,7 +2540,7 @@ function OnboardingActionsPanel({
   const safeGroups = actions?.groups
     .map((group) => ({
       ...group,
-      actions: group.actions.filter((action) => !isPlannedLiveAction(action)),
+      actions: group.actions.filter((action) => !action.external_api && !isPlannedLiveAction(action)),
     }))
     .filter((group) => group.actions.length > 0);
   const plannedGroups = actions?.groups
@@ -2497,7 +2617,7 @@ function OnboardingActionsPanel({
 }
 
 function isPlannedLiveAction(action: OnboardingAction) {
-  return action.label.startsWith('Future:') || action.external_api;
+  return action.label.startsWith('Future:') || action.classification === 'interactive_manual' || action.classification === 'unsafe_or_not_ready';
 }
 
 function OnboardingActionCard({
@@ -4765,6 +4885,9 @@ function runOnboardingAction(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       confirmed: options.confirmed,
+      confirm_write: options.confirmed,
+      confirm_live_readonly: options.confirmed,
+      confirm_authorized_operator: options.confirmed,
       input_file: options.inputFile.trim() || undefined,
     }),
   })
