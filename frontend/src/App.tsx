@@ -379,6 +379,7 @@ type ExecutionStep = {
   label: string;
   status: string;
   detail: string;
+  phase: string;
   timestamp: string;
   latest_result: string;
 };
@@ -445,6 +446,16 @@ type OnboardingStatus = {
     primary: NextActionItem;
     queue: NextActionItem[];
   };
+  next_safe_action: {
+    action_id: string;
+    label: string;
+    status: string;
+    detail: string;
+    provider: string;
+    phase: string;
+    requires_confirmation: boolean;
+    auto_chain: boolean;
+  } | null;
   operator_guidance: string[];
   safety: {
     read_only: boolean;
@@ -901,7 +912,29 @@ function App() {
 
               <OnboardingAccelerationPanel status={detail.onboarding_status} />
 
-              <LocalExecutionPanel status={detail.onboarding_status} />
+              <LocalExecutionPanel
+                status={detail.onboarding_status}
+                actions={onboardingActions}
+                busyActionId={onboardingActionBusyId}
+                onRun={(actionId) =>
+                  runOnboardingAction(
+                    detail.slug,
+                    actionId,
+                    {
+                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
+                      inputFile: onboardingActionInputs[actionId] ?? '',
+                    },
+                    setOnboardingActionBusyId,
+                    setOnboardingActionMessage,
+                    (result) =>
+                      setSessionActionResults((current) => [
+                        result,
+                        ...current.filter((item) => item.id !== result.id),
+                      ].slice(0, 8)),
+                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
+                  )
+                }
+              />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
 
@@ -928,7 +961,37 @@ function App() {
                 }
               />
 
-              <PrimaryNextAction status={detail.onboarding_status} />
+              <PrimaryNextAction
+                status={detail.onboarding_status}
+                actions={onboardingActions}
+                actionInputs={onboardingActionInputs}
+                actionConfirmations={onboardingActionConfirmations}
+                busyActionId={onboardingActionBusyId}
+                onInputChange={(actionId, value) =>
+                  setOnboardingActionInputs((current) => ({ ...current, [actionId]: value }))
+                }
+                onConfirmationChange={(actionId, confirmed) =>
+                  setOnboardingActionConfirmations((current) => ({ ...current, [actionId]: confirmed }))
+                }
+                onRun={(actionId) =>
+                  runOnboardingAction(
+                    detail.slug,
+                    actionId,
+                    {
+                      confirmed: Boolean(onboardingActionConfirmations[actionId]),
+                      inputFile: onboardingActionInputs[actionId] ?? '',
+                    },
+                    setOnboardingActionBusyId,
+                    setOnboardingActionMessage,
+                    (result) =>
+                      setSessionActionResults((current) => [
+                        result,
+                        ...current.filter((item) => item.id !== result.id),
+                      ].slice(0, 8)),
+                    () => refreshSelectedProfile('Onboarding status refreshed after local action', false),
+                  )
+                }
+              />
 
               <ProviderSetupWorkbench
                 detail={detail}
@@ -938,6 +1001,7 @@ function App() {
 
               <OnboardingActionsPanel
                 actions={onboardingActions}
+                status={detail.onboarding_status}
                 actionInputs={onboardingActionInputs}
                 actionConfirmations={onboardingActionConfirmations}
                 busyActionId={onboardingActionBusyId}
@@ -1456,9 +1520,20 @@ function OnboardingAccelerationPanel({ status }: { status: OnboardingStatus }) {
   );
 }
 
-function LocalExecutionPanel({ status }: { status: OnboardingStatus }) {
+function LocalExecutionPanel({
+  status,
+  actions,
+  busyActionId,
+  onRun,
+}: {
+  status: OnboardingStatus;
+  actions: OnboardingActionsResponse | null;
+  busyActionId: string;
+  onRun: (actionId: string) => void;
+}) {
   const execution = status.execution ?? { steps: [], recent_results: [] };
   const dashboardStep = execution.steps.find((step) => step.id === 'dashboard_lab_ready');
+  const actionMap = new Map((actions?.actions ?? []).map((action) => [action.id, action]));
   return (
     <section className="execution-card" aria-label="Local execution workflow">
       <div className="onboarding-status-heading">
@@ -1479,8 +1554,19 @@ function LocalExecutionPanel({ status }: { status: OnboardingStatus }) {
               </div>
               <span className={statusBadgeClass(step.status)}>{step.status}</span>
             </div>
+            <p className="execution-phase">Phase: {executionPhaseLabel(step.phase)}</p>
             {step.latest_result ? <p className="execution-latest-result">{step.latest_result}</p> : null}
             {step.timestamp ? <time>{step.timestamp}</time> : null}
+            {canRerunExecutionAction(actionMap.get(step.id)) ? (
+              <button
+                type="button"
+                className="copy-button compact-action-button"
+                disabled={busyActionId === step.id}
+                onClick={() => onRun(step.id)}
+              >
+                {busyActionId === step.id ? 'Running...' : step.timestamp ? 'Rerun step' : 'Run step'}
+              </button>
+            ) : null}
           </article>
         ))}
       </div>
@@ -1499,6 +1585,16 @@ function LocalExecutionPanel({ status }: { status: OnboardingStatus }) {
                 <span className={statusBadgeClass(item.status)}>{item.status}</span>
                 <p>{item.summary}</p>
                 <time>{item.timestamp}</time>
+                {canRerunExecutionAction(actionMap.get(item.action_id)) ? (
+                  <button
+                    type="button"
+                    className="copy-button compact-action-button"
+                    disabled={busyActionId === item.action_id}
+                    onClick={() => onRun(item.action_id)}
+                  >
+                    {busyActionId === item.action_id ? 'Running...' : 'Rerun safely'}
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
@@ -1708,6 +1804,9 @@ function CompletionSummaryPanel({
 
       {summary ? (
         <>
+          {summary.profile.readiness_state === 'Dashboard-lab ready' ? (
+            <p className="dashboard-ready-cue">Ready to open dashboard-lab manually. Portal publishing remains separate.</p>
+          ) : null}
           <div className="completion-summary-strip">
             <StatusTile label="Readiness" value={summary.profile.readiness_state} tone={statusTone(summary.profile.readiness_state)} />
             <StatusTile label="Validation" value={summary.validation.state} tone={statusTone(summary.validation.state)} />
@@ -1837,7 +1936,7 @@ function stepStateLabel(state: string) {
   if (normalized.includes('ready') || normalized.includes('configured') || normalized.includes('available')) {
     return 'Ready';
   }
-  if (normalized.includes('missing') || normalized.includes('needs') || normalized.includes('blocked')) {
+  if (normalized.includes('missing') || normalized.includes('needs') || normalized.includes('blocked') || normalized.includes('failed')) {
     return 'Needs attention';
   }
   if (normalized.includes('planned') || normalized.includes('not enabled')) {
@@ -1854,7 +1953,7 @@ function stepTone(state: string) {
   if (normalized.includes('ready') || normalized.includes('configured') || normalized.includes('available') || normalized.includes('done') || normalized.includes('copied')) {
     return 'ok';
   }
-  if (normalized.includes('missing') || normalized.includes('needs') || normalized.includes('blocked')) {
+  if (normalized.includes('missing') || normalized.includes('needs') || normalized.includes('blocked') || normalized.includes('failed')) {
     return 'warn';
   }
   return 'neutral';
@@ -1878,6 +1977,7 @@ function ProviderStatusRow({ provider }: { provider: OnboardingProviderStatus })
 
 function OnboardingActionsPanel({
   actions,
+  status,
   actionInputs,
   actionConfirmations,
   busyActionId,
@@ -1887,6 +1987,7 @@ function OnboardingActionsPanel({
   onRun,
 }: {
   actions: OnboardingActionsResponse | null;
+  status: OnboardingStatus;
   actionInputs: Record<string, string>;
   actionConfirmations: Record<string, boolean>;
   busyActionId: string;
@@ -1927,6 +2028,7 @@ function OnboardingActionsPanel({
                 {group.actions.map((action) => (
                   <OnboardingActionCard
                     action={action}
+                    status={status}
                     inputValue={actionInputs[action.id] ?? ''}
                     confirmed={Boolean(actionConfirmations[action.id])}
                     busy={busyActionId === action.id}
@@ -1950,6 +2052,7 @@ function OnboardingActionsPanel({
                     {group.actions.map((action) => (
                       <OnboardingActionCard
                         action={action}
+                        status={status}
                         inputValue={actionInputs[action.id] ?? ''}
                         confirmed={Boolean(actionConfirmations[action.id])}
                         busy={busyActionId === action.id}
@@ -1978,6 +2081,7 @@ function isPlannedLiveAction(action: OnboardingAction) {
 
 function OnboardingActionCard({
   action,
+  status,
   inputValue,
   confirmed,
   busy,
@@ -1986,6 +2090,7 @@ function OnboardingActionCard({
   onRun,
 }: {
   action: OnboardingAction;
+  status: OnboardingStatus;
   inputValue: string;
   confirmed: boolean;
   busy: boolean;
@@ -1998,8 +2103,12 @@ function OnboardingActionCard({
   const isCopyPreview = action.id === 'dashboard_lab.preview-fixture-copy';
   const isCopyAction = action.id === 'dashboard_lab.copy-validated-fixtures';
   const isLocalImport = isFormFillsImport || isCallRailImport;
+  const localFileMap = new Map((status.local_file_readiness ?? []).map((item) => [item.provider, item]));
+  const providerKey = isFormFillsImport ? 'form_fills' : isCallRailImport ? 'callrail' : '';
+  const configuredInputDetected = providerKey ? Boolean(localFileMap.get(providerKey)?.detected) : false;
+  const hasOverrideInput = inputValue.trim().length > 0;
   const canRunReadOnly = action.available && action.read_only && !action.writes_files && !action.external_api && !action.fixture_copy;
-  const canRunLocalImport = action.available && isLocalImport && action.writes_files && !action.external_api && !action.fixture_copy && confirmed && inputValue.trim().length > 0;
+  const canRunLocalImport = action.available && isLocalImport && action.writes_files && !action.external_api && !action.fixture_copy && confirmed && (configuredInputDetected || hasOverrideInput);
   const canPreviewCopy = action.available && isCopyPreview && action.read_only && action.fixture_copy && !action.external_api;
   const canRunCopy = action.available && isCopyAction && action.writes_files && action.fixture_copy && !action.external_api && confirmed;
   const runnable = canRunReadOnly || canRunLocalImport || canPreviewCopy || canRunCopy;
@@ -2025,15 +2134,20 @@ function OnboardingActionCard({
       {isLocalImport ? (
         <div className="onboarding-import-controls">
           <label>
-            <span>Local input file</span>
+            <span>Local input file override</span>
             <input
               type="text"
               value={inputValue}
               onChange={(event) => onInputChange(event.target.value)}
-              placeholder={isCallRailImport ? 'qa-callrail.csv' : 'qa-form-fills.csv'}
+              placeholder={isCallRailImport ? 'Optional override: qa-callrail.csv' : 'Optional override: qa-form-fills.csv'}
               disabled={busy || !action.available}
             />
           </label>
+          <p className="safe-copy-footnote">
+            {configuredInputDetected
+              ? 'A configured approved local file is already detected. Leave the override blank to use it.'
+              : 'If no configured local file is detected, provide a safe override under the allowed local input folder.'}
+          </p>
           <label className="confirmation-row compact-confirmation">
             <input
               type="checkbox"
@@ -2085,6 +2199,16 @@ function actionButtonLabel(actionId: string) {
     return 'Copy validated fixtures';
   }
   return 'Run safe check';
+}
+
+function canRerunExecutionAction(action: OnboardingAction | undefined) {
+  if (!action || !action.available) {
+    return false;
+  }
+  if (action.requires_confirmation) {
+    return false;
+  }
+  return action.read_only || action.id === 'local_falcon.validate-manifest';
 }
 
 function SessionActionHistoryPanel({ results }: { results: SessionActionResult[] }) {
@@ -2736,8 +2860,22 @@ function LocalConfigProviderSection({
 
 function PrimaryNextAction({
   status,
+  actions,
+  actionInputs,
+  actionConfirmations,
+  busyActionId,
+  onInputChange,
+  onConfirmationChange,
+  onRun,
 }: {
   status: OnboardingStatus;
+  actions: OnboardingActionsResponse | null;
+  actionInputs: Record<string, string>;
+  actionConfirmations: Record<string, boolean>;
+  busyActionId: string;
+  onInputChange: (actionId: string, value: string) => void;
+  onConfirmationChange: (actionId: string, confirmed: boolean) => void;
+  onRun: (actionId: string) => void;
 }) {
   const primary = status.next_action_stack?.primary ?? {
     id: 'review',
@@ -2746,6 +2884,27 @@ function PrimaryNextAction({
     detail: 'All visible local onboarding gates are currently satisfied.',
   };
   const queue = status.next_action_stack?.queue ?? [];
+  const nextSafeAction = status.next_safe_action;
+  const actionMap = new Map((actions?.actions ?? []).map((action) => [action.id, action]));
+  const actionable = nextSafeAction ? actionMap.get(nextSafeAction.action_id) : undefined;
+  const localFileMap = new Map((status.local_file_readiness ?? []).map((item) => [item.provider, item]));
+  const configuredInputDetected = actionable?.id === 'form_fills.import-local'
+    ? Boolean(localFileMap.get('form_fills')?.detected)
+    : actionable?.id === 'callrail.import-local'
+      ? Boolean(localFileMap.get('callrail')?.detected)
+      : false;
+  const hasOverrideInput = actionable ? Boolean((actionInputs[actionable.id] ?? '').trim()) : false;
+  const confirmed = actionable ? Boolean(actionConfirmations[actionable.id]) : false;
+  const runnable = actionable
+    ? actionable.requires_confirmation
+      ? actionable.id === 'dashboard_lab.copy-validated-fixtures'
+        ? confirmed
+        : actionable.id === 'form_fills.import-local' || actionable.id === 'callrail.import-local'
+          ? confirmed && (configuredInputDetected || hasOverrideInput)
+          : confirmed
+      : actionable.available
+    : false;
+  const dashboardReady = status.dashboard_copy.state === 'Dashboard-lab ready';
   return (
     <section className="next-action-card" aria-label="Recommended next actions">
       <div>
@@ -2754,6 +2913,50 @@ function PrimaryNextAction({
         <p>{primary.detail}</p>
       </div>
       <span className={statusBadgeClass(primary.status)}>{primary.status}</span>
+      {nextSafeAction && actionable ? (
+        <div className="next-safe-action-panel">
+          <strong>Next safe local step</strong>
+          <p>{nextSafeAction.label}</p>
+          <span className={statusBadgeClass(nextSafeAction.status)}>{nextSafeAction.status}</span>
+          <p>{nextSafeAction.detail}</p>
+          {(actionable.id === 'form_fills.import-local' || actionable.id === 'callrail.import-local') ? (
+            <label className="local-config-field">
+              <span>Optional local input override</span>
+              <input
+                type="text"
+                value={actionInputs[actionable.id] ?? ''}
+                placeholder={actionable.id === 'callrail.import-local' ? 'Optional override: qa-callrail.csv' : 'Optional override: qa-form-fills.csv'}
+                onChange={(event) => onInputChange(actionable.id, event.target.value)}
+                disabled={busyActionId === actionable.id}
+              />
+            </label>
+          ) : null}
+          {actionable.requires_confirmation ? (
+            <label className="confirmation-row compact-confirmation">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                disabled={busyActionId === actionable.id}
+                onChange={(event) => onConfirmationChange(actionable.id, event.target.checked)}
+              />
+              <span>{nextSafeConfirmationLabel(actionable.id, configuredInputDetected)}</span>
+            </label>
+          ) : null}
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!runnable || busyActionId === actionable.id}
+            onClick={() => onRun(actionable.id)}
+          >
+            {busyActionId === actionable.id ? 'Running...' : nextSafeActionButtonLabel(actionable.id)}
+          </button>
+        </div>
+      ) : (
+        <p className="safe-copy-footnote">No single runnable safe local step is available yet. Resolve the current blockers first.</p>
+      )}
+      {dashboardReady ? (
+        <p className="dashboard-ready-cue">Ready to open dashboard-lab manually. Portal publishing remains separate.</p>
+      ) : null}
       {queue.length ? (
         <div className="secondary-next-action">
           {queue.map((item) => (
@@ -2809,6 +3012,60 @@ function ProviderSetupWorkbench({
       <RealProfileGuardrails detail={detail} />
     </section>
   );
+}
+
+function nextSafeActionButtonLabel(actionId: string) {
+  if (actionId === 'dashboard_lab.copy-validated-fixtures') {
+    return 'Copy validated fixtures';
+  }
+  if (actionId === 'dashboard_lab.preview-fixture-copy') {
+    return 'Preview dashboard-lab fixture copy';
+  }
+  if (actionId === 'validate-output') {
+    return 'Validate existing output';
+  }
+  if (actionId === 'local_falcon.validate-manifest') {
+    return 'Validate Local Falcon manifest';
+  }
+  if (actionId === 'callrail.import-local') {
+    return 'Import CallRail';
+  }
+  if (actionId === 'form_fills.import-local') {
+    return 'Import Form Fills';
+  }
+  return 'Run next safe step';
+}
+
+function nextSafeConfirmationLabel(actionId: string, configuredInputDetected: boolean) {
+  if (actionId === 'dashboard_lab.copy-validated-fixtures') {
+    return 'I confirm this copies only eligible validated summaries to the guarded local fixture target.';
+  }
+  if (actionId === 'callrail.import-local') {
+    return configuredInputDetected
+      ? 'I confirm this uses the configured approved local CallRail file and writes ignored local output only.'
+      : 'I confirm this uses a safe local CallRail override under the allowed input folder and writes ignored local output only.';
+  }
+  if (actionId === 'form_fills.import-local') {
+    return configuredInputDetected
+      ? 'I confirm this uses the configured approved date-only Form Fills file and writes ignored local output only.'
+      : 'I confirm this uses a safe date-only Form Fills override under the allowed input folder and writes ignored local output only.';
+  }
+  return 'I confirm this safe local step is approved.';
+}
+
+function executionPhaseLabel(phase: string) {
+  const labels: Record<string, string> = {
+    blocked: 'Blocked',
+    failed: 'Failed',
+    configured: 'Configured',
+    ready_to_run: 'Ready to run',
+    validation_required: 'Validation required',
+    validated: 'Validated',
+    copy_eligible: 'Copy eligible',
+    copied: 'Copied',
+    ran_successfully: 'Ran successfully',
+  };
+  return labels[phase] ?? phase;
 }
 
 function ProviderSetupPanel({

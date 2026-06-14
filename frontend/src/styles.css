@@ -642,6 +642,19 @@ code {
   margin: 0;
 }
 
+.execution-phase {
+  color: #596575;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.compact-action-button {
+  justify-self: start;
+}
+
 .panel-empty {
   color: #5a6b7c;
   margin: 0;
@@ -1128,7 +1141,33 @@ code {
   border-color: #bfd1e5;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.4fr);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.next-safe-action-panel,
+.dashboard-ready-cue {
+  background: #f8fafb;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.next-safe-action-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.next-safe-action-panel p,
+.dashboard-ready-cue {
+  color: #485160;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dashboard-ready-cue {
+  background: #eef8ef;
+  border-color: #b9d9be;
+  color: #214b2f;
 }
 
 .secret-vault-card {

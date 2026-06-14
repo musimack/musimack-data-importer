@@ -166,6 +166,7 @@ PROVIDER_LABELS = {
     "google_ads_search": "Google Ads Search",
     "callrail": "CallRail",
     "form_fills": "Form Fills",
+    "profile": "Profile Output",
     "dashboard_lab": "Dashboard-lab Fixtures",
 }
 ALLOWED_VAULT_SECRET_KEYS = {("local_falcon", "api_key")}
@@ -1081,6 +1082,16 @@ def build_onboarding_status(
         execution=execution,
     )
     next_action_stack = _onboarding_next_action_stack(acceleration=acceleration)
+    next_safe_action = _build_next_safe_action(acceleration=acceleration, execution=execution)
+    validation_state = _validation_status_state(
+        folder_exists=output_status["folder_exists"],
+        last_validation=last_actions.get("last_validation"),
+    )
+    dashboard_copy_state = _dashboard_copy_state(
+        enabled_provider_count=enabled_provider_count,
+        execution=execution,
+        last_actions=last_actions,
+    )
 
     return {
         "profile": {
@@ -1096,14 +1107,14 @@ def build_onboarding_status(
         "local_config": local_config_state,
         "vault": vault_state,
         "validation": {
-            "state": "Ready for validation" if output_status["folder_exists"] else "Validation unknown",
+            "state": validation_state,
             "folder_exists": output_status["folder_exists"],
             "overall_ok": output_status["ok"],
             "last_validation": "Available" if last_actions["last_validation"] else "Not run",
             "warning_count": len(output_status["warnings"]),
         },
         "dashboard_copy": {
-            "state": "Ready for dashboard-lab copy" if ready_for_copy_count and ready_for_copy_count == enabled_provider_count else "Not applicable" if not enabled_provider_count else "Output missing",
+            "state": dashboard_copy_state,
             "ready_provider_count": ready_for_copy_count,
             "last_copy": "Available" if last_actions["last_copy"] else "Not run",
         },
@@ -1113,6 +1124,7 @@ def build_onboarding_status(
         "execution": execution,
         "acceleration": acceleration,
         "next_action_stack": next_action_stack,
+        "next_safe_action": next_safe_action,
         "operator_guidance": _real_operator_guidance(),
         "safety": {
             "read_only": True,
@@ -1551,30 +1563,45 @@ def _build_execution_tracking(
     validation_failed = bool(validation_action) and str(validation_action.get("status") or "") != "ok"
     preview_ok = _action_succeeded(preview_action)
     copy_ok = _action_succeeded(copy_action)
+    manifest_failed = bool(manifest_action) and not _action_succeeded(manifest_action)
+    form_fills_failed = bool(form_fills_action) and not _action_succeeded(form_fills_action)
+    callrail_failed = bool(callrail_action) and not _action_succeeded(callrail_action)
 
     steps = [
         _execution_step(
             step_id="local_falcon.validate-manifest",
             provider="local_falcon",
             label="Validate Local Falcon manifest",
-            status="Complete" if _action_succeeded(manifest_action) else "Ready now" if file_map.get("local_falcon", {}).get("detected") else "Needs file",
-            detail="Latest manifest validation passed." if _action_succeeded(manifest_action) else "Run the local-only manifest validator before any live Local Falcon planning." if file_map.get("local_falcon", {}).get("detected") else "Place the local-only manifest in an approved manifest location or disposable QA override.",
+            status="Failed" if manifest_failed else "Complete" if _action_succeeded(manifest_action) else "Ready now" if file_map.get("local_falcon", {}).get("detected") else "Needs file",
+            detail="Latest manifest validation needs attention." if manifest_failed else "Latest manifest validation passed." if _action_succeeded(manifest_action) else "Run the local-only manifest validator before any live Local Falcon planning." if file_map.get("local_falcon", {}).get("detected") else "Place the local-only manifest in an approved manifest location or disposable QA override.",
+            phase=_execution_phase(
+                step_id="local_falcon.validate-manifest",
+                status="Failed" if manifest_failed else "Complete" if _action_succeeded(manifest_action) else "Ready now" if file_map.get("local_falcon", {}).get("detected") else "Needs file",
+            ),
             action=manifest_action,
         ),
         _execution_step(
             step_id="form_fills.import-local",
             provider="form_fills",
             label="Import Form Fills",
-            status="Complete" if provider_map.get("form_fills", {}).get("output_state") == "Output exists" else "Ready now" if file_map.get("form_fills", {}).get("detected") else "Needs file",
-            detail="Date-only Form Fills summary output is available." if provider_map.get("form_fills", {}).get("output_state") == "Output exists" else "Run the local-only Form Fills import from the approved input location." if file_map.get("form_fills", {}).get("detected") else "Add the approved Form Fills local file before import.",
+            status="Failed" if form_fills_failed else "Complete" if provider_map.get("form_fills", {}).get("output_state") == "Output exists" else "Ready now" if file_map.get("form_fills", {}).get("detected") else "Needs file",
+            detail="The latest Form Fills import needs attention." if form_fills_failed else "Date-only Form Fills summary output is available." if provider_map.get("form_fills", {}).get("output_state") == "Output exists" else "Run the local-only Form Fills import from the approved input location." if file_map.get("form_fills", {}).get("detected") else "Add the approved Form Fills local file before import.",
+            phase=_execution_phase(
+                step_id="form_fills.import-local",
+                status="Failed" if form_fills_failed else "Complete" if provider_map.get("form_fills", {}).get("output_state") == "Output exists" else "Ready now" if file_map.get("form_fills", {}).get("detected") else "Needs file",
+            ),
             action=form_fills_action,
         ),
         _execution_step(
             step_id="callrail.import-local",
             provider="callrail",
             label="Import CallRail",
-            status="Complete" if provider_map.get("callrail", {}).get("output_state") == "Output exists" else "Ready now" if file_map.get("callrail", {}).get("detected") else "Needs file",
-            detail="CallRail summary output is available." if provider_map.get("callrail", {}).get("output_state") == "Output exists" else "Run the local-only CallRail import from the approved input location." if file_map.get("callrail", {}).get("detected") else "Add the approved CallRail local file before import.",
+            status="Failed" if callrail_failed else "Complete" if provider_map.get("callrail", {}).get("output_state") == "Output exists" else "Ready now" if file_map.get("callrail", {}).get("detected") else "Needs file",
+            detail="The latest CallRail import needs attention." if callrail_failed else "CallRail summary output is available." if provider_map.get("callrail", {}).get("output_state") == "Output exists" else "Run the local-only CallRail import from the approved input location." if file_map.get("callrail", {}).get("detected") else "Add the approved CallRail local file before import.",
+            phase=_execution_phase(
+                step_id="callrail.import-local",
+                status="Failed" if callrail_failed else "Complete" if provider_map.get("callrail", {}).get("output_state") == "Output exists" else "Ready now" if file_map.get("callrail", {}).get("detected") else "Needs file",
+            ),
             action=callrail_action,
         ),
         _execution_step(
@@ -1583,6 +1610,10 @@ def _build_execution_tracking(
             label="Validate existing summaries",
             status="Blocked" if validation_failed else "Complete" if validation_ok else "Needs validation" if any_output_exists else "Output missing",
             detail="Latest validation failed and blocks dashboard-lab readiness." if validation_failed else "Local summary validation passed." if validation_ok else "Run the allowlisted local validator on the current dashboard summary output." if any_output_exists else "Create or update local summary output before validation.",
+            phase=_execution_phase(
+                step_id="validate-output",
+                status="Blocked" if validation_failed else "Complete" if validation_ok else "Needs validation" if any_output_exists else "Output missing",
+            ),
             action=validation_action,
         ),
         _execution_step(
@@ -1591,6 +1622,10 @@ def _build_execution_tracking(
             label="Preview dashboard-lab fixture copy",
             status="Complete" if preview_ok or copy_ok else "Needs confirmation" if validation_ok and safe_preview.get("status") == "ready" else "Validation required",
             detail="Fixture preview is ready." if preview_ok or copy_ok else "Preview the guarded dashboard-lab copy set before copying." if validation_ok and safe_preview.get("status") == "ready" else "Validation must pass before previewing fixture copy.",
+            phase=_execution_phase(
+                step_id="dashboard_lab.preview-fixture-copy",
+                status="Complete" if preview_ok or copy_ok else "Needs confirmation" if validation_ok and safe_preview.get("status") == "ready" else "Validation required",
+            ),
             action=preview_action,
         ),
         _execution_step(
@@ -1599,6 +1634,10 @@ def _build_execution_tracking(
             label="Copy validated fixtures",
             status="Complete" if copy_ok else "Needs confirmation" if (preview_ok or (validation_ok and safe_preview.get("status") == "ready")) else "Validation required",
             detail="Validated summaries were copied to the guarded local fixture target." if copy_ok else "Copy only eligible validated summaries into guarded local fixtures." if (preview_ok or (validation_ok and safe_preview.get("status") == "ready")) else "Validation and preview must be ready before copying fixtures.",
+            phase=_execution_phase(
+                step_id="dashboard_lab.copy-validated-fixtures",
+                status="Complete" if copy_ok else "Needs confirmation" if (preview_ok or (validation_ok and safe_preview.get("status") == "ready")) else "Validation required",
+            ),
             action=copy_action,
         ),
         _execution_step(
@@ -1606,7 +1645,11 @@ def _build_execution_tracking(
             provider="dashboard_lab",
             label="Dashboard-lab ready",
             status="Blocked" if validation_failed else "Complete" if copy_ok else "Needs confirmation" if (preview_ok or (validation_ok and safe_preview.get("status") == "ready")) else "In progress",
-            detail="Local fixture copy is complete and dashboard-lab local review can begin." if copy_ok else "Validation failure must be resolved before dashboard-lab readiness." if validation_failed else "Complete validation, preview, and guarded copy to reach dashboard-lab ready state.",
+            detail="Local fixture copy is complete. Ready to open dashboard-lab manually." if copy_ok else "Validation failure must be resolved before dashboard-lab readiness." if validation_failed else "Complete validation, preview, and guarded copy to reach dashboard-lab ready state.",
+            phase=_execution_phase(
+                step_id="dashboard_lab_ready",
+                status="Blocked" if validation_failed else "Complete" if copy_ok else "Needs confirmation" if (preview_ok or (validation_ok and safe_preview.get("status") == "ready")) else "In progress",
+            ),
             action=copy_action,
         ),
     ]
@@ -1619,6 +1662,7 @@ def _build_execution_tracking(
                 label="Add Local Falcon key",
                 status="Needs secret",
                 detail="Save the key through the local vault or make the env reference available.",
+                phase="blocked",
                 action=None,
             ),
         )
@@ -1635,6 +1679,7 @@ def _execution_step(
     label: str,
     status: str,
     detail: str,
+    phase: str,
     action: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return {
@@ -1643,9 +1688,36 @@ def _execution_step(
         "label": label,
         "status": status,
         "detail": detail,
+        "phase": phase,
         "timestamp": str((action or {}).get("timestamp") or ""),
         "latest_result": _recent_execution_summary(action) if action else "",
     }
+
+
+def _execution_phase(*, step_id: str, status: str) -> str:
+    if status in {"Needs file", "Needs secret", "Blocked", "Output missing"}:
+        return "blocked"
+    if status == "Failed":
+        return "failed"
+    if status == "Ready now":
+        return "ready_to_run"
+    if status == "Needs validation":
+        return "validation_required"
+    if status == "Needs confirmation":
+        return "copy_eligible" if step_id in {"dashboard_lab.preview-fixture-copy", "dashboard_lab.copy-validated-fixtures", "dashboard_lab_ready"} else "ready_to_run"
+    if status == "Complete":
+        if step_id == "local_falcon.validate-manifest":
+            return "validated"
+        if step_id in {"form_fills.import-local", "callrail.import-local"}:
+            return "ran_successfully"
+        if step_id == "validate-output":
+            return "validated"
+        if step_id == "dashboard_lab.preview-fixture-copy":
+            return "copy_eligible"
+        if step_id in {"dashboard_lab.copy-validated-fixtures", "dashboard_lab_ready"}:
+            return "copied"
+        return "validated"
+    return "configured"
 
 
 def _recent_execution_result(entry: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -1708,7 +1780,7 @@ def _build_onboarding_acceleration(
     execution: Mapping[str, Any],
 ) -> dict[str, Any]:
     ready_statuses = {"Ready now", "Needs validation", "Needs confirmation"}
-    blocked_statuses = {"Needs file", "Needs secret", "Blocked", "Validation required", "Output missing"}
+    blocked_statuses = {"Needs file", "Needs secret", "Blocked", "Validation required", "Output missing", "Failed"}
     ready_now = [
         _execution_action_item(item)
         for item in execution.get("steps", [])
@@ -1743,6 +1815,7 @@ def _build_onboarding_acceleration(
             _guidance_item("Needs file", [item for item in blocked if item["status"] == "Needs file"]),
             _guidance_item("Needs validation", [item for item in ready_now if item["status"] == "Needs validation"]),
             _guidance_item("Needs confirmation", [item for item in ready_now if item["status"] == "Needs confirmation"]),
+            _guidance_item("Failed", [item for item in blocked if item["status"] == "Failed"]),
             _guidance_item("Planned live step", planned_live),
         ],
     }
@@ -1798,6 +1871,8 @@ def _execution_action_item(step: Mapping[str, Any]) -> dict[str, str]:
         return _next_action_item(step_id, "Add CallRail local file", status, detail)
     if step_id == "form_fills.import-local" and status == "Needs file":
         return _next_action_item(step_id, "Add Form Fills local file", status, detail)
+    if step_id == "validate-output" and status == "Failed":
+        return _next_action_item(step_id, "Resolve validation failure", status, detail)
     return _next_action_item(step_id, label, status, detail)
 
 
@@ -1958,6 +2033,7 @@ def _completion_blockers(
     blockers: list[str] = []
     providers = [item for item in onboarding_status["providers"] if item["enabled"]]
     file_readiness = {item["provider"]: item for item in onboarding_status.get("local_file_readiness", []) if isinstance(item, Mapping)}
+    execution_steps = {item["id"]: item for item in onboarding_status.get("execution", {}).get("steps", []) if isinstance(item, Mapping)}
     if onboarding_status["local_config"]["state"] != "Configured":
         blockers.append("Missing local config")
     if any(item["config_state"] == "Vault locked" for item in providers):
@@ -1975,8 +2051,10 @@ def _completion_blockers(
         blockers.append("Validation not run")
     elif str(last_validation.get("status") or "") == "failed":
         blockers.append("Validation failed")
-    if safe_preview.get("status") != "ready":
-        blockers.append("Fixture copy not previewed")
+    if str(execution_steps.get("dashboard_lab.preview-fixture-copy", {}).get("status") or "") == "Validation required":
+        blockers.append("Fixture preview requires validation")
+    elif safe_preview.get("status") != "ready":
+        blockers.append("Fixture preview required")
     if not _action_succeeded(last_actions.get("last_copy")):
         blockers.append("Fixture copy not completed")
     if any(
@@ -2021,6 +2099,76 @@ def _completion_recommended_actions(
             "Refresh the completion summary.",
         ]
     return ["Continue local setup and refresh the completion summary."]
+
+
+def _validation_status_state(
+    *,
+    folder_exists: bool,
+    last_validation: Mapping[str, Any] | None,
+) -> str:
+    if last_validation and str(last_validation.get("status") or "") == "failed":
+        return "Validation failed"
+    if _action_succeeded(last_validation):
+        return "Validation passed"
+    return "Ready for validation" if folder_exists else "Validation unknown"
+
+
+def _dashboard_copy_state(
+    *,
+    enabled_provider_count: int,
+    execution: Mapping[str, Any],
+    last_actions: Mapping[str, Any],
+) -> str:
+    if not enabled_provider_count:
+        return "Not applicable"
+    if _action_succeeded(last_actions.get("last_validation")) and _action_succeeded(last_actions.get("last_copy")):
+        return "Dashboard-lab ready"
+    steps = {item["id"]: item for item in execution.get("steps", []) if isinstance(item, Mapping)}
+    copy_status = str(steps.get("dashboard_lab.copy-validated-fixtures", {}).get("status") or "")
+    preview_status = str(steps.get("dashboard_lab.preview-fixture-copy", {}).get("status") or "")
+    validation_status = str(steps.get("validate-output", {}).get("status") or "")
+    if copy_status == "Needs confirmation":
+        return "Ready to copy validated fixtures"
+    if preview_status == "Needs confirmation":
+        return "Ready to preview dashboard-lab fixture copy"
+    if validation_status == "Blocked":
+        return "Blocked by validation"
+    if validation_status == "Needs validation":
+        return "Validation required"
+    return "Output missing"
+
+
+def _build_next_safe_action(
+    *,
+    acceleration: Mapping[str, Any],
+    execution: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    ready_now = [item for item in acceleration.get("ready_now", []) if isinstance(item, Mapping)]
+    if not ready_now:
+        return None
+    primary = ready_now[0]
+    action_id = str(primary.get("id") or "")
+    if action_id not in {
+        "local_falcon.validate-manifest",
+        "form_fills.import-local",
+        "callrail.import-local",
+        "validate-output",
+        "dashboard_lab.preview-fixture-copy",
+        "dashboard_lab.copy-validated-fixtures",
+    }:
+        return None
+    steps = {item["id"]: item for item in execution.get("steps", []) if isinstance(item, Mapping)}
+    step = steps.get(action_id, {})
+    return {
+        "action_id": action_id,
+        "label": str(primary.get("label") or ""),
+        "status": str(primary.get("status") or ""),
+        "detail": str(primary.get("detail") or ""),
+        "provider": str(step.get("provider") or ""),
+        "phase": str(step.get("phase") or ""),
+        "requires_confirmation": action_id in {"form_fills.import-local", "callrail.import-local", "dashboard_lab.copy-validated-fixtures"},
+        "auto_chain": False,
+    }
 
 
 def _completion_final_checklist(
@@ -2110,6 +2258,8 @@ def _build_operator_handoff_text(
     lines.append("")
     lines.append(f"Validation status: {validation['state']} ({validation['last_validation']})")
     lines.append(f"Fixture copy status: {fixture_copy['state']} ({fixture_copy['last_copy']})")
+    if fixture_copy["state"] == "Dashboard-lab ready":
+        lines.append("Dashboard-lab local review: Ready to open dashboard-lab manually.")
     if blockers:
         lines.append("")
         lines.append("Current blockers:")
@@ -2197,7 +2347,7 @@ def build_onboarding_actions(
                 "label": PROVIDER_LABELS.get(provider, provider),
                 "actions": [action for action in actions if action["provider"] == provider],
             }
-            for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills", "dashboard_lab")
+            for provider in ("ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills", "profile", "dashboard_lab")
         ],
         "safety": _onboarding_action_safety(),
     }
@@ -2282,17 +2432,28 @@ def run_onboarding_action(
         result = build_safe_dashboard_lab_copy_preview(profile)["result"]
     elif action["kind"] == "dashboard_lab_copy_validated":
         result = run_safe_dashboard_lab_copy_action(profile, audit_log_path=audit_log_path or DEFAULT_AUDIT_LOG)["result"]
+    elif action["kind"] == "profile_validate_output":
+        validation = run_validate_output_action(profile, audit_log_path=audit_log_path or DEFAULT_AUDIT_LOG)
+        result = {
+            "status": "passed" if validation["status"] == "ok" else "failed",
+            "message": "Local output validation passed." if validation["status"] == "ok" else "Local output validation failed.",
+            "warning_count": len(validation["result"]["warnings"]),
+            "missing_required_file_count": len(validation["result"]["missing_required_files"]),
+            "malformed_json_file_count": len(validation["result"]["malformed_json_files"]),
+        }
     elif action["kind"] == "form_fills_import_local":
         result = _run_form_fills_import_action(
             profile,
             input_file=input_file,
             input_root=form_fills_input_dir or resolve_form_fills_input_dir(env=safe_env),
+            local_config=_provider_config(local_config, "form_fills"),
         )
     elif action["kind"] == "callrail_import_local":
         result = _run_callrail_import_action(
             profile,
             input_file=input_file,
             input_root=callrail_input_dir or resolve_callrail_input_dir(env=safe_env),
+            local_config=_provider_config(local_config, "callrail"),
         )
     else:
         return {
@@ -2426,6 +2587,22 @@ def _onboarding_action_catalog(
                 )
             )
         actions.append(_future_onboarding_action(provider))
+    actions.append(
+        _onboarding_action(
+            action_id="validate-output",
+            provider="profile",
+            kind="profile_validate_output",
+            label="Validate existing summaries",
+            description="Run the allowlisted local validator across the current dashboard summary output without returning file contents.",
+            available=True,
+            unavailable_reason="",
+            read_only=True,
+            writes_files=False,
+            external_api=False,
+            fixture_copy=False,
+            requires_confirmation=False,
+        )
+    )
     actions.append(
         _onboarding_action(
             action_id="dashboard_lab.preview-fixture-copy",
@@ -2759,8 +2936,12 @@ def _run_form_fills_import_action(
     *,
     input_file: str | None,
     input_root: Path,
+    local_config: Mapping[str, Any],
 ) -> dict[str, Any]:
-    resolved_input = _resolve_form_fills_input_file(input_root=input_root, input_file=input_file)
+    resolved_input = _resolve_form_fills_input_file(
+        input_root=input_root,
+        input_file=input_file or _safe_local_input_filename(local_config),
+    )
     if not resolved_input["path"].is_file():
         return {
             "status": "input_missing",
@@ -2906,8 +3087,12 @@ def _run_callrail_import_action(
     *,
     input_file: str | None,
     input_root: Path,
+    local_config: Mapping[str, Any],
 ) -> dict[str, Any]:
-    resolved_input = _resolve_callrail_input_file(input_root=input_root, input_file=input_file)
+    resolved_input = _resolve_callrail_input_file(
+        input_root=input_root,
+        input_file=input_file or _safe_local_input_filename(local_config),
+    )
     if not resolved_input["path"].is_file():
         return {
             "status": "input_missing",

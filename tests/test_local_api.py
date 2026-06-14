@@ -1396,6 +1396,16 @@ def test_onboarding_status_detects_local_files_and_groups_ready_steps_without_pa
         "Import CallRail",
     ]
     assert payload["next_action_stack"]["primary"]["label"] == "Validate Local Falcon manifest"
+    assert payload["next_safe_action"] == {
+        "action_id": "local_falcon.validate-manifest",
+        "label": "Validate Local Falcon manifest",
+        "status": "Ready now",
+        "detail": "Run the local-only manifest validator before any live Local Falcon planning.",
+        "provider": "local_falcon",
+        "phase": "ready_to_run",
+        "requires_confirmation": False,
+        "auto_chain": False,
+    }
     assert payload["acceleration"]["guidance"][0] == {"label": "Ready now", "count": 3, "active": True}
     assert str(tmp_path) not in serialized
     assert "steadfast.json" not in serialized
@@ -1543,12 +1553,18 @@ def test_onboarding_status_includes_recent_execution_results_and_dashboard_ready
     serialized = json.dumps(payload)
     steps = {item["id"]: item for item in payload["execution"]["steps"]}
     assert steps["local_falcon.validate-manifest"]["status"] == "Complete"
+    assert steps["local_falcon.validate-manifest"]["phase"] == "validated"
     assert steps["form_fills.import-local"]["status"] == "Complete"
+    assert steps["form_fills.import-local"]["phase"] == "ran_successfully"
     assert steps["callrail.import-local"]["status"] == "Complete"
     assert steps["validate-output"]["status"] == "Complete"
     assert steps["dashboard_lab.preview-fixture-copy"]["status"] == "Complete"
+    assert steps["dashboard_lab.preview-fixture-copy"]["phase"] == "copy_eligible"
     assert steps["dashboard_lab.copy-validated-fixtures"]["status"] == "Complete"
+    assert steps["dashboard_lab.copy-validated-fixtures"]["phase"] == "copied"
     assert steps["dashboard_lab_ready"]["status"] == "Complete"
+    assert payload["dashboard_copy"]["state"] == "Dashboard-lab ready"
+    assert payload["next_safe_action"] is None
     assert payload["acceleration"]["ready_now"] == []
     assert payload["execution"]["recent_results"][0]["label"] == "Copy validated fixtures"
     assert str(tmp_path) not in serialized
@@ -1787,6 +1803,47 @@ def test_form_fills_import_writes_temp_summary_and_validates_without_raw_content
     assert str(tmp_path) not in serialized
 
 
+def test_form_fills_import_uses_configured_local_input_when_override_is_blank(tmp_path):
+    input_dir = tmp_path / "inputs"
+    output_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_text(
+        input_dir / "configured" / "steadfast-form-fills.csv",
+        "date\n2026-04-11\n2026-05-12\n",
+    )
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "form_fills": {"local_input_filename": "configured/steadfast-form-fills.csv"},
+                }
+            }
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=_form_fills_registry(tmp_path, importer_output_folder=output_folder),
+            env={},
+            form_fills_input_dir=input_dir,
+            local_profile_config_path=config_path,
+        )
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/form_fills.import-local/run",
+        json={"confirmed": True},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] == "ok"
+    assert payload["result"]["input_file"] == "configured/steadfast-form-fills.csv"
+    assert str(tmp_path) not in serialized
+
+
 def test_callrail_import_action_appears_only_when_provider_is_enabled(tmp_path):
     disabled_client = TestClient(create_app(registry_path=_registry(tmp_path), env={}))
     enabled_client = TestClient(
@@ -1865,6 +1922,44 @@ def test_callrail_import_rejects_missing_and_traversal_inputs_safely(tmp_path):
     assert traversal.status_code == 400
     assert traversal.json()["detail"] == "CallRail input must stay under the allowed local input folder"
     serialized = json.dumps({"missing": missing.json(), "traversal": traversal.json()})
+    assert str(tmp_path) not in serialized
+
+
+def test_callrail_import_uses_configured_local_input_when_override_is_blank(tmp_path):
+    input_dir = tmp_path / "inputs"
+    output_folder = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_callrail_csv(input_dir / "configured" / "steadfast-callrail.csv", [_callrail_row()])
+    config_path = tmp_path / "local-profile-configs" / "demo-profile.local.json"
+    _write_json(
+        config_path,
+        {
+            "profiles": {
+                "demo-profile": {
+                    "profile": "demo-profile",
+                    "callrail": {"local_input_filename": "configured/steadfast-callrail.csv"},
+                }
+            }
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=_callrail_registry(tmp_path, importer_output_folder=output_folder),
+            env={},
+            callrail_input_dir=input_dir,
+            local_profile_config_path=config_path,
+        )
+    )
+
+    response = client.post(
+        "/api/profiles/demo-profile/onboarding-actions/callrail.import-local/run",
+        json={"confirmed": True},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["result"]["status"] == "ok"
+    assert payload["result"]["input_file"] == "configured/steadfast-callrail.csv"
     assert str(tmp_path) not in serialized
 
 
@@ -2410,6 +2505,63 @@ def test_onboarding_completion_summary_returns_safe_metadata_and_handoff_text(tm
     assert "dashboard-lab-fixtures" not in serialized
 
 
+def test_onboarding_completion_summary_blocks_dashboard_ready_after_later_failed_validation(tmp_path):
+    registry = _registry(
+        tmp_path,
+        capabilities=[
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills"},
+        ],
+        data_sources=["callrail", "form_fills"],
+    )
+    output_dir = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(output_dir / "callrail-summary.json", {"schema_version": "callrail.v1"})
+    _write_json(output_dir / "form-fills-summary.json", {"schema_version": "form-fills.v1"})
+    fixture_target = tmp_path / ".tmp" / "dashboard-lab-fixtures"
+    audit_path = tmp_path / "logs" / "local-action-runs.jsonl"
+    _write_audit(
+        audit_path,
+        {
+            "timestamp": "2026-06-13T09:05:00+00:00",
+            "action_id": "dashboard_lab.copy-validated-fixtures",
+            "profile_slug": "demo-profile",
+            "status": "ok",
+            "file_counts": {"copied": 2, "overwritten": 0, "skipped": 0, "failed": 0},
+        },
+    )
+    _write_audit(
+        audit_path,
+        {
+            "timestamp": "2026-06-13T09:10:00+00:00",
+            "action_id": "validate-output",
+            "profile_slug": "demo-profile",
+            "status": "failed",
+            "result_summary": {"missing_required_file_count": 0, "malformed_json_file_count": 1},
+        },
+    )
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+            audit_log_path=audit_path,
+            dashboard_lab_fixture_target_dir=fixture_target,
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-completion-summary")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert payload["profile"]["readiness_state"] == "Blocked"
+    assert payload["validation"]["state"] == "Validation failed"
+    assert payload["fixture_copy"]["state"] == "Blocked by validation"
+    assert "Validation failed" in payload["blockers"]
+    assert "Dashboard-lab ready" not in payload["operator_handoff_text"]
+    assert str(tmp_path) not in serialized
+
+
 def test_onboarding_completion_summary_reports_blockers_safely(tmp_path):
     client = TestClient(
         create_app(
@@ -2428,7 +2580,7 @@ def test_onboarding_completion_summary_reports_blockers_safely(tmp_path):
     assert "Missing local config" in payload["blockers"]
     assert "Output missing" in payload["blockers"]
     assert "Validation not run" in payload["blockers"]
-    assert "Fixture copy not previewed" in payload["blockers"]
+    assert "Fixture preview requires validation" in payload["blockers"]
     assert "Fixture copy not completed" in payload["blockers"]
     assert str(tmp_path) not in serialized
     assert "dashboard_lab_profiles" not in serialized
