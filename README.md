@@ -765,6 +765,41 @@ http://localhost:5274
 
 The importer frontend intentionally uses port `5274` so it can run at the same time as dashboard-lab, which commonly uses port `5174`.
 
+### Steadfast Decks and Fences onboarding from the importer frontend
+
+Use this flow when David is ready to onboard Steadfast from the local importer console:
+
+1. Start the backend from the importer repo root:
+
+   ```powershell
+   python -m uvicorn server.main:app --reload --port 8765
+   ```
+
+2. Start the frontend in a second PowerShell window:
+
+   ```powershell
+   cd frontend
+   npm run dev
+   ```
+
+3. Open `http://localhost:5274`, select `Steadfast Decks and Fences`, and review the command center's primary next step.
+4. Review or save ignored local config from the local config editor. Store only safe env var names and local file references; do not paste secret values, OAuth JSON, customer IDs, or raw provider data.
+5. If Local Falcon needs a key, use the Secret Vault panel. The key is write-only in the UI; the frontend must not display, print, or copy the value back.
+6. Upload or place the approved local files:
+
+   - `steadfast-form-fills.csv`
+   - `steadfast-callrail.csv`
+   - `steadfast-local-falcon-manifest.json`
+
+7. Run local-only actions from the command center or guarded local actions section: validate the Local Falcon manifest, import Form Fills, import CallRail, validate summaries, and preview dashboard-lab fixture copy.
+8. When credentials are ready, David may run the separate live read-only provider pulls from the `Live read-only provider pulls` section. These require explicit confirmation and are not part of `Run Next Safe Step`.
+9. For Google Ads Search, use read-only reporting only. No campaign, bid, budget, keyword, ad, asset, conversion, billing, upload, or account-setting mutations are allowed.
+10. Preview the dashboard-lab fixture copy, then copy only validated summary fixtures after confirmation.
+11. Open dashboard-lab manually to review local fixtures. The importer frontend does not modify dashboard-lab source and does not publish to the portal.
+12. Copy the safe operator handoff summary when local onboarding is complete enough to hand off or document the state.
+
+Secrets, OAuth tokens, API keys, ignored local configs, provider exports, vault files, and local fixture copies stay local and must not be committed. Portal publishing remains a separate manual workflow after local QA is complete.
+
 ### Local onboarding runbook
 
 Use the console as a guided local workstation:
@@ -794,7 +829,7 @@ python -m uvicorn server.main:app --reload --port 8765
 
 Use fake client/profile metadata, fake env var names, and aggregate/date-only local inputs only. Do not paste secrets, OAuth JSON, API keys, raw provider rows, raw fixture payloads, customer data, caller names, phone numbers, recordings, or transcripts. Delete `.tmp` after QA.
 
-This console does not publish to the portal, run live provider APIs unless a future explicit action is added, start OAuth flows, edit dashboard-lab source, edit client-dashboard, or put secrets in Git.
+This console does not publish to the portal, start OAuth flows, edit dashboard-lab source, edit client-dashboard, or put secrets in Git. Live provider pulls are available only as David-confirmed read-only provider actions in the frontend; automated QA must not run them.
 
 To manually QA the Secret Vault panel without touching the real default vault path, run the backend with a disposable vault path override:
 
@@ -833,19 +868,20 @@ The frontend shows:
 - profile shell draft/preview/save controls,
 - ignored local config draft/preview/save controls,
 - local encrypted vault status and Local Falcon API key management,
-- source-aware onboarding status and next best action,
+- source-aware onboarding status and next safe action,
 - guarded local imports for supported local files,
 - guarded validation controls for local output metadata only,
 - guarded dashboard-lab fixture-copy preview and confirmation,
 - a refresh control for selected profile status, copy preview, onboarding actions, and recent run history,
 - a current-browser-session action result history,
 - a recent local actions panel sourced from ignored audit logs,
-- read-only action plan cards with preview commands, expected outputs, missing inputs, blocked reasons, and safety notes,
+- a separate live read-only provider pull section with explicit David confirmation gates,
+- collapsed advanced diagnostics for legacy action plan details, expected outputs, missing inputs, blocked reasons, and safety notes,
 - a visible local-only safety notice.
 
-Live provider action plans are previews only. The browser can copy provider command previews to the clipboard, but GA4, GSC, Local Falcon fetches, and Google Ads reporting pulls remain disabled/planned unless a future explicit guarded action is added. GA4 remains snapshot/manual-first in the browser: operators run the local snapshot export and then the dashboard-lab `ga4-summary.json` writer from PowerShell.
+Live provider actions are visually separate from local-only work. GA4 traffic overview, GSC summary, Local Falcon fetch, and Google Ads Search reporting pulls require explicit David confirmation before they run. They are read-only provider pulls, never part of `Run Next Safe Step`, and must not be invoked during automated QA.
 
-Guarded browser actions are local-only. Validation reads only metadata from `exports/local-real/dashboard-lab/{profile}/`, validates expected dashboard-lab files, reports missing files, malformed JSON, schema versions, file sizes, and last-modified times, and returns one of `ok`, `warning`, `missing_outputs`, `invalid_json`, or `folder_missing`. Supported local import actions require explicit confirmation and allowed ignored input folders. Fixture copy requires explicit confirmation and copies only allowlisted summary files. These actions do not contact providers, start OAuth, publish to the portal, or edit dashboard-lab source.
+Guarded local browser actions are local-only. Validation reads only metadata from `exports/local-real/dashboard-lab/{profile}/`, validates expected dashboard-lab files, reports missing files, malformed JSON, schema versions, file sizes, and last-modified times, and returns one of `ok`, `warning`, `missing_outputs`, `invalid_json`, or `folder_missing`. Supported local import actions require explicit confirmation and allowed ignored input folders. Fixture copy requires explicit confirmation and copies only allowlisted summary files. These local actions do not contact providers, start OAuth, publish to the portal, or edit dashboard-lab source.
 
 Validation action audit entries are written locally to:
 
@@ -892,7 +928,7 @@ config/dashboard_lab_profiles.local.json
 
 That ignored local file may contain real operational identifiers, but the API exposes only presence/absence style readiness booleans. It must not expose API keys, OAuth tokens, refresh tokens, client secret JSON, Authorization headers, credential paths, raw provider payloads, or real output file contents.
 
-The React/FastAPI console currently executes only local guarded actions: profile shell metadata save, ignored local config save, local vault status/key management, supported local aggregate imports, validation, and guarded dashboard-lab local fixture copy. It does not implement live GA4 imports, live GSC imports, Local Falcon runs from the browser, OAuth, uploads, auth/login, staging/production connections, or production database access. The existing Streamlit console remains available at `app/importer_console.py` and is still launched with:
+The React/FastAPI console executes local guarded actions: profile shell metadata save, ignored local config save, local vault status/key management, supported local aggregate imports, validation, and guarded dashboard-lab local fixture copy. It also exposes David-confirmed live read-only provider pulls for supported providers. It does not implement OAuth bootstrapping, auth/login, staging/production connections, production database access, portal publishing, dashboard-lab source edits, client-dashboard edits, or Google Ads mutations. The existing Streamlit console remains available at `app/importer_console.py` and is still launched with:
 
 ```powershell
 python -m streamlit run app/importer_console.py
@@ -909,7 +945,7 @@ The React console also includes an operator completion report for the selected p
 
 Use the handoff summary when local onboarding is complete enough to pass to the next operator. It must stay free of secrets, raw local config values, raw provider rows, file contents, phone numbers, caller names, transcripts, recordings, customer IDs, and OAuth/token material.
 
-The completion report is not portal publishing. It does not create dashboard-lab routes, update portal/database state, run live provider pulls, start OAuth, or publish client-facing output. Portal publishing remains a separate manual workflow after local QA is complete.
+The completion report is not portal publishing. It does not create dashboard-lab routes, update portal/database state, start OAuth, run unconfirmed live provider pulls, or publish client-facing output. Portal publishing remains a separate manual workflow after local QA is complete.
 
 Create local operator config once:
 
