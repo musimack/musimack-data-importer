@@ -373,6 +373,25 @@ type GuidanceItem = {
   active: boolean;
 };
 
+type ExecutionStep = {
+  id: string;
+  provider: string;
+  label: string;
+  status: string;
+  detail: string;
+  timestamp: string;
+  latest_result: string;
+};
+
+type RecentExecutionResult = {
+  action_id: string;
+  provider: string;
+  label: string;
+  status: string;
+  timestamp: string;
+  summary: string;
+};
+
 type OnboardingStatus = {
   profile: {
     slug: string;
@@ -411,6 +430,10 @@ type OnboardingStatus = {
   preflight: {
     state: string;
     providers: OnboardingPreflightProvider[];
+  };
+  execution: {
+    steps: ExecutionStep[];
+    recent_results: RecentExecutionResult[];
   };
   acceleration: {
     ready_now: NextActionItem[];
@@ -518,6 +541,10 @@ type CompletionSummary = {
     label: string;
     status: string;
   }>;
+  local_execution: {
+    steps: ExecutionStep[];
+    recent_results: RecentExecutionResult[];
+  };
   validation: {
     state: string;
     last_validation: string;
@@ -873,6 +900,8 @@ function App() {
               <LocalReadinessPanel status={detail.onboarding_status} />
 
               <OnboardingAccelerationPanel status={detail.onboarding_status} />
+
+              <LocalExecutionPanel status={detail.onboarding_status} />
 
               <OnboardingStatusDashboard status={detail.onboarding_status} />
 
@@ -1427,6 +1456,60 @@ function OnboardingAccelerationPanel({ status }: { status: OnboardingStatus }) {
   );
 }
 
+function LocalExecutionPanel({ status }: { status: OnboardingStatus }) {
+  const execution = status.execution ?? { steps: [], recent_results: [] };
+  const dashboardStep = execution.steps.find((step) => step.id === 'dashboard_lab_ready');
+  return (
+    <section className="execution-card" aria-label="Local execution workflow">
+      <div className="onboarding-status-heading">
+        <div>
+          <span className="eyebrow">Execution flow</span>
+          <h3>Local execution workflow</h3>
+          <p>Move from import-ready to dashboard-lab ready with explicit safe local checkpoints and recent execution outcomes.</p>
+        </div>
+        <span className={statusBadgeClass(dashboardStep?.status ?? 'In progress')}>{dashboardStep?.status ?? 'In progress'}</span>
+      </div>
+      <div className="execution-steps-grid">
+        {execution.steps.map((step) => (
+          <article className="execution-step-card" key={step.id}>
+            <div className="card-heading">
+              <div>
+                <h4>{step.label}</h4>
+                <p>{step.detail}</p>
+              </div>
+              <span className={statusBadgeClass(step.status)}>{step.status}</span>
+            </div>
+            {step.latest_result ? <p className="execution-latest-result">{step.latest_result}</p> : null}
+            {step.timestamp ? <time>{step.timestamp}</time> : null}
+          </article>
+        ))}
+      </div>
+      <article className="execution-results-panel">
+        <div className="card-heading">
+          <div>
+            <h4>Recent local step results</h4>
+            <p>Safe action history only. No command output, paths, payloads, IDs, or secret values.</p>
+          </div>
+        </div>
+        {execution.recent_results.length ? (
+          <div className="execution-results-list">
+            {execution.recent_results.map((item) => (
+              <div className="execution-result-item" key={`${item.action_id}-${item.timestamp}`}>
+                <strong>{item.label}</strong>
+                <span className={statusBadgeClass(item.status)}>{item.status}</span>
+                <p>{item.summary}</p>
+                <time>{item.timestamp}</time>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="panel-empty">No recent local execution results yet.</p>
+        )}
+      </article>
+    </section>
+  );
+}
+
 function OnboardingStatusDashboard({ status }: { status: OnboardingStatus }) {
   const enabledProviders = status.providers.filter((provider) => provider.enabled);
   const disabledProviders = status.providers.filter((provider) => !provider.enabled);
@@ -1503,12 +1586,9 @@ function OnboardingFlowChecklist({
   copyPreview: CopyPreview | null;
   actions: OnboardingActionsResponse | null;
 }) {
+  const execution = detail.onboarding_status.execution ?? { steps: [], recent_results: [] };
+  const executionSteps = new Map(execution.steps.map((step) => [step.id, step]));
   const enabledProviders = detail.onboarding_status.providers.filter((provider) => provider.enabled);
-  const readyProviders = enabledProviders.filter((provider) => provider.copy_state === 'Ready for dashboard-lab copy');
-  const copyReady = Boolean(copyPreview?.items.length) && copyPreview?.items.some((item) => item.source_exists);
-  const copyAction = actions?.actions.find((action) => action.id === 'dashboard_lab.copy-validated-fixtures');
-  const localFileActions = actions?.actions.filter((action) => action.id === 'form_fills.import-local' || action.id === 'callrail.import-local') ?? [];
-  const unavailableLocalImports = localFileActions.filter((action) => !action.available).length;
   const steps = [
     {
       label: 'Profile shell',
@@ -1530,35 +1610,36 @@ function OnboardingFlowChecklist({
     },
     {
       label: 'Local imports',
-      state: enabledProviders.length ? `${readyProviders.length}/${enabledProviders.length} ready` : 'Skipped/not enabled',
-      detail: unavailableLocalImports ? 'Enable lead sources before local imports' : 'Form Fills and CallRail can run locally when enabled',
-      tone: enabledProviders.length && readyProviders.length === enabledProviders.length ? 'ok' : enabledProviders.length ? 'warn' : 'neutral',
+      state: stepStateLabel(executionSteps.get('form_fills.import-local')?.status ?? executionSteps.get('callrail.import-local')?.status ?? 'In progress'),
+      detail: executionSteps.get('form_fills.import-local')?.detail ?? executionSteps.get('callrail.import-local')?.detail ?? 'Local import state is provider-driven',
+      tone: stepTone(executionSteps.get('form_fills.import-local')?.status ?? executionSteps.get('callrail.import-local')?.status ?? 'In progress'),
     },
     {
       label: 'Validation',
-      state: stepStateLabel(detail.onboarding_status.validation.state),
-      detail: 'No provider calls',
-      tone: stepTone(detail.onboarding_status.validation.state),
+      state: stepStateLabel(executionSteps.get('validate-output')?.status ?? detail.onboarding_status.validation.state),
+      detail: executionSteps.get('validate-output')?.detail ?? 'No provider calls',
+      tone: stepTone(executionSteps.get('validate-output')?.status ?? detail.onboarding_status.validation.state),
     },
     {
       label: 'Preview fixture copy',
-      state: copyReady ? 'Ready' : 'Needs attention',
-      detail: 'Preview is read-only',
-      tone: copyReady ? 'ok' : 'warn',
+      state: stepStateLabel(executionSteps.get('dashboard_lab.preview-fixture-copy')?.status ?? 'In progress'),
+      detail: executionSteps.get('dashboard_lab.preview-fixture-copy')?.detail ?? 'Preview is read-only',
+      tone: stepTone(executionSteps.get('dashboard_lab.preview-fixture-copy')?.status ?? 'In progress'),
     },
     {
       label: 'Copy validated fixtures',
-      state: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Complete' : copyAction?.available ? 'Ready' : 'Needs attention',
-      detail: 'Guarded local fixtures only',
-      tone: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'ok' : copyAction?.available ? 'warn' : 'neutral',
+      state: stepStateLabel(executionSteps.get('dashboard_lab.copy-validated-fixtures')?.status ?? 'In progress'),
+      detail: executionSteps.get('dashboard_lab.copy-validated-fixtures')?.detail ?? 'Guarded local fixtures only',
+      tone: stepTone(executionSteps.get('dashboard_lab.copy-validated-fixtures')?.status ?? 'In progress'),
     },
     {
       label: 'Ready for dashboard-lab',
-      state: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Complete' : 'Not started',
-      detail: 'Portal publishing is separate',
-      tone: detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'ok' : 'neutral',
+      state: stepStateLabel(executionSteps.get('dashboard_lab_ready')?.status ?? 'Not started'),
+      detail: executionSteps.get('dashboard_lab_ready')?.detail ?? 'Portal publishing is separate',
+      tone: stepTone(executionSteps.get('dashboard_lab_ready')?.status ?? 'Not started'),
     },
   ];
+  const dashboardReadyStatus = executionSteps.get('dashboard_lab_ready')?.status ?? 'In progress';
   return (
     <section className="onboarding-flow-card" aria-label="End-to-end onboarding checklist">
       <div className="onboarding-flow-heading">
@@ -1566,8 +1647,8 @@ function OnboardingFlowChecklist({
           <span className="eyebrow">Onboarding workstation</span>
           <h3>End-to-end checklist</h3>
         </div>
-        <span className={detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'badge ok' : copyReady ? 'badge warn' : 'badge neutral'}>
-          {detail.onboarding_status.dashboard_copy.last_copy === 'Available' ? 'Copied' : copyReady ? 'Ready to copy' : 'In progress'}
+        <span className={statusBadgeClass(dashboardReadyStatus)}>
+          {dashboardReadyStatus}
         </span>
       </div>
       <div className="onboarding-flow-steps">
@@ -1598,6 +1679,7 @@ function CompletionSummaryPanel({
   onRefresh: () => void;
   onCopy: () => void;
 }) {
+  const recentExecutionResults = summary?.local_execution?.recent_results ?? [];
   return (
     <section className="completion-summary-card" aria-label="Onboarding completion summary">
       <div className="completion-summary-heading">
@@ -1718,6 +1800,29 @@ function CompletionSummaryPanel({
               readOnly
               aria-label="Operator handoff summary text"
             />
+          </article>
+
+          <article className="completion-summary-panel">
+            <div className="card-heading">
+              <div>
+                <h4>Recent local execution</h4>
+                <p>Safe local step outcomes that feed the handoff flow.</p>
+              </div>
+            </div>
+            {recentExecutionResults.length ? (
+              <div className="execution-results-list">
+                {recentExecutionResults.map((item) => (
+                  <div className="execution-result-item" key={`${item.action_id}-${item.timestamp}`}>
+                    <strong>{item.label}</strong>
+                    <span className={statusBadgeClass(item.status)}>{item.status}</span>
+                    <p>{item.summary}</p>
+                    <time>{item.timestamp}</time>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="panel-empty">No recent local execution results are available yet.</p>
+            )}
           </article>
         </>
       ) : (

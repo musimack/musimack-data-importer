@@ -1503,6 +1503,57 @@ def test_onboarding_completion_summary_blocks_on_configured_missing_local_file_s
     assert "steadfast-callrail.csv" not in serialized
 
 
+def test_onboarding_status_includes_recent_execution_results_and_dashboard_ready_flow_safely(tmp_path):
+    registry = _registry(
+        tmp_path,
+        data_sources=["local_falcon", "callrail", "form_fills"],
+        capabilities=[
+            {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
+            {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json"},
+            {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json"},
+        ],
+    )
+    output_dir = tmp_path / "exports" / "local-real" / "dashboard-lab" / "demo-profile"
+    _write_json(output_dir / "client-profile.json", {"schema_version": "client.v1"})
+    _write_json(output_dir / "combined-dashboard-summary.json", {"schema_version": "combined.v1"})
+    _write_json(output_dir / "local-falcon-summary.json", {"schema_version": "local-falcon.v1"})
+    _write_json(output_dir / "callrail-summary.json", {"schema_version": "callrail.v1"})
+    _write_json(output_dir / "form-fills-summary.json", {"schema_version": "form-fills.v1"})
+    audit_path = tmp_path / "logs" / "local-action-runs.jsonl"
+    _write_audit(audit_path, {"timestamp": "2026-06-13T10:00:00+00:00", "action_id": "local_falcon.validate-manifest", "profile_slug": "demo-profile", "status": "ok", "result_summary": {"report_count": 2, "warning_count": 0, "error_count": 0, "safe_to_process": True}})
+    _write_audit(audit_path, {"timestamp": "2026-06-13T10:05:00+00:00", "action_id": "form_fills.import-local", "profile_slug": "demo-profile", "status": "ok", "result_summary": {"total_form_fills": 3, "date_count": 2, "validation_passed": True}})
+    _write_audit(audit_path, {"timestamp": "2026-06-13T10:06:00+00:00", "action_id": "callrail.import-local", "profile_slug": "demo-profile", "status": "ok", "result_summary": {"total_calls": 2, "answered_calls": 1, "missed_calls": 1, "validation_passed": True}})
+    _write_audit(audit_path, {"timestamp": "2026-06-13T10:10:00+00:00", "action_id": "validate-output", "profile_slug": "demo-profile", "status": "ok", "result_summary": {"folder_exists": True, "expected_file_count": 5, "required_file_count": 2, "missing_required_file_count": 0, "malformed_json_file_count": 0}})
+    _write_audit(audit_path, {"timestamp": "2026-06-13T10:11:00+00:00", "action_id": "dashboard_lab.preview-fixture-copy", "profile_slug": "demo-profile", "status": "ok", "result_summary": {"eligible_count": 5}})
+    _write_audit(audit_path, {"timestamp": "2026-06-13T10:12:00+00:00", "action_id": "dashboard_lab.copy-validated-fixtures", "profile_slug": "demo-profile", "status": "ok", "file_counts": {"copied": 5, "overwritten": 0, "skipped": 0, "failed": 0}})
+    client = TestClient(
+        create_app(
+            registry_path=registry,
+            env={},
+            local_profile_config_path=_full_provider_local_config(tmp_path),
+            audit_log_path=audit_path,
+            dashboard_lab_fixture_target_dir=tmp_path / ".tmp" / "dashboard-lab-fixtures",
+        )
+    )
+
+    response = client.get("/api/profiles/demo-profile/onboarding-status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    serialized = json.dumps(payload)
+    steps = {item["id"]: item for item in payload["execution"]["steps"]}
+    assert steps["local_falcon.validate-manifest"]["status"] == "Complete"
+    assert steps["form_fills.import-local"]["status"] == "Complete"
+    assert steps["callrail.import-local"]["status"] == "Complete"
+    assert steps["validate-output"]["status"] == "Complete"
+    assert steps["dashboard_lab.preview-fixture-copy"]["status"] == "Complete"
+    assert steps["dashboard_lab.copy-validated-fixtures"]["status"] == "Complete"
+    assert steps["dashboard_lab_ready"]["status"] == "Complete"
+    assert payload["acceleration"]["ready_now"] == []
+    assert payload["execution"]["recent_results"][0]["label"] == "Copy validated fixtures"
+    assert str(tmp_path) not in serialized
+
+
 def test_onboarding_validation_action_runs_allowlisted_script_with_sanitized_failure(tmp_path):
     registry = _registry(
         tmp_path,
@@ -2347,6 +2398,7 @@ def test_onboarding_completion_summary_returns_safe_metadata_and_handoff_text(tm
     assert payload["enabled_provider_labels"] == ["CallRail", "Form Fills"]
     assert payload["fixture_copy"]["copied_file_count"] == 2
     assert "Operator handoff: Demo Profile" in payload["operator_handoff_text"]
+    assert "Completed local execution:" in payload["operator_handoff_text"]
     assert "Portal publishing is separate" in payload["operator_handoff_text"]
     assert "CallRail" in json.dumps(payload["provider_outputs"])
     assert "hidden" not in serialized
