@@ -166,6 +166,9 @@ type SessionActionResult = {
   message: string;
 };
 
+type ThemeMode = 'light' | 'dark';
+type WorkspaceView = 'client' | 'new-profile';
+
 type SecretVaultStatus = {
   exists: boolean;
   unlocked: boolean;
@@ -663,6 +666,8 @@ type ProfileDetail = ProfileSummary & {
 };
 
 function App() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => preferredThemeMode());
+  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('client');
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>('');
   const [detail, setDetail] = useState<ProfileDetail | null>(null);
@@ -719,6 +724,15 @@ function App() {
     () => profiles.find((profile) => profile.slug === selectedSlug),
     [profiles, selectedSlug],
   );
+  const sortedProfiles = useMemo(
+    () => [...profiles].sort((left, right) => left.display_name.localeCompare(right.display_name)),
+    [profiles],
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    localStorage.setItem('musimack-importer-theme', themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     refreshRuntimeSafetyStatus(setRuntimeSafetyStatus);
@@ -891,13 +905,27 @@ function App() {
   };
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-theme={themeMode}>
       <header className="topbar">
         <div>
           <h1>Musimack Data Importer Console</h1>
           <p>Local read-only admin foundation for client profiles and data-source readiness.</p>
         </div>
-        <span className="status-pill">Local only</span>
+        <div className="topbar-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-label={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`}
+            aria-pressed={themeMode === 'dark'}
+            onClick={() => setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))}
+          >
+            <span className="theme-toggle-track" aria-hidden="true">
+              <span className="theme-toggle-thumb" />
+            </span>
+            <span>{themeMode === 'dark' ? 'Dark' : 'Light'}</span>
+          </button>
+          <span className="status-pill">Local only</span>
+        </div>
       </header>
 
       <section className="safety-notice" aria-label="Safety boundary notice">
@@ -910,72 +938,97 @@ function App() {
 
       {error ? <div className="error-banner">API error: {error}</div> : null}
 
-      <NewClientOnboardingGuide runtimeSafetyStatus={runtimeSafetyStatus} />
-
-      <ProfileRegistryCreator
-        busy={profileRegistryBusy}
-        confirmed={profileRegistryConfirmed}
-        draft={profileRegistryDraft}
-        form={profileRegistryForm}
-        message={profileRegistryDirty && !profileRegistryMessage ? 'Unsaved tracked profile edits are in progress.' : profileRegistryMessage}
-        preview={profileRegistryPreview}
-        setConfirmed={setProfileRegistryConfirmed}
-        setForm={(nextForm) => {
-          setProfileRegistryForm(nextForm);
-          setProfileRegistryDirty(true);
-        }}
-        onPreview={() =>
-          previewProfileRegistry(
-            profileRegistryForm,
-            setProfileRegistryPreview,
-            setProfileRegistryMessage,
-            setProfileRegistryBusy,
-            setProfileRegistryConfirmed,
-          )
-        }
-        onSave={() =>
-          saveProfileRegistry(
-            profileRegistryForm,
-            profileRegistryConfirmed,
-            setProfileRegistryPreview,
-            setProfileRegistryMessage,
-            setProfileRegistryBusy,
-            setProfileRegistryConfirmed,
-            (savedSlug) => {
-              setProfileRegistryDirty(false);
-              refreshProfiles(setProfiles, setSelectedSlug, setError, selectedSlug, savedSlug);
-              refreshProfileRegistryDraft(
-                setProfileRegistryDraft,
-                setProfileRegistryForm,
-                setProfileRegistryPreview,
-                setProfileRegistryMessage,
-                setProfileRegistryBusy,
-                setProfileRegistryConfirmed,
-                setProfileRegistryDirty,
-              );
-            },
-          )
-        }
-      />
-
       <div className="workspace">
         <aside className="client-list" aria-label="Client profiles">
           <h2>Clients</h2>
-          {profiles.map((profile) => (
+          {sortedProfiles.map((profile) => (
             <button
               key={profile.slug}
               type="button"
               className={profile.slug === selectedSlug ? 'client-button active' : 'client-button'}
-              onClick={() => setSelectedSlug(profile.slug)}
+              onClick={() => {
+                setSelectedSlug(profile.slug);
+                setWorkspaceView('client');
+              }}
             >
               <span>{profile.display_name}</span>
               <small>{profile.domain}</small>
             </button>
           ))}
+          <div className="client-list-footer">
+            <button
+              type="button"
+              className={workspaceView === 'new-profile' ? 'create-profile-link active' : 'create-profile-link'}
+              onClick={() => setWorkspaceView('new-profile')}
+            >
+              Create new client profile
+            </button>
+          </div>
         </aside>
 
         <section className="detail-panel">
-          {detail ? (
+          {workspaceView === 'new-profile' ? (
+            <div className="new-profile-screen">
+              <div className="section-heading">
+                <div>
+                  <h2>Create new client profile</h2>
+                  <p>Start a tracked profile shell without touching local config, secrets, providers, fixtures, or portal publishing.</p>
+                </div>
+                <button type="button" className="copy-button" onClick={() => setWorkspaceView('client')}>
+                  Back to current client
+                </button>
+              </div>
+
+              <NewClientOnboardingGuide runtimeSafetyStatus={runtimeSafetyStatus} />
+
+              <ProfileRegistryCreator
+                busy={profileRegistryBusy}
+                confirmed={profileRegistryConfirmed}
+                draft={profileRegistryDraft}
+                form={profileRegistryForm}
+                message={profileRegistryDirty && !profileRegistryMessage ? 'Unsaved tracked profile edits are in progress.' : profileRegistryMessage}
+                preview={profileRegistryPreview}
+                setConfirmed={setProfileRegistryConfirmed}
+                setForm={(nextForm) => {
+                  setProfileRegistryForm(nextForm);
+                  setProfileRegistryDirty(true);
+                }}
+                onPreview={() =>
+                  previewProfileRegistry(
+                    profileRegistryForm,
+                    setProfileRegistryPreview,
+                    setProfileRegistryMessage,
+                    setProfileRegistryBusy,
+                    setProfileRegistryConfirmed,
+                  )
+                }
+                onSave={() =>
+                  saveProfileRegistry(
+                    profileRegistryForm,
+                    profileRegistryConfirmed,
+                    setProfileRegistryPreview,
+                    setProfileRegistryMessage,
+                    setProfileRegistryBusy,
+                    setProfileRegistryConfirmed,
+                    (savedSlug) => {
+                      setProfileRegistryDirty(false);
+                      setWorkspaceView('client');
+                      refreshProfiles(setProfiles, setSelectedSlug, setError, selectedSlug, savedSlug);
+                      refreshProfileRegistryDraft(
+                        setProfileRegistryDraft,
+                        setProfileRegistryForm,
+                        setProfileRegistryPreview,
+                        setProfileRegistryMessage,
+                        setProfileRegistryBusy,
+                        setProfileRegistryConfirmed,
+                        setProfileRegistryDirty,
+                      );
+                    },
+                  )
+                }
+              />
+            </div>
+          ) : detail ? (
             <>
               <div className="section-heading">
                 <div>
@@ -1408,6 +1461,14 @@ const PROVIDER_SAFETY_NOTES: Record<string, string> = {
   profile: 'Validates local-real output metadata without returning raw fixture payloads.',
   dashboard_lab: 'Guarded copy targets dashboard-lab public/local-fixtures only and excludes ga4-snapshot.json.',
 };
+
+function preferredThemeMode(): ThemeMode {
+  const saved = localStorage.getItem('musimack-importer-theme');
+  if (saved === 'dark' || saved === 'light') {
+    return saved;
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 function RuntimeSafetyBanner({ status }: { status: RuntimeSafetyStatus | null }) {
   if (!status) {
@@ -3310,7 +3371,7 @@ function ProfileRegistryCreator({
           <input
             type="checkbox"
             checked={confirmed}
-            disabled={!preview || preview.blocked}
+            disabled={busy || !form}
             onChange={(event) => setConfirmed(event.target.checked)}
           />
           <span>I confirm this writes tracked safe profile metadata only.</span>
@@ -3352,6 +3413,44 @@ function LocalConfigEditor({
   onSave: () => void;
 }) {
   const fields = draft?.fields ?? [];
+  const canSave = Boolean(preview && !preview.blocked && confirmed && !busy);
+  const saveHint = !preview
+    ? 'Preview changes first to enable saving.'
+    : preview.blocked
+      ? 'Resolve preview errors before saving.'
+      : !confirmed
+        ? 'Confirm the local-only save boundary to enable saving.'
+        : 'Ready to save the ignored local config file.';
+  const renderActions = (placement: 'top' | 'bottom') => (
+    <div className={`local-config-save-panel ${placement}`}>
+      <div>
+        <strong>Save client configuration</strong>
+        <p>{saveHint}</p>
+      </div>
+      <div className="local-config-actions">
+        <button type="button" className="copy-button" disabled={busy || !form} onClick={onPreview}>
+          {busy ? 'Working...' : 'Preview local config changes'}
+        </button>
+        <label className="confirmation-row compact-confirmation">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            disabled={!preview || preview.blocked}
+            onChange={(event) => setConfirmed(event.target.checked)}
+          />
+          <span>I confirm this writes only ignored local config and contains no secrets or raw data.</span>
+        </label>
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!canSave}
+          onClick={onSave}
+        >
+          Save client configuration
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <section className="local-config-card" aria-label="Local profile config setup">
@@ -3374,6 +3473,8 @@ function LocalConfigEditor({
       ) : (
         <p className="vault-message">Loading local config draft...</p>
       )}
+
+      {renderActions('top')}
 
       {form ? (
         <div className="local-config-sections">
@@ -3463,28 +3564,7 @@ function LocalConfigEditor({
 
       {message ? <p className="vault-message">{message}</p> : null}
 
-      <div className="local-config-actions">
-        <button type="button" className="copy-button" disabled={busy || !form} onClick={onPreview}>
-          {busy ? 'Working...' : 'Preview local config changes'}
-        </button>
-        <label className="confirmation-row compact-confirmation">
-          <input
-            type="checkbox"
-            checked={confirmed}
-            disabled={!preview || preview.blocked}
-            onChange={(event) => setConfirmed(event.target.checked)}
-          />
-          <span>I confirm this writes only ignored local config and contains no secrets or raw data.</span>
-        </label>
-        <button
-          type="button"
-          className="primary-button"
-          disabled={busy || !preview || preview.blocked || !confirmed}
-          onClick={onSave}
-        >
-          Save ignored local config
-        </button>
-      </div>
+      {renderActions('bottom')}
     </section>
   );
 }
