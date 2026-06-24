@@ -147,21 +147,33 @@ def normalize_landing_page_rows(mock_rows: Iterable[dict[str, Any]]) -> list[dic
 
 
 def normalize_time_series(mock_rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    rows = []
+    rows_by_date: dict[str, dict[str, Any]] = {}
     for row in mock_rows:
-        rows.append(
-            _without_none(
-                {
-                    "date": _field(row, "segments.date", "date") or "",
-                    "spend": micros_to_currency(_field(row, "metrics.cost_micros", "cost_micros")) or 0.0,
-                    "clicks": _int(_field(row, "metrics.clicks", "clicks")) or 0,
-                    "impressions": _int(_field(row, "metrics.impressions", "impressions")) or 0,
-                    "conversions": _number(_field(row, "metrics.conversions", "conversions")) or 0.0,
-                    "calls": _int(_field(row, "calls")),
-                }
-            )
+        date = str(_field(row, "segments.date", "date") or "").strip()
+        if not date:
+            continue
+        aggregate = rows_by_date.setdefault(
+            date,
+            {
+                "date": date,
+                "spend": 0.0,
+                "clicks": 0,
+                "impressions": 0,
+                "conversions": 0.0,
+            },
         )
-    return rows
+        aggregate["spend"] = round(aggregate["spend"] + _time_series_spend(row), 6)
+        aggregate["clicks"] += _int(_field(row, "metrics.clicks", "clicks")) or 0
+        aggregate["impressions"] += _int(_field(row, "metrics.impressions", "impressions")) or 0
+        aggregate["conversions"] = round(
+            aggregate["conversions"] + (_number(_field(row, "metrics.conversions", "conversions")) or 0.0),
+            6,
+        )
+        _sum_optional_int(aggregate, row, "interactions")
+        _sum_optional_int(aggregate, row, "tracked_calls", "tracked_calls", "calls")
+        _sum_optional_int(aggregate, row, "form_fills")
+        _sum_optional_int(aggregate, row, "tracked_leads")
+    return [_without_none(rows_by_date[date]) for date in sorted(rows_by_date)]
 
 
 def build_summary_from_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
@@ -184,6 +196,20 @@ def build_summary_from_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
             "cost_per_call": round(spend / calls, 6) if calls else None,
         }
     )
+
+
+def _sum_optional_int(aggregate: dict[str, Any], row: dict[str, Any], output_key: str, *input_paths: str) -> None:
+    value = _int(_field(row, *(input_paths or (output_key,))))
+    if value is None:
+        return
+    aggregate[output_key] = int(aggregate.get(output_key, 0)) + value
+
+
+def _time_series_spend(row: dict[str, Any]) -> float:
+    micros = _field(row, "metrics.cost_micros", "cost_micros")
+    if micros is not None:
+        return micros_to_currency(micros) or 0.0
+    return _number(_field(row, "spend", "cost")) or 0.0
 
 
 def _derived_ctr(row: dict[str, Any], clicks: int, impressions: int) -> float:

@@ -198,6 +198,57 @@ def test_search_term_landing_page_and_time_series_rows_normalize():
     ]
 
 
+def test_time_series_rows_aggregate_duplicate_campaign_dates():
+    time_series = normalize_time_series(
+        [
+            {
+                "segments": {"date": "2026-01-02"},
+                "metrics": {"impressions": 20, "clicks": 2, "cost_micros": 2_000_000, "conversions": 0.5},
+                "campaign": {"name": "Second campaign name should not be kept"},
+            },
+            {
+                "segments": {"date": "2026-01-01"},
+                "metrics": {"impressions": 100, "clicks": 10, "cost_micros": 2_500_000, "conversions": 1.25},
+                "interactions": 11,
+                "calls": 3,
+            },
+            {
+                "segments": {"date": "2026-01-01"},
+                "metrics": {"impressions": 50, "clicks": 5, "cost_micros": 1_250_000, "conversions": 2.75},
+                "interactions": 6,
+                "calls": 2,
+                "form_fills": 1,
+                "tracked_leads": 3,
+                "campaign": {"name": "Brand campaign name should not be kept"},
+            },
+            {
+                "date": "2026-01-01",
+                "spend": 0.5,
+                "impressions": 25,
+                "clicks": 3,
+                "conversions": 1,
+            },
+        ]
+    )
+
+    assert time_series == [
+        {
+            "date": "2026-01-01",
+            "spend": 4.25,
+            "clicks": 18,
+            "impressions": 175,
+            "conversions": 5.0,
+            "interactions": 17,
+            "tracked_calls": 5,
+            "form_fills": 1,
+            "tracked_leads": 3,
+        },
+        {"date": "2026-01-02", "spend": 2.0, "clicks": 2, "impressions": 20, "conversions": 0.5},
+    ]
+    assert all("campaign" not in row for row in time_series)
+    assert len({row["date"] for row in time_series}) == len(time_series)
+
+
 def test_search_term_rows_tolerate_missing_keyword_segment_fields():
     rows = normalize_search_term_rows(
         [
