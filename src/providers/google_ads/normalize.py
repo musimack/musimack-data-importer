@@ -162,18 +162,34 @@ def normalize_time_series(mock_rows: Iterable[dict[str, Any]]) -> list[dict[str,
                 "conversions": 0.0,
             },
         )
-        aggregate["spend"] = round(aggregate["spend"] + _time_series_spend(row), 6)
-        aggregate["clicks"] += _int(_field(row, "metrics.clicks", "clicks")) or 0
-        aggregate["impressions"] += _int(_field(row, "metrics.impressions", "impressions")) or 0
-        aggregate["conversions"] = round(
-            aggregate["conversions"] + (_number(_field(row, "metrics.conversions", "conversions")) or 0.0),
-            6,
-        )
-        _sum_optional_int(aggregate, row, "interactions")
-        _sum_optional_int(aggregate, row, "tracked_calls", "tracked_calls", "calls")
-        _sum_optional_int(aggregate, row, "form_fills")
-        _sum_optional_int(aggregate, row, "tracked_leads")
+        _sum_time_series_metrics(aggregate, row)
     return [_without_none(rows_by_date[date]) for date in sorted(rows_by_date)]
+
+
+def normalize_campaign_time_series(mock_rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows_by_campaign_date: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in mock_rows:
+        date = str(_field(row, "segments.date", "date") or "").strip()
+        campaign = str(_field(row, "campaign.name", "campaign", "campaign_name") or "").strip()
+        if not date or not campaign:
+            continue
+        key = (campaign, date)
+        aggregate = rows_by_campaign_date.setdefault(
+            key,
+            {
+                "date": date,
+                "campaign": campaign,
+                "spend": 0.0,
+                "clicks": 0,
+                "impressions": 0,
+                "conversions": 0.0,
+            },
+        )
+        _sum_time_series_metrics(aggregate, row)
+    return [
+        _without_none(rows_by_campaign_date[key])
+        for key in sorted(rows_by_campaign_date, key=lambda item: (item[1], item[0].casefold()))
+    ]
 
 
 def build_summary_from_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
@@ -196,6 +212,20 @@ def build_summary_from_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
             "cost_per_call": round(spend / calls, 6) if calls else None,
         }
     )
+
+
+def _sum_time_series_metrics(aggregate: dict[str, Any], row: dict[str, Any]) -> None:
+    aggregate["spend"] = round(aggregate["spend"] + _time_series_spend(row), 6)
+    aggregate["clicks"] += _int(_field(row, "metrics.clicks", "clicks")) or 0
+    aggregate["impressions"] += _int(_field(row, "metrics.impressions", "impressions")) or 0
+    aggregate["conversions"] = round(
+        aggregate["conversions"] + (_number(_field(row, "metrics.conversions", "conversions")) or 0.0),
+        6,
+    )
+    _sum_optional_int(aggregate, row, "interactions")
+    _sum_optional_int(aggregate, row, "tracked_calls", "tracked_calls", "calls")
+    _sum_optional_int(aggregate, row, "form_fills")
+    _sum_optional_int(aggregate, row, "tracked_leads")
 
 
 def _sum_optional_int(aggregate: dict[str, Any], row: dict[str, Any], output_key: str, *input_paths: str) -> None:

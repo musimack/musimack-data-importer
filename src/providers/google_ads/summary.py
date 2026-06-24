@@ -22,6 +22,7 @@ def build_google_ads_summary_payload(
     search_term_rows: list[dict[str, Any]],
     landing_page_rows: list[dict[str, Any]],
     time_series: list[dict[str, Any]],
+    campaign_time_series: list[dict[str, Any]] | None = None,
     budget_pacing: dict[str, Any] | None = None,
     paid_search_call_signal: dict[str, Any] | None = None,
     source: str = "google_ads_api",
@@ -49,6 +50,7 @@ def build_google_ads_summary_payload(
         "paid_search_call_signal": paid_search_call_signal or {},
         "budget_pacing": budget_pacing or {},
         "time_series": time_series,
+        "campaign_time_series": campaign_time_series or [],
         "data_quality_notes": notes,
     }
     validate_google_ads_summary(payload)

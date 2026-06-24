@@ -83,6 +83,7 @@ def build_time_series_query(start_date: str, end_date: str) -> str:
     return _format_query(
         """
         SELECT
+          campaign.name,
           segments.date,
           metrics.impressions,
           metrics.clicks,

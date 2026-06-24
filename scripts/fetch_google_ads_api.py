@@ -14,6 +14,7 @@ from src.providers.google_ads.config import GoogleAdsConfigError, check_google_a
 from src.providers.google_ads.export_plan import build_google_ads_export_plan
 from src.providers.google_ads.normalize import (
     normalize_campaign_rows,
+    normalize_campaign_time_series,
     normalize_keyword_rows,
     normalize_landing_page_rows,
     normalize_search_term_rows,
@@ -138,14 +139,14 @@ def main() -> int:
                 build_landing_page_performance_query(args.start_date, args.end_date),
             )
         )
-        time_series = normalize_time_series(
-            _run_query_area(
-                client,
-                local_config.customer_id,
-                "time series",
-                build_time_series_query(args.start_date, args.end_date),
-            )
+        raw_time_series_rows = _run_query_area(
+            client,
+            local_config.customer_id,
+            "time series",
+            build_time_series_query(args.start_date, args.end_date),
         )
+        time_series = normalize_time_series(raw_time_series_rows)
+        campaign_time_series = normalize_campaign_time_series(raw_time_series_rows)
         payload = build_google_ads_summary_payload(
             profile=args.profile,
             start_date=args.start_date,
@@ -155,6 +156,7 @@ def main() -> int:
             search_term_rows=search_term_rows,
             landing_page_rows=landing_page_rows,
             time_series=time_series,
+            campaign_time_series=campaign_time_series,
             data_quality_notes=[
                 "Read-only Google Ads API reporting pull.",
                 "No Google Ads mutate, upload, bid, budget, campaign, keyword, ad, asset, conversion, billing, or account setting operations are performed.",

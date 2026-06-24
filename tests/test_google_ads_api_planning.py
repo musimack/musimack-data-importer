@@ -2,6 +2,7 @@ from src.providers.google_ads.normalize import (
     build_summary_from_rows,
     micros_to_currency,
     normalize_campaign_rows,
+    normalize_campaign_time_series,
     normalize_ctr,
     normalize_keyword_rows,
     normalize_landing_page_rows,
@@ -71,6 +72,7 @@ def test_time_series_and_budget_queries_include_reporting_dimensions():
     budget_query = build_budget_pacing_query("2026-01-01", "2026-05-31")
 
     assert "segments.date" in time_query
+    assert "campaign.name" in time_query
     assert "metrics.cost_micros" in time_query
     assert "campaign_budget.amount_micros" in budget_query
     assert "campaign.status" in budget_query
@@ -247,6 +249,69 @@ def test_time_series_rows_aggregate_duplicate_campaign_dates():
     ]
     assert all("campaign" not in row for row in time_series)
     assert len({row["date"] for row in time_series}) == len(time_series)
+
+
+def test_campaign_time_series_rows_aggregate_duplicate_campaign_dates():
+    campaign_time_series = normalize_campaign_time_series(
+        [
+            {
+                "segments": {"date": "2026-01-02"},
+                "campaign": {"name": "Rooms"},
+                "metrics": {"impressions": 20, "clicks": 2, "cost_micros": 2_000_000, "conversions": 0.5},
+            },
+            {
+                "segments": {"date": "2026-01-01"},
+                "campaign": {"name": "Brand"},
+                "metrics": {"impressions": 100, "clicks": 10, "cost_micros": 2_500_000, "conversions": 1.25},
+                "interactions": 11,
+                "calls": 3,
+                "campaign_id": "must-not-leak",
+            },
+            {
+                "segments": {"date": "2026-01-01"},
+                "campaign": {"name": "Brand"},
+                "metrics": {"impressions": 50, "clicks": 5, "cost_micros": 1_250_000, "conversions": 2.75},
+                "interactions": 6,
+                "calls": 2,
+                "form_fills": 1,
+                "tracked_leads": 3,
+            },
+            {
+                "date": "2026-01-01",
+                "campaign": "Rooms",
+                "spend": 0.5,
+                "impressions": 25,
+                "clicks": 3,
+                "conversions": 1,
+            },
+        ]
+    )
+
+    assert campaign_time_series == [
+        {
+            "date": "2026-01-01",
+            "campaign": "Brand",
+            "spend": 3.75,
+            "clicks": 15,
+            "impressions": 150,
+            "conversions": 4.0,
+            "interactions": 17,
+            "tracked_calls": 5,
+            "form_fills": 1,
+            "tracked_leads": 3,
+        },
+        {
+            "date": "2026-01-01",
+            "campaign": "Rooms",
+            "spend": 0.5,
+            "clicks": 3,
+            "impressions": 25,
+            "conversions": 1.0,
+        },
+        {"date": "2026-01-02", "campaign": "Rooms", "spend": 2.0, "clicks": 2, "impressions": 20, "conversions": 0.5},
+    ]
+    assert all("campaign_id" not in row for row in campaign_time_series)
+    assert len({(row["campaign"], row["date"]) for row in campaign_time_series}) == len(campaign_time_series)
 
 
 def test_search_term_rows_tolerate_missing_keyword_segment_fields():

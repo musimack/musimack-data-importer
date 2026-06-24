@@ -91,6 +91,7 @@ def validate_google_ads_summary(payload: dict[str, Any]) -> ValidationResult:
     _validate_array_if_present(payload, "campaign_rows", filename)
     _validate_array_if_present(payload, "landing_page_rows", filename)
     _validate_array_if_present(payload, "time_series", filename)
+    _validate_array_if_present(payload, "campaign_time_series", filename)
 
     _validate_number_fields(payload["summary"], filename, "summary", {
         "spend",
@@ -156,6 +157,33 @@ def validate_google_ads_summary(payload: dict[str, Any]) -> ValidationResult:
         string_fields={"date"},
         numeric_fields={"spend", "cost", "impressions", "clicks", "ctr", "conversions", "calls"},
         integer_fields={"impressions", "clicks", "calls"},
+    )
+    _validate_rows(
+        payload.get("campaign_time_series", []),
+        filename,
+        "campaign_time_series",
+        string_fields={"date", "campaign"},
+        numeric_fields={
+            "spend",
+            "cost",
+            "impressions",
+            "clicks",
+            "interactions",
+            "conversions",
+            "calls",
+            "tracked_calls",
+            "form_fills",
+            "tracked_leads",
+        },
+        integer_fields={
+            "impressions",
+            "clicks",
+            "interactions",
+            "calls",
+            "tracked_calls",
+            "form_fills",
+            "tracked_leads",
+        },
     )
     return _result(payload, "google_ads", warnings)
 
