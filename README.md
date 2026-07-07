@@ -498,6 +498,14 @@ python scripts/validate_client_report_publisher_handoff.py dev/fixtures/client_r
 
 This validator is local-only. It reads sanitized handoff JSON and prints safe validation status only; it does not call provider APIs, inspect secrets, export provider data, write to `client-dashboard`, or publish reports.
 
+Generate a local-only Client Report Publisher handoff from existing sanitized local-real summaries with:
+
+```powershell
+python scripts/write_client_report_publisher_handoff.py --profile inn-at-spanish-head --client-name "Spanish Head" --source-dir exports\local-real\dashboard-lab\inn-at-spanish-head --out exports\local-real\client-report-publisher-handoff\inn-at-spanish-head
+```
+
+The handoff writer skips GA4 Top Sources unless true source/source-medium rows exist, and skips GA4 Top Landing Pages unless landing-page-scoped rows exist. It must not relabel broad traffic channels as sources or broad page popularity rows as landing pages.
+
 The implemented live path is read-only Data Retrieval only. It uses the Local Falcon API key from local environment, retrieves existing scan reports by report id, optionally attempts the read-only competitor report detail, normalizes into the same dashboard-compatible v2 shape, validates before write, and writes only to ignored `exports/local-real/` output unless a `.test-tmp-*` path is used in tests. On-Demand scan creation, credit-consuming scan endpoints, campaign creation, provider sync, portal behavior, dashboard-lab changes, and client-dashboard changes remain out of scope.
 
 The API planning command can validate direct arguments or a local manifest and print the intended future fetch/output plan without requiring credentials, writing output, or making network requests:

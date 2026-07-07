@@ -22,6 +22,14 @@ Current fake fixture smoke command:
 python scripts/validate_client_report_publisher_handoff.py dev/fixtures/client_report_publisher_handoff
 ```
 
+Generated local-real handoff folders can be created from already-sanitized dashboard-lab summaries with:
+
+```powershell
+python scripts/write_client_report_publisher_handoff.py --profile inn-at-spanish-head --client-name "Spanish Head" --source-dir exports\local-real\dashboard-lab\inn-at-spanish-head --out exports\local-real\client-report-publisher-handoff\inn-at-spanish-head
+```
+
+This writer is also local-only. It does not call GA4, GSC, Local Falcon, Google Ads, CallRail, BigQuery, or `client-dashboard`; it only transforms existing sanitized JSON files into versioned handoff JSON under ignored `exports/local-real/`.
+
 ## Expected Input
 
 A handoff folder should contain:

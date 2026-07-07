@@ -217,6 +217,15 @@ dev/fixtures/client_report_publisher_handoff/
 
 Those files are synthetic planning fixtures only. They are not real client data, not generated from provider APIs, and not intended for dashboard import without a later approved path. See [Client Report Publisher Handoff Validator Plan](client_report_publisher_handoff_validator_plan.md) for the lightweight validator scaffold and current fixture test scope.
 
+The local-only handoff writer can generate sanitized handoff JSON from existing local-real dashboard-lab summaries:
+
+```powershell
+python scripts/write_client_report_publisher_handoff.py --profile inn-at-spanish-head --client-name "Spanish Head" --source-dir exports\local-real\dashboard-lab\inn-at-spanish-head --out exports\local-real\client-report-publisher-handoff\inn-at-spanish-head
+python scripts/validate_client_report_publisher_handoff.py exports\local-real\client-report-publisher-handoff\inn-at-spanish-head
+```
+
+The writer does not call provider APIs, read credentials, write to `client-dashboard`, or publish reports. It writes only ignored local-real handoff files. If true source/source-medium rows or landing-page-scoped rows are unavailable, it skips `ga4_top_sources_display.v1` and `ga4_top_landing_pages_display.v1` instead of relabeling broad traffic-channel or page-popularity rows.
+
 ## Handoff Manifest
 
 Each export period should include:
