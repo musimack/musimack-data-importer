@@ -12,27 +12,27 @@
   "rows": [
     {
       "rank": 1,
-      "label": "Organic Search",
+      "label": "google / organic",
       "sessions": 720,
       "users": 610,
       "engagement_rate": 0.67
     },
     {
       "rank": 2,
-      "label": "Direct",
+      "label": "(direct) / (none)",
       "sessions": 340,
       "users": 301,
       "engagement_rate": 0.58
     },
     {
       "rank": 3,
-      "label": "Referral",
+      "label": "example.com / referral",
       "sessions": 188,
       "users": 160,
       "engagement_rate": 0.62
     }
   ],
   "notes": [
-    "Rows are bounded fake examples for display planning."
+    "Rows are bounded fake source/source-medium examples for display planning."
   ]
 }

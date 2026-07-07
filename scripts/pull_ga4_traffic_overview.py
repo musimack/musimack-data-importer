@@ -52,7 +52,7 @@ def main() -> int:
     print(
         "Saved sanitized GA4 snapshot "
         f"to {out_path} with {summary['metric_count']} metrics, "
-        f"{summary['dimension_row_count']} channel rows, "
+        f"{summary['dimension_row_count']} dimension rows, "
         f"{summary['time_series_count']} trend points."
     )
     return 0

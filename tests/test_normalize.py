@@ -108,6 +108,73 @@ def mocked_richer_ga4_response():
                 },
             ],
         },
+        "source_medium": {
+            "dimensionHeaders": [{"name": "sessionSourceMedium"}],
+            "metricHeaders": [
+                {"name": "activeUsers"},
+                {"name": "sessions"},
+                {"name": "engagementRate"},
+                {"name": "averageSessionDuration"},
+                {"name": "eventCount"},
+            ],
+            "rows": [
+                {
+                    "dimensionValues": [{"value": "google / organic"}],
+                    "metricValues": [
+                        {"value": "8"},
+                        {"value": "10"},
+                        {"value": "0.72"},
+                        {"value": "88"},
+                        {"value": "22"},
+                    ],
+                },
+                {
+                    "dimensionValues": [{"value": "(direct) / (none)"}],
+                    "metricValues": [
+                        {"value": "5"},
+                        {"value": "7"},
+                        {"value": "0.57"},
+                        {"value": "42"},
+                        {"value": "13"},
+                    ],
+                },
+            ],
+        },
+        "landing_pages": {
+            "dimensionHeaders": [{"name": "landingPagePlusQueryString"}],
+            "metricHeaders": [
+                {"name": "activeUsers"},
+                {"name": "sessions"},
+                {"name": "engagedSessions"},
+                {"name": "engagementRate"},
+                {"name": "averageSessionDuration"},
+                {"name": "eventCount"},
+            ],
+            "rows": [
+                {
+                    "dimensionValues": [{"value": "/rooms/"}],
+                    "metricValues": [
+                        {"value": "9"},
+                        {"value": "12"},
+                        {"value": "8"},
+                        {"value": "0.66"},
+                        {"value": "91"},
+                        {"value": "18"},
+                    ],
+                },
+                {
+                    "dimensionValues": [{"value": "/contact/"}],
+                    "metricValues": [
+                        {"value": "4"},
+                        {"value": "6"},
+                        {"value": "3"},
+                        {"value": "0.5"},
+                        {"value": "44"},
+                        {"value": "9"},
+                    ],
+                },
+            ],
+        },
     }
 
 
@@ -147,4 +214,14 @@ def test_richer_ga4_response_normalizes_channel_and_top_page_rows():
     assert normalized.top_page_rows[0].label == "Home (/)"
     assert {metric.name for metric in normalized.top_page_rows[0].metrics}.issuperset(
         {"views", "users", "event_count", "average_session_duration_seconds"}
+    )
+    assert normalized.source_medium_rows[0].kind == "source_medium"
+    assert normalized.source_medium_rows[0].label == "google / organic"
+    assert {metric.name for metric in normalized.source_medium_rows[0].metrics}.issuperset(
+        {"sessions", "users", "engagement_rate", "average_session_duration_seconds"}
+    )
+    assert normalized.landing_page_rows[0].kind == "landing_pages"
+    assert normalized.landing_page_rows[0].label == "/rooms/"
+    assert {metric.name for metric in normalized.landing_page_rows[0].metrics}.issuperset(
+        {"sessions", "users", "engaged_sessions", "engagement_rate"}
     )

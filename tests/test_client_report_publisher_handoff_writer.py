@@ -54,6 +54,39 @@ def test_handoff_writer_preserves_channel_source_distinction(tmp_path):
     assert metric_display["breakdowns"][0]["key"] == "top_traffic_channels"
 
 
+def test_handoff_writer_generates_scoped_source_and_landing_page_contracts(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    _write_json(source / "ga4-summary.json", _ga4_summary_with_scoped_rows())
+    _write_json(source / "ga4-snapshot.json", _ga4_snapshot_with_scoped_rows())
+    _write_json(source / "gsc-summary.json", _gsc_summary())
+
+    result = write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    generated_names = sorted(path.name for path in result.files)
+    assert "ga4_top_sources_display.v1.json" in generated_names
+    assert "ga4_top_landing_pages_display.v1.json" in generated_names
+    assert not any("source/source-medium rows unavailable" in item for item in result.skipped)
+    assert not any("landing-page scoped rows unavailable" in item for item in result.skipped)
+
+    sources = json.loads((tmp_path / "handoff" / "ga4_top_sources_display.v1.json").read_text())
+    landing_pages = json.loads(
+        (tmp_path / "handoff" / "ga4_top_landing_pages_display.v1.json").read_text()
+    )
+    assert sources["rows"][0]["label"] == "google / organic"
+    assert sources["notes"][1].endswith("not broad traffic channels.")
+    assert landing_pages["rows"][0]["path"] == "/rooms/"
+    assert landing_pages["notes"][1].endswith("not broad most-viewed page rows.")
+
+    validation = validate_handoff_directory(tmp_path / "handoff")
+    assert validation.valid is True
+
+
 def test_handoff_writer_can_use_ga4_snapshot_override_for_weekly_period(tmp_path):
     source = tmp_path / "source"
     source.mkdir()
@@ -106,6 +139,32 @@ def _ga4_summary() -> dict:
     }
 
 
+def _ga4_summary_with_scoped_rows() -> dict:
+    payload = _ga4_summary()
+    payload["top_sources"] = [
+        {
+            "label": "google / organic",
+            "sessions": 70,
+            "users": 60,
+            "engagement_rate": 0.64,
+            "average_session_duration_seconds": 82,
+            "event_count": 12,
+        }
+    ]
+    payload["top_landing_pages"] = [
+        {
+            "path": "/rooms/",
+            "label": "/rooms/",
+            "sessions": 40,
+            "users": 35,
+            "engaged_sessions": 27,
+            "engagement_rate": 0.67,
+            "event_count": 9,
+        }
+    ]
+    return payload
+
+
 def _ga4_snapshot() -> dict:
     return {
         "schema_version": "ga4_snapshot.v1",
@@ -125,6 +184,37 @@ def _ga4_snapshot() -> dict:
             {"kind": "top_pages", "label": "Home", "metrics": {"views": 90, "users": 50, "event_count": 8}},
         ],
     }
+
+
+def _ga4_snapshot_with_scoped_rows() -> dict:
+    payload = _ga4_snapshot()
+    payload["dimension_rows"].extend(
+        [
+            {
+                "kind": "source_medium",
+                "label": "google / organic",
+                "metrics": {
+                    "sessions": 70,
+                    "users": 60,
+                    "engagement_rate": 0.64,
+                    "average_session_duration_seconds": 82,
+                    "event_count": 12,
+                },
+            },
+            {
+                "kind": "landing_pages",
+                "label": "/rooms/",
+                "metrics": {
+                    "sessions": 40,
+                    "users": 35,
+                    "engaged_sessions": 27,
+                    "engagement_rate": 0.67,
+                    "event_count": 9,
+                },
+            },
+        ]
+    )
+    return payload
 
 
 def _gsc_summary() -> dict:

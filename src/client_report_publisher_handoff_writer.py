@@ -71,13 +71,31 @@ def write_client_report_publisher_handoff(
     else:
         skipped.append("ga4_most_viewed_pages_display.v1: no sanitized top page rows available")
 
-    if _has_dimension_kind(ga4_snapshot, "source_medium"):
-        skipped.append("ga4_top_sources_display.v1: source/source-medium writer not implemented")
+    source_rows = _top_sources_from_summary_or_snapshot(ga4_summary, ga4_snapshot)
+    if source_rows:
+        generated.append(
+            (
+                output / "ga4_top_sources_display.v1.json",
+                _build_ga4_top_sources(profile, source_rows, period),
+                "ga4",
+                "top_sources_display",
+                "ga4_top_sources_display.v1",
+            )
+        )
     else:
         skipped.append("ga4_top_sources_display.v1: true source/source-medium rows unavailable")
 
-    if _has_dimension_kind(ga4_snapshot, "landing_pages"):
-        skipped.append("ga4_top_landing_pages_display.v1: landing-page writer not implemented")
+    landing_page_rows = _top_landing_pages_from_summary_or_snapshot(ga4_summary, ga4_snapshot)
+    if landing_page_rows:
+        generated.append(
+            (
+                output / "ga4_top_landing_pages_display.v1.json",
+                _build_ga4_top_landing_pages(profile, landing_page_rows, period),
+                "ga4",
+                "top_landing_pages_display",
+                "ga4_top_landing_pages_display.v1",
+            )
+        )
     else:
         skipped.append("ga4_top_landing_pages_display.v1: landing-page scoped rows unavailable")
 
@@ -242,6 +260,76 @@ def _build_ga4_most_viewed_pages(
     }
 
 
+def _build_ga4_top_sources(
+    profile: str,
+    source_rows: list[dict[str, Any]],
+    period: dict[str, str],
+) -> dict[str, Any]:
+    return {
+        "schema_version": "ga4_top_sources_display.v1",
+        "provider": "ga4",
+        "report_type": "top_sources_display",
+        "client_slug": profile,
+        "report_period": _report_period(period),
+        "rows": [
+            {
+                "rank": index + 1,
+                "label": str(row.get("label") or "(not set)"),
+                "sessions": _number_or_none(row.get("sessions")),
+                "users": _number_or_none(row.get("users")),
+                "engagement_rate": _number_or_none(row.get("engagement_rate")),
+                "average_session_duration_seconds": _number_or_none(
+                    row.get("average_session_duration_seconds")
+                ),
+                "event_count": _number_or_none(row.get("event_count")),
+                "key_events": _number_or_none(row.get("key_events")),
+                "conversions": _number_or_none(row.get("conversions")),
+            }
+            for index, row in enumerate(source_rows[:10])
+        ],
+        "notes": [
+            "Generated from GA4 sessionSourceMedium rows.",
+            "These rows are true source/source-medium rows and are not broad traffic channels.",
+        ],
+    }
+
+
+def _build_ga4_top_landing_pages(
+    profile: str,
+    landing_page_rows: list[dict[str, Any]],
+    period: dict[str, str],
+) -> dict[str, Any]:
+    return {
+        "schema_version": "ga4_top_landing_pages_display.v1",
+        "provider": "ga4",
+        "report_type": "top_landing_pages_display",
+        "client_slug": profile,
+        "report_period": _report_period(period),
+        "rows": [
+            {
+                "rank": index + 1,
+                "path": str(row.get("path") or ""),
+                "label": str(row.get("label") or row.get("path") or "Untitled landing page"),
+                "sessions": _number_or_none(row.get("sessions")),
+                "users": _number_or_none(row.get("users")),
+                "engaged_sessions": _number_or_none(row.get("engaged_sessions")),
+                "engagement_rate": _number_or_none(row.get("engagement_rate")),
+                "average_session_duration_seconds": _number_or_none(
+                    row.get("average_session_duration_seconds")
+                ),
+                "event_count": _number_or_none(row.get("event_count")),
+                "key_events": _number_or_none(row.get("key_events")),
+                "conversions": _number_or_none(row.get("conversions")),
+            }
+            for index, row in enumerate(landing_page_rows[:10])
+        ],
+        "notes": [
+            "Generated from GA4 landingPagePlusQueryString rows.",
+            "These rows are landing-page scoped rows and are not broad most-viewed page rows.",
+        ],
+    }
+
+
 def _build_gsc_summary_display(
     profile: str,
     gsc_summary: dict[str, Any],
@@ -384,8 +472,55 @@ def _number_or_none(value: Any) -> int | float | None:
     return None
 
 
-def _has_dimension_kind(snapshot: dict[str, Any], kind: str) -> bool:
-    return any(row.get("kind") == kind for row in snapshot.get("dimension_rows") or [])
+def _top_sources_from_summary_or_snapshot(
+    ga4_summary: dict[str, Any],
+    ga4_snapshot: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows = ga4_summary.get("top_sources")
+    if isinstance(rows, list) and rows:
+        return [row for row in rows if isinstance(row, dict)]
+    return [
+        {"label": row.get("label") or "(not set)", **_dimension_metrics(row)}
+        for row in _dimension_rows(ga4_snapshot, "source_medium")
+    ]
+
+
+def _top_landing_pages_from_summary_or_snapshot(
+    ga4_summary: dict[str, Any],
+    ga4_snapshot: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows = ga4_summary.get("top_landing_pages")
+    if isinstance(rows, list) and rows:
+        return [row for row in rows if isinstance(row, dict)]
+    return [
+        {
+            "path": str(row.get("label") or ""),
+            "label": str(row.get("label") or "Untitled landing page"),
+            **_dimension_metrics(row),
+        }
+        for row in _dimension_rows(ga4_snapshot, "landing_pages")
+    ]
+
+
+def _dimension_rows(snapshot: dict[str, Any], kind: str) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in snapshot.get("dimension_rows") or []
+        if isinstance(row, dict) and row.get("kind") == kind
+    ]
+
+
+def _dimension_metrics(row: dict[str, Any]) -> dict[str, Any]:
+    raw_metrics = row.get("metrics")
+    if isinstance(raw_metrics, dict):
+        return raw_metrics
+    if not isinstance(raw_metrics, list):
+        return {}
+    return {
+        metric.get("name"): metric.get("value")
+        for metric in raw_metrics
+        if isinstance(metric, dict) and metric.get("name")
+    }
 
 
 def _ga4_summary_from_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
@@ -396,10 +531,12 @@ def _ga4_summary_from_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
     }
     traffic_channels = []
     top_pages = []
+    top_sources = []
+    top_landing_pages = []
     for row in snapshot.get("dimension_rows") or []:
         if not isinstance(row, dict):
             continue
-        metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
+        metrics = _dimension_metrics(row)
         if row.get("kind") == "traffic_channels":
             traffic_channels.append(
                 {
@@ -415,6 +552,21 @@ def _ga4_summary_from_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
                     **metrics,
                 }
             )
+        elif row.get("kind") == "source_medium":
+            top_sources.append(
+                {
+                    "label": row.get("label"),
+                    **metrics,
+                }
+            )
+        elif row.get("kind") == "landing_pages":
+            top_landing_pages.append(
+                {
+                    "label": row.get("label"),
+                    "path": row.get("label") or "",
+                    **metrics,
+                }
+            )
     return {
         "schema_version": "dashboard_lab_provider_summary.v1",
         "provider": "ga4",
@@ -423,6 +575,8 @@ def _ga4_summary_from_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "time_series": snapshot.get("time_series") or [],
         "traffic_channels": traffic_channels,
         "top_pages": top_pages,
+        "top_sources": top_sources,
+        "top_landing_pages": top_landing_pages,
     }
 
 

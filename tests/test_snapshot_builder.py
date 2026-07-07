@@ -41,5 +41,5 @@ def test_snapshot_payload_includes_richer_channel_and_top_page_rows():
     payload = build_traffic_overview_snapshot(normalized, "properties/123456789", date_range)
 
     kinds = {row.get("kind") for row in payload["dimension_rows"]}
-    assert {"traffic_channels", "top_pages"}.issubset(kinds)
+    assert {"traffic_channels", "top_pages", "source_medium", "landing_pages"}.issubset(kinds)
     assert payload["summary_counts"]["dimension_row_count"] == len(payload["dimension_rows"])

@@ -17,7 +17,13 @@ def build_traffic_overview_snapshot(
     date_range: DateRange,
 ) -> dict[str, Any]:
     dimension_rows = [
-        row.as_dict() for row in [*normalized.channel_rows, *normalized.top_page_rows]
+        row.as_dict()
+        for row in [
+            *normalized.channel_rows,
+            *normalized.top_page_rows,
+            *normalized.source_medium_rows,
+            *normalized.landing_page_rows,
+        ]
     ]
     payload = {
         "schema_version": SCHEMA_VERSION,

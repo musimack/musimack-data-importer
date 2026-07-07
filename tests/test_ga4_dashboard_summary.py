@@ -43,6 +43,10 @@ def test_ga4_dashboard_summary_transforms_snapshot_to_provider_summary_shape():
     assert payload["traffic_channels"][0]["sessions"] == 11
     assert payload["top_pages"][0]["label"] == "Home (/)"
     assert payload["top_pages"][0]["path"] == "/"
+    assert payload["top_sources"][0]["label"] == "google / organic"
+    assert payload["top_sources"][0]["sessions"] == 10
+    assert payload["top_landing_pages"][0]["path"] == "/rooms/"
+    assert payload["top_landing_pages"][0]["sessions"] == 12
     assert payload["time_series"][0]["date"] == "2026-04-01"
     assert payload["time_series"][0]["event_count"] == 30
     assert "property_resource" not in json.dumps(payload)

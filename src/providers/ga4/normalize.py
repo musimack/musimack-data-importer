@@ -36,6 +36,8 @@ class NormalizedTrafficOverview:
     time_series: list[dict[str, Any]]
     channel_rows: list[DimensionRow]
     top_page_rows: list[DimensionRow]
+    source_medium_rows: list[DimensionRow]
+    landing_page_rows: list[DimensionRow]
     warnings: list[str]
 
 
@@ -67,10 +69,18 @@ def _normalize_richer_traffic_overview(raw_response: dict[str, Any]) -> Normaliz
         raw_response.get("channel_breakdown", {})
     )
     top_page_rows, top_page_warnings = _normalize_top_page_rows(raw_response.get("top_pages", {}))
+    source_medium_rows, source_medium_warnings = _normalize_source_medium_rows(
+        raw_response.get("source_medium", {})
+    )
+    landing_page_rows, landing_page_warnings = _normalize_landing_page_rows(
+        raw_response.get("landing_pages", {})
+    )
     warnings = [
         *trend.warnings,
         *channel_warnings,
         *top_page_warnings,
+        *source_medium_warnings,
+        *landing_page_warnings,
         *[str(warning) for warning in raw_response.get("warnings", []) if str(warning).strip()],
     ]
     return NormalizedTrafficOverview(
@@ -78,6 +88,8 @@ def _normalize_richer_traffic_overview(raw_response: dict[str, Any]) -> Normaliz
         time_series=trend.time_series,
         channel_rows=channel_rows,
         top_page_rows=top_page_rows,
+        source_medium_rows=source_medium_rows,
+        landing_page_rows=landing_page_rows,
         warnings=sorted(set(warnings)),
     )
 
@@ -125,6 +137,8 @@ def _normalize_legacy_traffic_overview(raw_response: dict[str, Any]) -> Normaliz
         time_series=time_series,
         channel_rows=channel_rows,
         top_page_rows=[],
+        source_medium_rows=[],
+        landing_page_rows=[],
         warnings=sorted(set(warnings)),
     )
 
@@ -268,9 +282,117 @@ def _normalize_top_page_rows(raw_response: dict[str, Any]) -> tuple[list[Dimensi
     return rows, warnings
 
 
+def _normalize_source_medium_rows(raw_response: dict[str, Any]) -> tuple[list[DimensionRow], list[str]]:
+    metric_headers = [header.get("name", "") for header in raw_response.get("metricHeaders", [])]
+    dimension_headers = [
+        header.get("name", "") for header in raw_response.get("dimensionHeaders", [])
+    ]
+    by_source: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    warnings: list[str] = []
+
+    for row in raw_response.get("rows", []):
+        dimensions = [value.get("value", "") for value in row.get("dimensionValues", [])]
+        metric_values = [value.get("value", "0") for value in row.get("metricValues", [])]
+        source_medium = _dimension_value(dimension_headers, dimensions, "sessionSourceMedium")
+        if not source_medium:
+            continue
+        row_values = {
+            header: _safe_float(raw_value)
+            for header, raw_value in zip(metric_headers, metric_values)
+        }
+        sessions = row_values.get("sessions", 0.0)
+        for header, raw_value in row_values.items():
+            name_unit = METRIC_NAME_MAP.get(header)
+            if not name_unit:
+                warnings.append(f"Unsupported GA4 source/source-medium metric omitted: {header}")
+                continue
+            name, _unit = name_unit
+            value = raw_value
+            if name in {"engagement_rate", "average_session_duration_seconds"} and sessions > 0:
+                value = raw_value * sessions
+            by_source[source_medium][name] += value
+
+    rows = []
+    for label, values in sorted(
+        by_source.items(), key=lambda item: item[1].get("sessions", 0.0), reverse=True
+    )[:10]:
+        rows.append(
+            DimensionRow(
+                label=label.strip() or "(not set)",
+                kind="source_medium",
+                metrics=[
+                    Metric("sessions", _clean_number(values.get("sessions", 0.0)), "count"),
+                    Metric("users", _clean_number(values.get("users", 0.0)), "count"),
+                    Metric(
+                        "engagement_rate",
+                        _clean_number(_weighted_average(values, "engagement_rate", "sessions")),
+                        "ratio",
+                    ),
+                    Metric(
+                        "average_session_duration_seconds",
+                        _clean_number(
+                            _weighted_average(
+                                values,
+                                "average_session_duration_seconds",
+                                "sessions",
+                            )
+                        ),
+                        "seconds",
+                    ),
+                    Metric("event_count", _clean_number(values.get("event_count", 0.0)), "count"),
+                    Metric("key_events", _clean_number(values.get("key_events", 0.0)), "count"),
+                    Metric("conversions", _clean_number(values.get("conversions", 0.0)), "count"),
+                ],
+            )
+        )
+    return rows, warnings
+
+
+def _normalize_landing_page_rows(raw_response: dict[str, Any]) -> tuple[list[DimensionRow], list[str]]:
+    metric_headers = [header.get("name", "") for header in raw_response.get("metricHeaders", [])]
+    dimension_headers = [
+        header.get("name", "") for header in raw_response.get("dimensionHeaders", [])
+    ]
+    rows: list[DimensionRow] = []
+    warnings: list[str] = []
+
+    for row in raw_response.get("rows", [])[:10]:
+        dimensions = [value.get("value", "") for value in row.get("dimensionValues", [])]
+        metric_values = [value.get("value", "0") for value in row.get("metricValues", [])]
+        path = (
+            _dimension_value(dimension_headers, dimensions, "landingPagePlusQueryString")
+            or _dimension_value(dimension_headers, dimensions, "landingPage")
+            or ""
+        ).strip()
+        if not path:
+            continue
+        row_values = {
+            header: _safe_float(raw_value)
+            for header, raw_value in zip(metric_headers, metric_values)
+        }
+        metrics = []
+        for header, raw_value in row_values.items():
+            name_unit = METRIC_NAME_MAP.get(header)
+            if not name_unit:
+                warnings.append(f"Unsupported GA4 landing page metric omitted: {header}")
+                continue
+            name, unit = name_unit
+            metrics.append(Metric(name, _clean_number(raw_value), unit))
+        rows.append(DimensionRow(label=path, kind="landing_pages", metrics=metrics))
+
+    return rows, warnings
+
+
 def _is_richer_response(raw_response: dict[str, Any]) -> bool:
     return any(
-        key in raw_response for key in ("traffic_overview", "channel_breakdown", "top_pages")
+        key in raw_response
+        for key in (
+            "traffic_overview",
+            "channel_breakdown",
+            "top_pages",
+            "source_medium",
+            "landing_pages",
+        )
     )
 
 

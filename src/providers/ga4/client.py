@@ -34,6 +34,8 @@ class Ga4DataClient:
         warnings = []
         channel_breakdown = _empty_report()
         top_pages = _empty_report()
+        source_medium = _empty_report()
+        landing_pages = _empty_report()
         try:
             channel_breakdown = self._run_report(build_channel_breakdown_request(date_range))
         except Ga4ClientError as exc:
@@ -42,10 +44,20 @@ class Ga4DataClient:
             top_pages = self._run_report(build_top_pages_request(date_range))
         except Ga4ClientError as exc:
             warnings.append(f"Top pages omitted: {exc}")
+        try:
+            source_medium = self._run_report(build_source_medium_request(date_range))
+        except Ga4ClientError as exc:
+            warnings.append(f"Source/source-medium rows omitted: {exc}")
+        try:
+            landing_pages = self._run_report(build_landing_pages_request(date_range))
+        except Ga4ClientError as exc:
+            warnings.append(f"Landing pages omitted: {exc}")
         return {
             "traffic_overview": trend,
             "channel_breakdown": channel_breakdown,
             "top_pages": top_pages,
+            "source_medium": source_medium,
+            "landing_pages": landing_pages,
             "warnings": warnings,
         }
 
@@ -235,6 +247,41 @@ def build_top_pages_request(date_range: DateRange) -> dict[str, Any]:
             {"name": "averageSessionDuration"},
         ],
         "orderBys": [{"metric": {"metricName": "screenPageViews"}, "desc": True}],
+        "limit": 10,
+        "keepEmptyRows": False,
+    }
+
+
+def build_source_medium_request(date_range: DateRange) -> dict[str, Any]:
+    return {
+        "dateRanges": [date_range.as_ga4()],
+        "dimensions": [{"name": "sessionSourceMedium"}],
+        "metrics": [
+            {"name": "activeUsers"},
+            {"name": "sessions"},
+            {"name": "engagementRate"},
+            {"name": "averageSessionDuration"},
+            {"name": "eventCount"},
+        ],
+        "orderBys": [{"metric": {"metricName": "sessions"}, "desc": True}],
+        "limit": 10,
+        "keepEmptyRows": False,
+    }
+
+
+def build_landing_pages_request(date_range: DateRange) -> dict[str, Any]:
+    return {
+        "dateRanges": [date_range.as_ga4()],
+        "dimensions": [{"name": "landingPagePlusQueryString"}],
+        "metrics": [
+            {"name": "activeUsers"},
+            {"name": "sessions"},
+            {"name": "engagedSessions"},
+            {"name": "engagementRate"},
+            {"name": "averageSessionDuration"},
+            {"name": "eventCount"},
+        ],
+        "orderBys": [{"metric": {"metricName": "sessions"}, "desc": True}],
         "limit": 10,
         "keepEmptyRows": False,
     }

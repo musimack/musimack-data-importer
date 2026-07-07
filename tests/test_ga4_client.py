@@ -3,6 +3,8 @@ from datetime import date
 from src.config import DateRange
 from src.ga4_client import (
     build_channel_breakdown_request,
+    build_landing_pages_request,
+    build_source_medium_request,
     build_top_pages_request,
     build_traffic_overview_request,
     sanitized_google_api_error,
@@ -52,6 +54,26 @@ def test_top_pages_request_uses_safe_page_dimensions():
     assert request["dimensions"] == [{"name": "pageTitle"}, {"name": "pagePath"}]
     assert {"name": "screenPageViews"} in request["metrics"]
     assert {"name": "activeUsers"} in request["metrics"]
+    assert request["limit"] == 10
+
+
+def test_source_medium_request_uses_true_source_medium_dimension():
+    request = build_source_medium_request(DateRange(date(2026, 4, 1), date(2026, 4, 30)))
+
+    assert request["dimensions"] == [{"name": "sessionSourceMedium"}]
+    assert {"name": "sessions"} in request["metrics"]
+    assert {"name": "activeUsers"} in request["metrics"]
+    assert request["orderBys"] == [{"metric": {"metricName": "sessions"}, "desc": True}]
+    assert request["limit"] == 10
+
+
+def test_landing_pages_request_uses_landing_page_dimension():
+    request = build_landing_pages_request(DateRange(date(2026, 4, 1), date(2026, 4, 30)))
+
+    assert request["dimensions"] == [{"name": "landingPagePlusQueryString"}]
+    assert {"name": "sessions"} in request["metrics"]
+    assert {"name": "engagedSessions"} in request["metrics"]
+    assert request["orderBys"] == [{"metric": {"metricName": "sessions"}, "desc": True}]
     assert request["limit"] == 10
 
 

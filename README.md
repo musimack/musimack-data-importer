@@ -674,13 +674,15 @@ python scripts/pull_ga4_traffic_overview.py --start-date 2026-04-01 --end-date 2
 
 This calls the GA4 Data API `runReport` endpoint, normalizes the response, validates the transport payload, saves sanitized JSON, and prints only summary counts.
 
-The traffic overview export now uses three narrow requests:
+The traffic overview export now uses five narrow requests:
 
 - Daily trend: `date` plus `activeUsers`, `sessions`, `screenPageViews`, `engagementRate`, `averageSessionDuration`, and `eventCount`.
 - Traffic channels: `sessionDefaultChannelGroup` plus `activeUsers`, `sessions`, `screenPageViews`, `engagementRate`, `averageSessionDuration`, and `eventCount`.
 - Top pages: `pageTitle`, `pagePath`, `screenPageViews`, `activeUsers`, `eventCount`, and `averageSessionDuration`.
+- Top sources: `sessionSourceMedium` plus `activeUsers`, `sessions`, `engagementRate`, `averageSessionDuration`, and `eventCount`.
+- Top landing pages: `landingPagePlusQueryString` plus `activeUsers`, `sessions`, `engagedSessions`, `engagementRate`, `averageSessionDuration`, and `eventCount`.
 
-Channel and top-page rows are normalized into sanitized `dimension_rows` entries with safe list keys. If a secondary request fails because GA4 rejects a dimension/metric combination, the exporter omits that list and prints a sanitized warning without tokens, headers, raw credential JSON, or raw response bodies.
+Channel, top-page, source/source-medium, and landing-page rows are normalized into sanitized `dimension_rows` entries with safe list keys. If a secondary request fails because GA4 rejects a dimension/metric combination, the exporter omits that list and prints a sanitized warning without tokens, headers, raw credential JSON, or raw response bodies.
 
 Aluma April 2026 richer export example:
 

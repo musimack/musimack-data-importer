@@ -37,6 +37,8 @@ class SnapshotInspection:
     trend_point_count: int
     channel_row_count: int
     top_page_row_count: int
+    source_medium_row_count: int
+    landing_page_row_count: int
     dimension_row_count: int
     warning_count: int
 
@@ -49,6 +51,8 @@ class SnapshotInspection:
             f"daily trend points: {self.trend_point_count}",
             f"traffic channel rows: {self.channel_row_count}",
             f"top page rows: {self.top_page_row_count}",
+            f"source/source-medium rows: {self.source_medium_row_count}",
+            f"landing page rows: {self.landing_page_row_count}",
             f"total dimension rows: {self.dimension_row_count}",
             f"warnings: {self.warning_count}",
         ]
@@ -96,6 +100,8 @@ def safe_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "time_series_count": inspection.trend_point_count,
         "channel_row_count": inspection.channel_row_count,
         "top_page_row_count": inspection.top_page_row_count,
+        "source_medium_row_count": inspection.source_medium_row_count,
+        "landing_page_row_count": inspection.landing_page_row_count,
         "warning_count": inspection.warning_count,
     }
 
@@ -113,6 +119,8 @@ def inspect_snapshot_payload(payload: dict[str, Any]) -> SnapshotInspection:
         trend_point_count=len(payload.get("time_series", [])),
         channel_row_count=sum(1 for row in rows if row.get("kind") == "traffic_channels"),
         top_page_row_count=sum(1 for row in rows if row.get("kind") == "top_pages"),
+        source_medium_row_count=sum(1 for row in rows if row.get("kind") == "source_medium"),
+        landing_page_row_count=sum(1 for row in rows if row.get("kind") == "landing_pages"),
         dimension_row_count=len(rows),
         warning_count=len(payload.get("warnings", [])),
     )

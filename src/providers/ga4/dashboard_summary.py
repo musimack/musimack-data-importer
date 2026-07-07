@@ -74,6 +74,8 @@ def build_ga4_dashboard_summary(
         "time_series": _time_series(snapshot_payload.get("time_series", [])),
         "traffic_channels": _traffic_channels(snapshot_payload.get("dimension_rows", [])),
         "top_pages": _top_pages(snapshot_payload.get("dimension_rows", [])),
+        "top_sources": _top_sources(snapshot_payload.get("dimension_rows", [])),
+        "top_landing_pages": _top_landing_pages(snapshot_payload.get("dimension_rows", [])),
         "insights": _insights(snapshot_payload),
         "warnings": sorted(set(warnings)),
     }
@@ -112,6 +114,8 @@ def validate_ga4_dashboard_summary(
             "time_series",
             "traffic_channels",
             "top_pages",
+            "top_sources",
+            "top_landing_pages",
             "warnings",
         ],
     )
@@ -132,6 +136,8 @@ def validate_ga4_dashboard_summary(
     _validate_time_series(payload.get("time_series"))
     _validate_rows(payload.get("traffic_channels"), "traffic_channels", "channel")
     _validate_rows(payload.get("top_pages"), "top_pages", "label")
+    _validate_rows(payload.get("top_sources"), "top_sources", "label")
+    _validate_rows(payload.get("top_landing_pages"), "top_landing_pages", "path")
 
 
 def real_output_dir(profile_slug: str) -> Path:
@@ -213,6 +219,51 @@ def _top_pages(rows: Any) -> list[dict[str, Any]]:
     return output
 
 
+def _top_sources(rows: Any) -> list[dict[str, Any]]:
+    output = []
+    for row in _dimension_rows(rows, "source_medium"):
+        metrics = _metric_lookup(row.get("metrics", []))
+        output.append(
+            {
+                "label": str(row.get("label") or "(not set)"),
+                "sessions": metrics.get("sessions"),
+                "users": metrics.get("users"),
+                "engagement_rate": metrics.get("engagement_rate"),
+                "average_session_duration_seconds": metrics.get(
+                    "average_session_duration_seconds"
+                ),
+                "event_count": metrics.get("event_count"),
+                "key_events": metrics.get("key_events"),
+                "conversions": metrics.get("conversions"),
+            }
+        )
+    return output
+
+
+def _top_landing_pages(rows: Any) -> list[dict[str, Any]]:
+    output = []
+    for row in _dimension_rows(rows, "landing_pages"):
+        metrics = _metric_lookup(row.get("metrics", []))
+        path = str(row.get("label") or "")
+        output.append(
+            {
+                "path": path,
+                "label": path or "Untitled landing page",
+                "sessions": metrics.get("sessions"),
+                "users": metrics.get("users"),
+                "engaged_sessions": metrics.get("engaged_sessions"),
+                "engagement_rate": metrics.get("engagement_rate"),
+                "average_session_duration_seconds": metrics.get(
+                    "average_session_duration_seconds"
+                ),
+                "event_count": metrics.get("event_count"),
+                "key_events": metrics.get("key_events"),
+                "conversions": metrics.get("conversions"),
+            }
+        )
+    return output
+
+
 def _dimension_rows(rows: Any, kind: str) -> list[dict[str, Any]]:
     if not isinstance(rows, list):
         return []
@@ -222,6 +273,8 @@ def _dimension_rows(rows: Any, kind: str) -> list[dict[str, Any]]:
 def _insights(snapshot_payload: dict[str, Any]) -> list[str]:
     channels = _traffic_channels(snapshot_payload.get("dimension_rows", []))
     pages = _top_pages(snapshot_payload.get("dimension_rows", []))
+    sources = _top_sources(snapshot_payload.get("dimension_rows", []))
+    landing_pages = _top_landing_pages(snapshot_payload.get("dimension_rows", []))
     insights = []
     if channels:
         top_channel = max(channels, key=lambda item: float(item.get("sessions") or 0))
@@ -229,6 +282,12 @@ def _insights(snapshot_payload: dict[str, Any]) -> list[str]:
     if pages:
         top_page = max(pages, key=lambda item: float(item.get("views") or 0))
         insights.append(f"Top GA4 page by views: {top_page['path'] or top_page['title'] or top_page['label']}.")
+    if sources:
+        top_source = max(sources, key=lambda item: float(item.get("sessions") or 0))
+        insights.append(f"Top GA4 source/source-medium by sessions: {top_source['label']}.")
+    if landing_pages:
+        top_landing_page = max(landing_pages, key=lambda item: float(item.get("sessions") or 0))
+        insights.append(f"Top GA4 landing page by sessions: {top_landing_page['path']}.")
     if not insights:
         insights.append("GA4 snapshot converted for dashboard-lab display; detailed channel or page rows were not available.")
     return insights
