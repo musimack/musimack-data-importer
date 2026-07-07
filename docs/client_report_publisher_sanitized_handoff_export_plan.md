@@ -184,13 +184,13 @@ Planning-phase constraints:
 
 ## Validation Plan
 
-A future validation command can be shaped like:
+The local-only validation command is:
 
 ```powershell
-python scripts/validate_client_report_publisher_handoff.py --folder "exports/local-real/client-report-publisher/<client_slug>/<period_slug>"
+python scripts/validate_client_report_publisher_handoff.py "exports/local-real/client-report-publisher/<client_slug>/<period_slug>"
 ```
 
-This sprint does not implement that command.
+The validator reads only the provided handoff folder. It validates `manifest.json`, referenced display JSON files, recognized schema versions, required manifest fields, safe file references, date ranges, bounded lists, forbidden keys, and secret-like values. It does not call provider APIs, inspect secrets, export provider data, write to `client-dashboard`, add credential handling, or create dashboard runtime behavior.
 
 Validation should check:
 
