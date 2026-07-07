@@ -1,0 +1,51 @@
+{
+  "schema_version": "gsc_queries_display.v1",
+  "provider": "gsc",
+  "report_type": "queries_display",
+  "client_slug": "sample-client",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "report_period": {
+    "label": "April 2026",
+    "start": "2026-04-01",
+    "end": "2026-04-30"
+  },
+  "query_rows": [
+    {
+      "rank": 1,
+      "query": "sample service near me",
+      "clicks": 64,
+      "impressions": 1900,
+      "ctr": 0.0337,
+      "average_position": 7.8
+    },
+    {
+      "rank": 2,
+      "query": "example care provider",
+      "clicks": 42,
+      "impressions": 1510,
+      "ctr": 0.0278,
+      "average_position": 11.2
+    }
+  ],
+  "page_rows": [
+    {
+      "rank": 1,
+      "page": "https://example.com/services/",
+      "clicks": 88,
+      "impressions": 2440,
+      "ctr": 0.0361,
+      "average_position": 9.4
+    },
+    {
+      "rank": 2,
+      "page": "https://example.com/contact/",
+      "clicks": 37,
+      "impressions": 980,
+      "ctr": 0.0378,
+      "average_position": 13.1
+    }
+  ],
+  "notes": [
+    "Query and page rows use example.com and fake search text only."
+  ]
+}

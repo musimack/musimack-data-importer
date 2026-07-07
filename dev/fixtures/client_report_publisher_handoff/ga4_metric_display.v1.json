@@ -1,0 +1,92 @@
+{
+  "schema_version": "ga4_metric_display.v1",
+  "provider": "ga4",
+  "report_type": "metric_display",
+  "client_slug": "sample-client",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "report_period": {
+    "label": "April 2026",
+    "start": "2026-04-01",
+    "end": "2026-04-30",
+    "grain": "month",
+    "data_freshness_label": "Fake fixture period"
+  },
+  "comparison_period": {
+    "label": "March 2026",
+    "start": "2026-03-01",
+    "end": "2026-03-31"
+  },
+  "metric_cards": [
+    {
+      "key": "users",
+      "label": "Website Visitors",
+      "value": 1240,
+      "formatted_value": "1,240",
+      "unit": "count",
+      "comparison": {
+        "previous_value": 1180,
+        "formatted_previous_value": "1,180",
+        "absolute_change": 60,
+        "percent_change": 5.1,
+        "direction": "up"
+      },
+      "availability": "available"
+    },
+    {
+      "key": "sessions",
+      "label": "Visits",
+      "value": 1588,
+      "formatted_value": "1,588",
+      "unit": "count",
+      "comparison": {
+        "previous_value": 1502,
+        "formatted_previous_value": "1,502",
+        "absolute_change": 86,
+        "percent_change": 5.7,
+        "direction": "up"
+      },
+      "availability": "available"
+    },
+    {
+      "key": "engagement_rate",
+      "label": "Engagement Rate",
+      "value": 0.64,
+      "formatted_value": "64%",
+      "unit": "percent",
+      "comparison": {
+        "previous_value": 0.61,
+        "formatted_previous_value": "61%",
+        "absolute_change": 0.03,
+        "percent_change": 4.9,
+        "direction": "up"
+      },
+      "availability": "available"
+    }
+  ],
+  "trend_charts": [
+    {
+      "key": "users_trend",
+      "title": "Website visitors over time",
+      "chart_type": "line",
+      "grain": "day",
+      "series": [
+        {
+          "key": "users",
+          "label": "Website Visitors",
+          "unit": "count",
+          "points": [
+            { "date": "2026-04-01", "value": 38 },
+            { "date": "2026-04-02", "value": 42 },
+            { "date": "2026-04-03", "value": 45 },
+            { "date": "2026-04-04", "value": 40 },
+            { "date": "2026-04-05", "value": 44 }
+          ]
+        }
+      ],
+      "availability": "available"
+    }
+  ],
+  "notes": [
+    "Sample client traffic increased modestly in this fake reporting period."
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "ga4_top_sources_display.v1",
+  "provider": "ga4",
+  "report_type": "top_sources_display",
+  "client_slug": "sample-client",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "report_period": {
+    "label": "April 2026",
+    "start": "2026-04-01",
+    "end": "2026-04-30"
+  },
+  "rows": [
+    {
+      "rank": 1,
+      "label": "Organic Search",
+      "sessions": 720,
+      "users": 610,
+      "engagement_rate": 0.67
+    },
+    {
+      "rank": 2,
+      "label": "Direct",
+      "sessions": 340,
+      "users": 301,
+      "engagement_rate": 0.58
+    },
+    {
+      "rank": 3,
+      "label": "Referral",
+      "sessions": 188,
+      "users": 160,
+      "engagement_rate": 0.62
+    }
+  ],
+  "notes": [
+    "Rows are bounded fake examples for display planning."
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "ga4_most_viewed_pages_display.v1",
+  "provider": "ga4",
+  "report_type": "most_viewed_pages_display",
+  "client_slug": "sample-client",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "report_period": {
+    "label": "April 2026",
+    "start": "2026-04-01",
+    "end": "2026-04-30"
+  },
+  "rows": [
+    {
+      "rank": 1,
+      "path": "/",
+      "label": "Home",
+      "views": 880,
+      "users": 610
+    },
+    {
+      "rank": 2,
+      "path": "/services/",
+      "label": "Services",
+      "views": 510,
+      "users": 390
+    },
+    {
+      "rank": 3,
+      "path": "/about/",
+      "label": "About",
+      "views": 240,
+      "users": 198
+    }
+  ],
+  "notes": [
+    "Most-viewed-page rows are sorted by views descending."
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "local_falcon_display.v1",
+  "provider": "local_falcon",
+  "report_type": "local_visibility_display",
+  "client_slug": "sample-client",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "scan_context": {
+    "keyword": "sample service",
+    "business_label": "Sample Client Demo Location",
+    "scan_date": "2026-04-18",
+    "grid_size": "3x3",
+    "location_label": "Example City"
+  },
+  "metrics": {
+    "arp": 8.6,
+    "atrp": 5.2,
+    "solv": 44.4,
+    "top_3_count": 2,
+    "top_10_count": 6,
+    "total_points": 9
+  },
+  "rank_buckets": {
+    "top_3": 2,
+    "top_10": 4,
+    "top_20": 2,
+    "not_found": 1
+  },
+  "grid_points": [
+    { "row": 1, "col": 1, "rank": 3, "bucket": "top_3" },
+    { "row": 1, "col": 2, "rank": 6, "bucket": "top_10" },
+    { "row": 1, "col": 3, "rank": 12, "bucket": "top_20" },
+    { "row": 2, "col": 1, "rank": 2, "bucket": "top_3" },
+    { "row": 2, "col": 2, "rank": 7, "bucket": "top_10" },
+    { "row": 2, "col": 3, "rank": 10, "bucket": "top_10" },
+    { "row": 3, "col": 1, "rank": 14, "bucket": "top_20" },
+    { "row": 3, "col": 2, "rank": 9, "bucket": "top_10" },
+    { "row": 3, "col": 3, "rank": null, "bucket": "not_found" }
+  ],
+  "competitors": [
+    {
+      "name": "Sample Competitor A",
+      "visible_points": 8,
+      "top_3_count": 3,
+      "top_10_count": 7
+    },
+    {
+      "name": "Sample Competitor B",
+      "visible_points": 5,
+      "top_3_count": 1,
+      "top_10_count": 4
+    }
+  ],
+  "notes": [
+    "Local visibility data is fake and contains no report identifiers or provider payloads."
+  ]
+}

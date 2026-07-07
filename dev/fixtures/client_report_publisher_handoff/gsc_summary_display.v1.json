@@ -1,0 +1,39 @@
+{
+  "schema_version": "gsc_summary_display.v1",
+  "provider": "gsc",
+  "report_type": "summary_display",
+  "client_slug": "sample-client",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "site_label": "example.com",
+  "report_period": {
+    "label": "April 2026",
+    "start": "2026-04-01",
+    "end": "2026-04-30"
+  },
+  "summary_metrics": {
+    "clicks": 512,
+    "impressions": 18420,
+    "ctr": 0.0278,
+    "average_position": 18.4
+  },
+  "trend_points": [
+    {
+      "date": "2026-04-01",
+      "clicks": 15,
+      "impressions": 610
+    },
+    {
+      "date": "2026-04-02",
+      "clicks": 18,
+      "impressions": 640
+    },
+    {
+      "date": "2026-04-03",
+      "clicks": 17,
+      "impressions": 622
+    }
+  ],
+  "notes": [
+    "Search performance values are fake and bounded for fixture validation."
+  ]
+}

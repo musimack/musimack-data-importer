@@ -209,6 +209,14 @@ Validation should check:
 
 Validator output should print only safe counts, file names, contract names, pass/fail status, and sanitized warnings.
 
+Tracked fake fixture examples now live at:
+
+```text
+dev/fixtures/client_report_publisher_handoff/
+```
+
+Those files are synthetic planning fixtures only. They are not real client data, not generated from provider APIs, and not intended for dashboard import without a later approved path. See [Client Report Publisher Handoff Validator Plan](client_report_publisher_handoff_validator_plan.md) for the lightweight validator scaffold and current fixture test scope.
+
 ## Handoff Manifest
 
 Each export period should include:
@@ -315,4 +323,5 @@ Do not skip the fake fixture and validator steps. The first real-data bridge sho
 - [Local Falcon API Integration Plan](local_falcon_api_integration_plan.md)
 - [Local Falcon Read-Only API Prototype Design](local_falcon_read_only_api_prototype_design.md)
 - [Dashboard Lab Paid Search/CallRail Fixture Contracts](dashboard_lab_paid_search_callrail_fixture_contracts.md)
+- [Client Report Publisher Handoff Validator Plan](client_report_publisher_handoff_validator_plan.md)
 - [GA4 Metric Display Model Plan](../portal-contract/docs/ga4_metric_display_model_plan.md)

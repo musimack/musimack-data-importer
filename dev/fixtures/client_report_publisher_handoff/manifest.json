@@ -1,0 +1,68 @@
+{
+  "schema_version": "client_report_publisher_handoff_manifest.v1",
+  "client_slug": "sample-client",
+  "period_start": "2026-04-01",
+  "period_end": "2026-04-30",
+  "generated_at": "2026-05-02T12:00:00Z",
+  "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
+  "files": [
+    {
+      "path": "ga4_metric_display.v1.json",
+      "provider": "ga4",
+      "report_type": "metric_display",
+      "schema_version": "ga4_metric_display.v1"
+    },
+    {
+      "path": "ga4_most_viewed_pages_display.v1.json",
+      "provider": "ga4",
+      "report_type": "most_viewed_pages_display",
+      "schema_version": "ga4_most_viewed_pages_display.v1"
+    },
+    {
+      "path": "ga4_top_landing_pages_display.v1.json",
+      "provider": "ga4",
+      "report_type": "top_landing_pages_display",
+      "schema_version": "ga4_top_landing_pages_display.v1"
+    },
+    {
+      "path": "ga4_top_sources_display.v1.json",
+      "provider": "ga4",
+      "report_type": "top_sources_display",
+      "schema_version": "ga4_top_sources_display.v1"
+    },
+    {
+      "path": "gsc_queries_display.v1.json",
+      "provider": "gsc",
+      "report_type": "queries_display",
+      "schema_version": "gsc_queries_display.v1"
+    },
+    {
+      "path": "gsc_summary_display.v1.json",
+      "provider": "gsc",
+      "report_type": "summary_display",
+      "schema_version": "gsc_summary_display.v1"
+    },
+    {
+      "path": "local_falcon_display.v1.json",
+      "provider": "local_falcon",
+      "report_type": "local_visibility_display",
+      "schema_version": "local_falcon_display.v1"
+    }
+  ],
+  "display_contract_versions": [
+    "ga4_metric_display.v1",
+    "ga4_most_viewed_pages_display.v1",
+    "ga4_top_landing_pages_display.v1",
+    "ga4_top_sources_display.v1",
+    "gsc_queries_display.v1",
+    "gsc_summary_display.v1",
+    "local_falcon_display.v1"
+  ],
+  "validation_status": "fixture_only_not_real_export",
+  "warnings": [],
+  "sanitized_source_names": [
+    "ga4",
+    "gsc",
+    "local_falcon"
+  ]
+}
