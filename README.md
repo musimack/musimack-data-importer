@@ -216,7 +216,7 @@ docs/examples/profile-local-config.example.json
 docs/examples/inn-at-spanish-head.local.example.json
 ```
 
-For the next Client Report Publisher client batch, use [docs/client_report_publisher_local_profile_config_checklist.md](docs/client_report_publisher_local_profile_config_checklist.md) before creating ignored local config files.
+For the next Client Report Publisher client batch, use [docs/client_report_publisher_local_profile_config_checklist.md](docs/client_report_publisher_local_profile_config_checklist.md) before creating ignored local config files, then run the preflight in [docs/client_report_publisher_profile_config_preflight.md](docs/client_report_publisher_profile_config_preflight.md).
 
 Example shape:
 
