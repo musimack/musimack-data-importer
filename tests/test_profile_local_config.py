@@ -368,6 +368,70 @@ def test_load_ga4_config_can_use_profile_env_names(tmp_path, monkeypatch):
     assert config.oauth_token_file == str(token)
 
 
+def test_profile_alias_local_config_takes_alias_file_before_canonical(tmp_path):
+    alias_config = tmp_path / "aluma.local.json"
+    canonical_config = tmp_path / "aluma-seo-geo.local.json"
+    alias_config.write_text(
+        json.dumps(
+            {
+                "profile": "aluma",
+                "ga4": {"property_id": "111111111"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    canonical_config.write_text(
+        json.dumps(
+            {
+                "profile": "aluma-seo-geo",
+                "ga4": {"property_id": "222222222"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_profile_local_config("aluma", config_dir=tmp_path, env={})
+
+    assert config.requested_profile_slug == "aluma"
+    assert config.profile_slug == "aluma-seo-geo"
+    assert config.path == alias_config
+    assert config.provider("ga4")["property_id_configured"] is True
+    assert config.provider("ga4")["property_id_source"] == "local_config"
+
+
+def test_load_ga4_config_can_use_alias_direct_local_config_values(tmp_path, monkeypatch):
+    client = tmp_path.parent / "client.json"
+    token = tmp_path.parent / "token.json"
+    client.write_text("{}", encoding="utf-8")
+    token.write_text("{}", encoding="utf-8")
+    config_dir = tmp_path / "local-profile-configs"
+    config_dir.mkdir()
+    (config_dir / "aluma.local.json").write_text(
+        json.dumps(
+            {
+                "profile": "aluma",
+                "ga4": {
+                    "property_id": "123456789",
+                    "oauth_client_secrets_file": str(client),
+                    "oauth_token_file": str(token),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config_module, "DEFAULT_LOCAL_PROFILE_CONFIG_DIR", config_dir)
+    monkeypatch.setattr(config_module, "load_local_operator_config", lambda: None)
+    monkeypatch.delenv("MUSIMACK_GA4_PROPERTY_ID", raising=False)
+    monkeypatch.delenv("MUSIMACK_GA4_OAUTH_CLIENT_SECRETS", raising=False)
+    monkeypatch.delenv("MUSIMACK_GA4_OAUTH_TOKEN_FILE", raising=False)
+
+    config = load_ga4_config("aluma")
+
+    assert config.property_id == "123456789"
+    assert config.oauth_client_secrets_file == str(client)
+    assert config.oauth_token_file == str(token)
+
+
 def test_ga4_real_output_path_uses_profile_folder():
     path = _resolve_ga4_output_path(
         "inn-at-spanish-head",

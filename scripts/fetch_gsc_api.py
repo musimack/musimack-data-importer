@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 from src.config import ConfigError, parse_date_range
 from src.local_config import load_local_operator_config
 from src.profile_local_config import load_profile_local_config
+from src.profile_aliases import ProfileAliasError, resolve_profile_slug
 from src.providers.gsc.client import (
     DEFAULT_GSC_TOKEN_FILE,
     GscClientError,
@@ -53,16 +54,17 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        output_dir = resolve_output_dir(args.profile, args.out, args.real_output)
+        canonical_profile = resolve_profile_slug(args.profile)
+        output_dir = resolve_output_dir(canonical_profile, args.out, args.real_output)
         if args.validate_only:
-            files = validate_gsc_output_dir(output_dir, args.profile)
+            files = validate_gsc_output_dir(output_dir, canonical_profile)
             print(f"Validated GSC dashboard-lab output directory: {output_dir}")
             for path in files:
                 print(f"- {path}")
             return 0
 
         profile_config = load_profile_local_config(args.profile).provider("gsc")
-        site_url = args.site_url or profile_config.get("_safe_site_url")
+        site_url = args.site_url or profile_config.get("_resolved_site_url") or profile_config.get("_safe_site_url")
         if not site_url:
             raise ConfigError("--site-url or per-profile GSC site_url is required unless --validate-only is used")
         date_range = parse_date_range(args.start_date, args.end_date)
@@ -72,10 +74,12 @@ def main() -> int:
         load_local_operator_config()
         credentials_env = str(profile_config.get("oauth_client_secrets_env") or "MUSIMACK_GSC_OAUTH_CLIENT_SECRETS")
         token_env = str(profile_config.get("oauth_token_file_env") or "MUSIMACK_GSC_OAUTH_TOKEN_FILE")
-        credentials_path = args.credentials or os.environ.get(credentials_env)
+        credentials_path = args.credentials or os.environ.get(credentials_env) or profile_config.get("_resolved_oauth_client_secrets_file")
         if not credentials_path:
             raise ConfigError(f"{credentials_env} is required unless --credentials is provided")
-        token_path = args.token or os.environ.get(token_env) or str(DEFAULT_GSC_TOKEN_FILE)
+        token_path = args.token or os.environ.get(token_env) or profile_config.get("_resolved_oauth_token_file") or str(DEFAULT_GSC_TOKEN_FILE)
+        _reject_repo_secret_path(str(credentials_path), "GSC OAuth client secrets file")
+        _reject_repo_secret_path(str(token_path), "GSC OAuth token file")
 
         client = GscSearchConsoleClient(
             GscFetchConfig(
@@ -90,18 +94,18 @@ def main() -> int:
             date_range.end.isoformat(),
         )
         summary = build_gsc_summary(
-            args.profile,
+            canonical_profile,
             site_url,
             date_range.start.isoformat(),
             date_range.end.isoformat(),
             response,
         )
         files = write_gsc_dashboard_outputs(output_dir, summary)
-    except (ConfigError, GscClientError, GscOAuthError, GscSummaryError, OSError) as exc:
+    except (ConfigError, ProfileAliasError, GscClientError, GscOAuthError, GscSummaryError, OSError) as exc:
         print(f"GSC fetch failed safely: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Fetched GSC dashboard-lab summary for profile '{args.profile}' into: {output_dir}")
+    print(f"Fetched GSC dashboard-lab summary for profile '{canonical_profile}' into: {output_dir}")
     for path in files:
         print(f"- {path}")
     print("GSC OAuth values, token contents, client secrets, and credential paths were not written to output JSON.")
@@ -114,6 +118,14 @@ def resolve_output_dir(profile: str, out: str | None, real_output: bool) -> Path
     if real_output:
         return real_output_dir(profile)
     raise ConfigError("--out is required unless --real-output is used")
+
+
+def _reject_repo_secret_path(path_text: str, label: str) -> None:
+    try:
+        Path(path_text).expanduser().resolve(strict=False).relative_to(ROOT.resolve(strict=False))
+    except ValueError:
+        return
+    raise ConfigError(f"{label} must be outside the repo")
 
 
 if __name__ == "__main__":

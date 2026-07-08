@@ -1,0 +1,17 @@
+{
+  "profile": "example-alias-or-canonical-slug",
+  "ga4": {
+    "property_id": "REDACTED_OR_PLACEHOLDER",
+    "oauth_token_file": "C:/path/outside/repo/client/ga4-token.json",
+    "oauth_client_secrets_file": "C:/path/outside/repo/client/oauth-client-secret.json"
+  },
+  "gsc": {
+    "site_url": "https://example.com/",
+    "oauth_token_file": "C:/path/outside/repo/client/gsc-token.json",
+    "oauth_client_secrets_file": "C:/path/outside/repo/client/oauth-client-secret.json"
+  },
+  "local_falcon": {
+    "manifest_path": "local-falcon-manifests/example-profile.json",
+    "api_key_env": "LOCAL_FALCON_API_KEY"
+  }
+}

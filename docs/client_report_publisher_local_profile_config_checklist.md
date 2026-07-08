@@ -10,7 +10,9 @@ Tracked profile shells live in `config/dashboard_lab_profiles.json`. Operator-lo
 local-profile-configs/{profile}.local.json
 ```
 
-Those files can name the environment variables that hold provider IDs or local credential file paths. They should not contain the real values themselves. The importer readiness checks report only safe presence/missing states and redacted path labels.
+Those files can either name the environment variables that hold provider IDs or local credential file paths, or they can directly hold private operational mapping values inside ignored local config. Routine pulls should use ignored local config so David does not need to repeatedly set PowerShell env vars. Env vars remain an override/fallback.
+
+GA4 property IDs and GSC site URLs are not access secrets by themselves, but they are private operational client mapping. Prefer keeping them in ignored local config rather than tracked config.
 
 ## Safe Location Rules
 
@@ -24,7 +26,27 @@ Those files can name the environment variables that hold provider IDs or local c
 
 ## Fake Placeholder Pattern
 
-Use fake env var names in local config first, then set the real values in David's local shell or `.env.local` without printing them.
+Use fake placeholders in tracked docs and templates. Real values belong only in ignored local config or David's local shell/ignored `.env.local`.
+
+Preferred direct local config shape:
+
+```json
+{
+  "profile": "example-profile",
+  "ga4": {
+    "property_id": "REDACTED_OR_PLACEHOLDER",
+    "oauth_token_file": "C:/path/outside/repo/client/ga4-token.json",
+    "oauth_client_secrets_file": "C:/path/outside/repo/client/oauth-client-secret.json"
+  },
+  "gsc": {
+    "site_url": "https://example.com/",
+    "oauth_token_file": "C:/path/outside/repo/client/gsc-token.json",
+    "oauth_client_secrets_file": "C:/path/outside/repo/client/oauth-client-secret.json"
+  }
+}
+```
+
+Env-var-name style remains supported as an override/fallback:
 
 ```json
 {
@@ -48,6 +70,20 @@ Use fake env var names in local config first, then set the real values in David'
 
 The JSON above is a shape example only. Do not commit copied `.local.json` files after filling them in.
 
+## Alias Filenames
+
+Preferred ignored filenames:
+
+- `local-profile-configs/aluma.local.json`
+- `local-profile-configs/steadfast.local.json`
+- `local-profile-configs/wws.local.json`
+- `local-profile-configs/spanish-head.local.json`
+- `local-profile-configs/pinnacle.local.json`
+- `local-profile-configs/lucy.local.json`
+- `local-profile-configs/avs.local.json`
+
+Existing canonical filenames still work. Commands accept either the alias or canonical slug.
+
 ## Per-Client Checklist
 
 ### Aluma Aesthetic Medicine
@@ -55,7 +91,8 @@ The JSON above is a shape example only. Do not commit copied `.local.json` files
 - Canonical importer slug: `aluma-seo-geo`
 - Display name in current profile shell: Aluma SEO/GEO
 - Dashboard project: Aluma Website Reporting
-- Local config file to create later: `local-profile-configs/aluma-seo-geo.local.json`
+- Preferred local config file to create later: `local-profile-configs/aluma.local.json`
+- Canonical fallback filename: `local-profile-configs/aluma-seo-geo.local.json`
 - GA4 checklist:
   - Set a local env var named like `ALUMA_GA4_PROPERTY_ID`.
   - Set a local env var named like `ALUMA_GA4_OAUTH_CLIENT_SECRETS`.
@@ -68,12 +105,30 @@ The JSON above is a shape example only. Do not commit copied `.local.json` files
 - Local Falcon: enabled in the profile shell, but live retrieval remains approval-gated.
 - Handoff output convention: `exports/local-real/client-report-publisher-handoff/aluma-seo-geo/`
 
+### Inn At Spanish Head
+
+- Canonical importer slug: `inn-at-spanish-head`
+- Preferred command/profile alias: `spanish-head`
+- Display name: Spanish Head
+- Dashboard project: Inn At Spanish Head Website Reporting
+- Preferred local config file: `local-profile-configs/spanish-head.local.json`
+- Canonical fallback filename: `local-profile-configs/inn-at-spanish-head.local.json`
+- GA4 checklist:
+  - Prefer direct ignored config values for `property_id`, `oauth_client_secrets_file`, and `oauth_token_file`.
+  - Env overrides remain supported with names like `INN_GA4_PROPERTY_ID`, `INN_GA4_OAUTH_CLIENT_SECRETS`, and `INN_GA4_OAUTH_TOKEN_FILE`.
+- GSC checklist:
+  - Prefer direct ignored config values for `site_url`, `oauth_client_secrets_file`, and `oauth_token_file`.
+  - Env overrides remain supported with names like `INN_GSC_OAUTH_CLIENT_SECRETS` and `INN_GSC_OAUTH_TOKEN_FILE`.
+- Local Falcon: enabled in the profile shell, but live retrieval remains approval-gated.
+- Handoff output convention: `exports/local-real/client-report-publisher-handoff/inn-at-spanish-head/`
+
 ### Lucy Escobar
 
 - Canonical importer slug: `lucy-escobar`
 - Display name: Lucy Escobar
 - Dashboard project: Lucy Escobar Website Reporting
-- Local config file to create later: `local-profile-configs/lucy-escobar.local.json`
+- Preferred local config file to create later: `local-profile-configs/lucy.local.json`
+- Canonical fallback filename: `local-profile-configs/lucy-escobar.local.json`
 - GA4 checklist:
   - Set a local env var named like `LUCY_GA4_PROPERTY_ID`.
   - Set local env vars named like `LUCY_GA4_OAUTH_CLIENT_SECRETS` and `LUCY_GA4_OAUTH_TOKEN_FILE`.
@@ -89,7 +144,8 @@ The JSON above is a shape example only. Do not commit copied `.local.json` files
 - Canonical importer slug: `pinnacle-contractors`
 - Display name: Pinnacle Contractors
 - Dashboard project: Pinnacle Contractors Website Reporting
-- Local config file to create later: `local-profile-configs/pinnacle-contractors.local.json`
+- Preferred local config file to create later: `local-profile-configs/pinnacle.local.json`
+- Canonical fallback filename: `local-profile-configs/pinnacle-contractors.local.json`
 - GA4 checklist:
   - Set a local env var named like `PINNACLE_GA4_PROPERTY_ID`.
   - Set local env vars named like `PINNACLE_GA4_OAUTH_CLIENT_SECRETS` and `PINNACLE_GA4_OAUTH_TOKEN_FILE`.
@@ -106,7 +162,8 @@ The JSON above is a shape example only. Do not commit copied `.local.json` files
 - Canonical importer slug: `western-wood-structures`
 - Display name: Western Wood Structures
 - Dashboard project: Western Wood Structures Website Reporting
-- Local config file to create later: `local-profile-configs/western-wood-structures.local.json`
+- Preferred local config file to create later: `local-profile-configs/wws.local.json`
+- Canonical fallback filename: `local-profile-configs/western-wood-structures.local.json`
 - GA4 checklist:
   - Set a local env var named like `WWS_GA4_PROPERTY_ID`.
   - Set local env vars named like `WWS_GA4_OAUTH_CLIENT_SECRETS` and `WWS_GA4_OAUTH_TOKEN_FILE`.
@@ -116,6 +173,24 @@ The JSON above is a shape example only. Do not commit copied `.local.json` files
   - Set local env vars named like `WWS_GSC_OAUTH_CLIENT_SECRETS` and `WWS_GSC_OAUTH_TOKEN_FILE`.
 - Local Falcon: planned only; do not include Local Falcon handoff output unless approved and validated.
 - Handoff output convention: `exports/local-real/client-report-publisher-handoff/western-wood-structures/`
+
+### Steadfast Decks and Fences
+
+- Canonical importer slug: `steadfast-decks-and-fences`
+- Preferred command/profile alias: `steadfast`
+- Display name: Steadfast Decks and Fences
+- Dashboard project: Steadfast Decks and Fences Website Reporting
+- Preferred local config file: `local-profile-configs/steadfast.local.json`
+- Canonical fallback filename: `local-profile-configs/steadfast-decks-and-fences.local.json`
+- GA4 checklist:
+  - Prefer direct ignored config values for `property_id`, `oauth_client_secrets_file`, and `oauth_token_file`.
+  - Env overrides remain supported with names like `STEADFAST_GA4_PROPERTY_ID`, `STEADFAST_GA4_OAUTH_CLIENT_SECRETS`, and `STEADFAST_GA4_OAUTH_TOKEN_FILE`.
+- GSC checklist:
+  - Prefer direct ignored config values for `site_url`, `oauth_client_secrets_file`, and `oauth_token_file`.
+  - Env overrides remain supported with names like `STEADFAST_GSC_OAUTH_CLIENT_SECRETS` and `STEADFAST_GSC_OAUTH_TOKEN_FILE`.
+- Local Falcon: enabled in the profile shell, but live retrieval remains approval-gated.
+- Google Ads / CallRail / Form Fills: enabled in tracked metadata for dashboard-lab readiness, but do not pull these unless explicitly approved.
+- Handoff output convention: `exports/local-real/client-report-publisher-handoff/steadfast-decks-and-fences/`
 
 ### AVS
 

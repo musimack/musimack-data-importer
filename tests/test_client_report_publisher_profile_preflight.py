@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from scripts.check_client_report_publisher_profile_preflight import (
@@ -10,14 +11,16 @@ def test_preflight_reports_registry_and_missing_env_without_reading_local_config
     registry = tmp_path / "profiles.json"
     registry.write_text(
         """
-        {
-          "profiles": [
-            {"slug": "aluma-seo-geo"},
-            {"slug": "lucy-escobar"},
-            {"slug": "pinnacle-contractors"},
-            {"slug": "western-wood-structures"},
-            {"slug": "avs"}
-          ]
+            {
+              "profiles": [
+                {"slug": "aluma-seo-geo"},
+                {"slug": "inn-at-spanish-head"},
+                {"slug": "lucy-escobar"},
+                {"slug": "pinnacle-contractors"},
+                {"slug": "steadfast-decks-and-fences"},
+                {"slug": "western-wood-structures"},
+                {"slug": "avs"}
+              ]
         }
         """,
         encoding="utf-8",
@@ -25,9 +28,9 @@ def test_preflight_reports_registry_and_missing_env_without_reading_local_config
 
     report = run_preflight(env={}, root=tmp_path, local_config_dir=tmp_path, registry_path=registry)
 
-    assert report["local_config_contents_read"] == "no"
+    assert report["local_config_contents_read"] == "requested profile only; values redacted"
     assert report["provider_calls"] == "none"
-    assert report["summary"]["profiles_checked"] == 5
+    assert report["summary"]["profiles_checked"] == 7
     assert report["summary"]["missing_registry_profiles"] == 0
     assert report["summary"]["missing_env_names"] > 0
 
@@ -103,3 +106,60 @@ def test_preflight_marks_avs_as_pending_domain_confirmation(tmp_path):
         "AVS_GA4_PROPERTY_ID_PENDING",
         "AVS_GSC_SITE_URL_PENDING",
     ]
+
+
+def test_preflight_accepts_alias_and_redacts_direct_local_config_values(tmp_path):
+    registry = tmp_path / "profiles.json"
+    registry.write_text(
+        """
+        {
+          "profiles": [
+            {"slug": "aluma-seo-geo"},
+            {"slug": "lucy-escobar"},
+            {"slug": "pinnacle-contractors"},
+            {"slug": "western-wood-structures"},
+            {"slug": "avs"}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    outside_dir = tmp_path.parent / "outside-preflight-alias"
+    outside_dir.mkdir(exist_ok=True)
+    client = outside_dir / "client.json"
+    token = outside_dir / "token.json"
+    client.write_text("not-read", encoding="utf-8")
+    token.write_text("not-read", encoding="utf-8")
+    (tmp_path / "aluma.local.json").write_text(
+        json.dumps(
+            {
+                "profile": "aluma",
+                "ga4": {
+                    "property_id": "123456789",
+                    "oauth_client_secrets_file": str(client),
+                    "oauth_token_file": str(token),
+                },
+                "gsc": {
+                    "site_url": "https://example.test/",
+                    "oauth_client_secrets_file": str(client),
+                    "oauth_token_file": str(token),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = run_preflight(
+        profiles=["aluma"],
+        env={},
+        root=tmp_path,
+        local_config_dir=tmp_path,
+        registry_path=registry,
+    )
+    text = format_report(report)
+
+    assert "Profile: aluma -> aluma-seo-geo" in text
+    assert "123456789" not in text
+    assert str(client) not in text
+    assert str(token) not in text
+    assert "GA4: property configured; client secrets configured; exists; outside repo; token configured; exists; outside repo" in text

@@ -43,10 +43,10 @@ The importer should not write directly into `client-dashboard` unless a future t
 
 The normal importer-side flow is:
 
-1. Confirm the client profile slug, for example `inn-at-spanish-head`.
+1. Confirm the client profile slug or supported operator alias, for example `spanish-head` -> `inn-at-spanish-head`.
 2. Confirm the reporting period.
 3. Confirm which providers are approved for this run.
-4. Verify config and environment visibility safely.
+4. Verify ignored local profile config and environment visibility safely. Prefer alias-named files such as `local-profile-configs/aluma.local.json`; env vars are fallback/override only.
 5. Confirm token and client-secret paths are present, usable, and outside the repo without printing values or reading file contents.
 6. Run the approved GA4 pull.
 7. Run the approved GSC pull.
@@ -162,10 +162,10 @@ Safe status reporting is limited to set/missing, exists/missing, usable/not usab
 
 Use this checklist for each client and period:
 
-1. Confirm the client slug.
+1. Confirm the client slug or supported operator alias.
 2. Confirm the reporting period.
 3. Confirm approved providers for the run.
-4. Verify environment/config visibility safely without printing values.
+4. Verify ignored local profile config and environment/config visibility safely without printing values.
 5. Verify token/client-secret paths safely without reading file contents.
 6. Run approved provider pulls.
 7. Validate provider snapshots.

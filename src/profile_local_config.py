@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from .profile_aliases import profile_local_config_candidates, resolve_profile_slug
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOCAL_PROFILE_CONFIG_DIR = ROOT / "local-profile-configs"
@@ -18,6 +20,7 @@ class ProfileLocalConfigError(ValueError):
 
 @dataclass(frozen=True)
 class ProfileLocalConfig:
+    requested_profile_slug: str
     profile_slug: str
     path: Path
     found: bool
@@ -34,6 +37,7 @@ class ProfileLocalConfig:
 
     def as_safe_dict(self) -> dict[str, Any]:
         return {
+            "requested_profile_slug": self.requested_profile_slug,
             "profile_slug": self.profile_slug,
             "path_label": self.path_label,
             "found": self.found,
@@ -52,6 +56,19 @@ def profile_local_config_path(
     return config_dir / f"{profile_slug}.local.json"
 
 
+def resolve_profile_local_config_path(
+    profile_slug: str,
+    *,
+    config_dir: Path = DEFAULT_LOCAL_PROFILE_CONFIG_DIR,
+) -> tuple[str, Path, list[Path]]:
+    canonical_slug = resolve_profile_slug(profile_slug)
+    candidates = profile_local_config_candidates(profile_slug, canonical_slug, config_dir)
+    for path in candidates:
+        if path.exists():
+            return canonical_slug, path, candidates
+    return canonical_slug, candidates[0], candidates
+
+
 def load_profile_local_config(
     profile_slug: str,
     *,
@@ -59,62 +76,70 @@ def load_profile_local_config(
     env: Mapping[str, str] | None = None,
 ) -> ProfileLocalConfig:
     source_env = {} if env is None else env
-    path = profile_local_config_path(profile_slug, config_dir=config_dir)
+    requested_profile = str(profile_slug).strip().lower()
+    canonical_profile, path, _candidates = resolve_profile_local_config_path(profile_slug, config_dir=config_dir)
     if not path.exists():
         return ProfileLocalConfig(
-            profile_slug=profile_slug,
+            requested_profile_slug=requested_profile,
+            profile_slug=canonical_profile,
             path=path,
             found=False,
             valid=True,
-            providers=_empty_provider_states(profile_slug, path),
+            providers=_empty_provider_states(requested_profile, canonical_profile, path),
         )
     if not path.is_file():
         return ProfileLocalConfig(
-            profile_slug=profile_slug,
+            requested_profile_slug=requested_profile,
+            profile_slug=canonical_profile,
             path=path,
             found=True,
             valid=False,
-            providers=_empty_provider_states(profile_slug, path),
+            providers=_empty_provider_states(requested_profile, canonical_profile, path),
             error="local profile config path is not a file",
         )
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return ProfileLocalConfig(
-            profile_slug=profile_slug,
+            requested_profile_slug=requested_profile,
+            profile_slug=canonical_profile,
             path=path,
             found=True,
             valid=False,
-            providers=_empty_provider_states(profile_slug, path),
+            providers=_empty_provider_states(requested_profile, canonical_profile, path),
             error="local profile config is not valid JSON",
         )
     except OSError:
         return ProfileLocalConfig(
-            profile_slug=profile_slug,
+            requested_profile_slug=requested_profile,
+            profile_slug=canonical_profile,
             path=path,
             found=True,
             valid=False,
-            providers=_empty_provider_states(profile_slug, path),
+            providers=_empty_provider_states(requested_profile, canonical_profile, path),
             error="local profile config could not be read",
         )
 
     if not isinstance(payload, dict):
         return ProfileLocalConfig(
-            profile_slug=profile_slug,
+            requested_profile_slug=requested_profile,
+            profile_slug=canonical_profile,
             path=path,
             found=True,
             valid=False,
-            providers=_empty_provider_states(profile_slug, path),
+            providers=_empty_provider_states(requested_profile, canonical_profile, path),
             error="local profile config must contain a JSON object",
         )
     configured_profile = str(payload.get("profile") or "").strip()
-    if configured_profile and configured_profile != profile_slug:
+    allowed_profiles = {requested_profile, canonical_profile}
+    if configured_profile and configured_profile not in allowed_profiles:
         return ProfileLocalConfig(
-            profile_slug=profile_slug,
+            requested_profile_slug=requested_profile,
+            profile_slug=canonical_profile,
             path=path,
             found=True,
             valid=False,
-            providers=_empty_provider_states(profile_slug, path),
+            providers=_empty_provider_states(requested_profile, canonical_profile, path),
             error="local profile config profile does not match requested slug",
         )
 
@@ -126,11 +151,12 @@ def load_profile_local_config(
         "callrail": _callrail_state(_provider_payload(payload, "callrail"), source_env),
         "form_fills": _form_fills_state(_provider_payload(payload, "form_fills")),
     }
-    metadata = _metadata(profile_slug, path, found=True, valid=True, error="")
+    metadata = _metadata(requested_profile, canonical_profile, path, found=True, valid=True, error="")
     for provider_state in providers.values():
         provider_state["_local_profile_config"] = metadata
     return ProfileLocalConfig(
-        profile_slug=profile_slug,
+        requested_profile_slug=requested_profile,
+        profile_slug=canonical_profile,
         path=path,
         found=True,
         valid=True,
@@ -157,7 +183,11 @@ def safe_path_label(path: Path) -> str:
 def _safe_providers(providers: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     safe = {}
     for provider, state in providers.items():
-        safe_state = dict(state)
+        safe_state = {
+            key: value
+            for key, value in state.items()
+            if not str(key).startswith("_resolved_")
+        }
         if safe_state.get("manifest_path"):
             safe_state["manifest_path"] = safe_state.get("manifest_path_label") or safe_path_label(Path(str(safe_state["manifest_path"])))
         safe[provider] = safe_state
@@ -174,8 +204,9 @@ def _provider_payload(payload: dict[str, Any], provider: str) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _empty_provider_states(profile_slug: str, path: Path) -> dict[str, dict[str, Any]]:
+def _empty_provider_states(requested_profile_slug: str, profile_slug: str, path: Path) -> dict[str, dict[str, Any]]:
     metadata = _metadata(
+        requested_profile_slug,
         profile_slug,
         path,
         found=path.exists(),
@@ -188,8 +219,17 @@ def _empty_provider_states(profile_slug: str, path: Path) -> dict[str, dict[str,
     }
 
 
-def _metadata(profile_slug: str, path: Path, *, found: bool, valid: bool, error: str) -> dict[str, Any]:
+def _metadata(
+    requested_profile_slug: str,
+    profile_slug: str,
+    path: Path,
+    *,
+    found: bool,
+    valid: bool,
+    error: str,
+) -> dict[str, Any]:
     return {
+        "requested_profile_slug": requested_profile_slug,
         "profile_slug": profile_slug,
         "present": found,
         "valid": valid,
@@ -202,11 +242,14 @@ def _ga4_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]
     property_env = _text(config.get("property_id_env"))
     client_env = _text(config.get("oauth_client_secrets_env"))
     token_env = _text(config.get("oauth_token_file_env"))
-    property_present = _env_present(env, property_env)
-    client_present = _env_present(env, client_env)
-    token_present = _env_present(env, token_env)
-    client_file_exists = _env_path_exists(env, client_env)
-    token_file_exists = _env_path_exists(env, token_env)
+    property_value = _env_or_config_value(env, property_env, config.get("property_id"))
+    client_value = _env_or_config_value(env, client_env, config.get("oauth_client_secrets_file"))
+    token_value = _env_or_config_value(env, token_env, config.get("oauth_token_file"))
+    property_present = bool(property_value)
+    client_present = bool(client_value)
+    token_present = bool(token_value)
+    client_file_exists = _path_exists(client_value)
+    token_file_exists = _path_exists(token_value)
     missing = []
     if not property_env:
         missing.append("GA4 property id env var name")
@@ -227,12 +270,21 @@ def _ga4_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]
     return {
         "property_id_env": property_env,
         "property_id_env_present": property_present,
+        "property_id_configured": property_present,
+        "property_id_source": _source_label(property_env, config.get("property_id"), env),
+        "_resolved_property_id": property_value,
         "oauth_client_secrets_env": client_env,
         "oauth_client_secrets_env_present": client_present,
+        "oauth_client_secrets_configured": client_present,
         "oauth_client_secrets_file_exists": client_file_exists,
+        "oauth_client_secrets_repo_location": _repo_location(client_value),
+        "_resolved_oauth_client_secrets_file": client_value,
         "oauth_token_file_env": token_env,
         "oauth_token_file_env_present": token_present,
+        "oauth_token_file_configured": token_present,
         "oauth_token_file_exists": token_file_exists,
+        "oauth_token_file_repo_location": _repo_location(token_value),
+        "_resolved_oauth_token_file": token_value,
         "property_id": property_present,
         "credentials_configured": client_present and token_present and client_file_exists and token_file_exists,
         "_missing_config_items": missing,
@@ -243,10 +295,12 @@ def _gsc_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]
     site_url = _text(config.get("site_url"))
     client_env = _text(config.get("oauth_client_secrets_env"))
     token_env = _text(config.get("oauth_token_file_env"))
-    client_present = _env_present(env, client_env)
-    token_present = _env_present(env, token_env)
-    client_file_exists = _env_path_exists(env, client_env)
-    token_file_exists = _env_path_exists(env, token_env)
+    client_value = _env_or_config_value(env, client_env, config.get("oauth_client_secrets_file"))
+    token_value = _env_or_config_value(env, token_env, config.get("oauth_token_file"))
+    client_present = bool(client_value)
+    token_present = bool(token_value)
+    client_file_exists = _path_exists(client_value)
+    token_file_exists = _path_exists(token_value)
     missing = []
     if not site_url:
         missing.append("GSC site URL")
@@ -266,12 +320,19 @@ def _gsc_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]
         "site_url": bool(site_url),
         "site_url_configured": bool(site_url),
         "gsc_site_url": bool(site_url),
+        "_resolved_site_url": site_url,
         "oauth_client_secrets_env": client_env,
         "oauth_client_secrets_env_present": client_present,
+        "oauth_client_secrets_configured": client_present,
         "oauth_client_secrets_file_exists": client_file_exists,
+        "oauth_client_secrets_repo_location": _repo_location(client_value),
+        "_resolved_oauth_client_secrets_file": client_value,
         "oauth_token_file_env": token_env,
         "oauth_token_file_env_present": token_present,
+        "oauth_token_file_configured": token_present,
         "oauth_token_file_exists": token_file_exists,
+        "oauth_token_file_repo_location": _repo_location(token_value),
+        "_resolved_oauth_token_file": token_value,
         "credentials_configured": client_present and token_present and client_file_exists and token_file_exists,
         "_safe_site_url": site_url,
         "_missing_config_items": missing,
@@ -410,6 +471,34 @@ def _env_path_exists(env: Mapping[str, str], name: str) -> bool:
     if not _env_present(env, name):
         return False
     return Path(str(env.get(name))).exists()
+
+
+def _env_or_config_value(env: Mapping[str, str], env_name: str, config_value: Any) -> str:
+    if _env_present(env, env_name):
+        return str(env.get(env_name) or "").strip()
+    return _text(config_value)
+
+
+def _path_exists(value: str) -> bool:
+    return bool(value) and Path(value).expanduser().exists()
+
+
+def _repo_location(value: str) -> str:
+    if not value:
+        return "not checked"
+    try:
+        Path(value).expanduser().resolve(strict=False).relative_to(ROOT.resolve(strict=False))
+    except ValueError:
+        return "outside repo"
+    return "inside repo"
+
+
+def _source_label(env_name: str, config_value: Any, env: Mapping[str, str]) -> str:
+    if _env_present(env, env_name):
+        return "env"
+    if _text(config_value):
+        return "local_config"
+    return "missing"
 
 
 def _text(value: Any) -> str:

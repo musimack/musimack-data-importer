@@ -11,6 +11,9 @@ from .local_config import load_local_operator_config
 from .profile_local_config import DEFAULT_LOCAL_PROFILE_CONFIG_DIR, load_profile_local_config
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class ConfigError(ValueError):
     pass
 
@@ -90,7 +93,9 @@ def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
     oauth_client_env = str(profile_ga4.get("oauth_client_secrets_env") or "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS")
     oauth_token_env = str(profile_ga4.get("oauth_token_file_env") or "MUSIMACK_GA4_OAUTH_TOKEN_FILE")
 
-    property_id = env_value(property_id_env)
+    property_id = _env_or_profile_value(
+        property_id_env, profile_ga4.get("_resolved_property_id"), required=True
+    )
     if not property_id or not property_id.isdigit():
         raise ConfigError(f"{property_id_env} must contain only digits")
 
@@ -98,10 +103,12 @@ def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
     if auth_method not in {"oauth", "service_account"}:
         raise ConfigError("MUSIMACK_GA4_AUTH_METHOD must be oauth or service_account")
 
-    oauth_client_secrets_file = env_value(
-        oauth_client_env, required=False
+    oauth_client_secrets_file = _env_or_profile_value(
+        oauth_client_env, profile_ga4.get("_resolved_oauth_client_secrets_file"), required=False
     )
-    oauth_token_file = env_value(oauth_token_env, required=False)
+    oauth_token_file = _env_or_profile_value(
+        oauth_token_env, profile_ga4.get("_resolved_oauth_token_file"), required=False
+    )
     service_account_file = env_value("GOOGLE_APPLICATION_CREDENTIALS", required=False)
     service_account_json = env_value("MUSIMACK_GA4_SERVICE_ACCOUNT_JSON", required=False)
     service_account_info = None
@@ -115,6 +122,9 @@ def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
         raise ConfigError(
             f"{oauth_client_env} and {oauth_token_env} are required for oauth"
         )
+    if auth_method == "oauth":
+        _reject_repo_secret_path(oauth_client_secrets_file, "GA4 OAuth client secrets file")
+        _reject_repo_secret_path(oauth_token_file, "GA4 OAuth token file")
 
     if auth_method == "service_account" and not service_account_file and not service_account_info:
         raise ConfigError(
@@ -129,6 +139,28 @@ def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
         service_account_file=service_account_file,
         service_account_info=service_account_info,
     )
+
+
+def _env_or_profile_value(env_name: str, profile_value: object, *, required: bool) -> str | None:
+    value = os.environ.get(env_name)
+    if value:
+        return value.strip()
+    text = str(profile_value or "").strip()
+    if text:
+        return text
+    if required:
+        raise ConfigError(f"{env_name} is required")
+    return None
+
+
+def _reject_repo_secret_path(path_text: str | None, label: str) -> None:
+    if not path_text:
+        return
+    try:
+        Path(path_text).expanduser().resolve(strict=False).relative_to(ROOT.resolve(strict=False))
+    except ValueError:
+        return
+    raise ConfigError(f"{label} must be outside the repo")
 
 
 def load_database_config(project_id_override: str | None = None) -> DatabaseConfig:

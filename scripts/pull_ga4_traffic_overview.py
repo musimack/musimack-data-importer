@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 from src.config import ConfigError, add_date_args, load_ga4_config, parse_date_range, resolve_output_path
 from src.ga4_client import Ga4DataClient, Ga4ClientError
 from src.normalize import normalize_traffic_overview
+from src.profile_aliases import ProfileAliasError, resolve_profile_slug
 from src.snapshot_builder import build_traffic_overview_snapshot
 from src.validate import safe_summary, validate_snapshot_payload
 
@@ -31,6 +32,7 @@ def main() -> int:
     try:
         if args.real_output and not args.profile:
             raise ConfigError("--profile is required with --real-output")
+        canonical_profile = resolve_profile_slug(args.profile) if args.profile else None
         date_range = parse_date_range(args.start_date, args.end_date)
         config = load_ga4_config(args.profile)
         raw = Ga4DataClient(config).run_traffic_overview(date_range)
@@ -41,10 +43,10 @@ def main() -> int:
             date_range=date_range,
         )
         validate_snapshot_payload(snapshot)
-        out_path = _resolve_ga4_output_path(args.profile, args.out, args.real_output, date_range)
+        out_path = _resolve_ga4_output_path(canonical_profile, args.out, args.real_output, date_range)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    except (ConfigError, Ga4ClientError, OSError, ValueError) as exc:
+    except (ConfigError, Ga4ClientError, ProfileAliasError, OSError, ValueError) as exc:
         print(f"GA4 export failed safely: {exc}", file=sys.stderr)
         return 1
 
