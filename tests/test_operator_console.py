@@ -37,6 +37,8 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert "inn-at-spanish-head" in slugs
     assert "lucy-escobar" in slugs
     assert "pinnacle-contractors" in slugs
+    assert "western-wood-structures" in slugs
+    assert "avs" in slugs
     assert "musimack-marketing" in slugs
     assert "wc-land-renewal" in slugs
     assert "steadfast-decks-and-fences" in slugs
@@ -54,6 +56,8 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert _capability(inn, "google_ads_search").expected_output_file == "google-ads-search-summary.json"
     lucy = profile_by_slug("lucy-escobar", profiles)
     pinnacle = profile_by_slug("pinnacle-contractors", profiles)
+    western = profile_by_slug("western-wood-structures", profiles)
+    avs = profile_by_slug("avs", profiles)
     musimack = profile_by_slug("musimack-marketing", profiles)
     wc = profile_by_slug("wc-land-renewal", profiles)
     steadfast = profile_by_slug("steadfast-decks-and-fences", profiles)
@@ -62,6 +66,13 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert lucy.data_sources == ["ga4", "gsc"]
     assert pinnacle.domain == "pinnaclecontractorsllc.com"
     assert pinnacle.data_sources == ["ga4", "gsc", "local_falcon"]
+    assert western.display_name == "Western Wood Structures"
+    assert western.domain == "westernwoodstructures.com"
+    assert western.data_sources == ["ga4", "gsc"]
+    assert _capability(western, "local_falcon").status == "planned"
+    assert avs.display_name == "AVS"
+    assert avs.domain == "avs.example.invalid"
+    assert avs.data_sources == []
     assert musimack.domain == "musimackmarketing.com"
     assert musimack.data_sources == ["ga4", "gsc", "local_falcon"]
     assert wc.display_name == "WC Land Renewal"
@@ -96,6 +107,8 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
         "spanishhead.com",
         "lucyescobar.com",
         "pinnaclecontractorsllc.com",
+        "westernwoodstructures.com",
+        "avs.example.invalid",
         "musimackmarketing.com",
         "wclandrenewal.com",
         "steadfastdecks.com",

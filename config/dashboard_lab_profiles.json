@@ -97,6 +97,47 @@
       ]
     },
     {
+      "slug": "western-wood-structures",
+      "display_name": "Western Wood Structures",
+      "domain": "westernwoodstructures.com",
+      "vertical": "commercial wood structures / specialty construction",
+      "service_model": "Client Report Publisher readiness profile for future organic search reporting",
+      "dashboard_lab_route": "/lab/western-wood-structures",
+      "importer_output_folder": "exports/local-real/dashboard-lab/western-wood-structures",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/western-wood-structures",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/western-wood-structures",
+      "data_sources": ["ga4", "gsc"],
+      "capabilities": [
+        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
+        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
+        {"key": "local_falcon", "label": "Local Falcon", "status": "planned", "kind": "dashboard_room", "notes": "Approval-gated; do not include Local Falcon handoff output until approved and validated."},
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
+      "slug": "avs",
+      "display_name": "AVS",
+      "domain": "avs.example.invalid",
+      "vertical": "pending client classification",
+      "service_model": "Client Report Publisher readiness shell; canonical domain and provider config pending operator confirmation",
+      "dashboard_lab_route": "/lab/avs",
+      "importer_output_folder": "exports/local-real/dashboard-lab/avs",
+      "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/avs",
+      "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/avs",
+      "data_sources": [],
+      "capabilities": [
+        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
+        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+      ]
+    },
+    {
       "slug": "musimack-marketing",
       "display_name": "Musimack Marketing",
       "domain": "musimackmarketing.com",
