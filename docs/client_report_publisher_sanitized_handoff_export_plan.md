@@ -196,6 +196,7 @@ Validation should check:
 
 - `schema_version` exists in every display file.
 - Expected `provider` and `report_type` values exist.
+- Manifest `files[]` metadata agrees with each referenced file's `provider`, `report_type`, and `schema_version`.
 - Required rows and metrics exist for each report type.
 - Forbidden keys are absent.
 - Secret-like values are absent.
@@ -206,6 +207,8 @@ Validation should check:
 - Notes are sanitized and client-safe.
 - Manifest file references exist and use approved contract versions.
 - Output is safe to preview in `client-dashboard`.
+
+The current validator is a shape and safety gate; it recognizes contract versions, checks manifest/file agreement, bounds lists, rejects non-finite numbers, rejects forbidden keys and secret-like values, and enforces in-folder file references. Contract-specific sourcing remains a writer responsibility covered by writer tests. In particular, Top Sources must come from true source/source-medium rows, Top Landing Pages must come from landing-page-scoped rows, and Most Viewed Pages must remain broad page popularity/page-title data.
 
 Validator output should print only safe counts, file names, contract names, pass/fail status, and sanitized warnings.
 

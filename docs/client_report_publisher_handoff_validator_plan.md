@@ -58,6 +58,7 @@ The current validator checks:
 - `schema_version` exists in every JSON file.
 - Each display contract version is recognized.
 - `provider` and `report_type` exist where expected.
+- Manifest `provider`, `report_type`, and `schema_version` metadata matches each referenced display file.
 - Date ranges are valid ISO dates and `period_start` is not after `period_end`.
 - Manifest `files[].path` entries exist and stay inside the handoff folder.
 - Manifest `files[].schema_version` matches the referenced file's `schema_version`.
@@ -70,7 +71,33 @@ The current validator checks:
 - Output contains no raw payload fields.
 - Validation output itself is safe to print.
 
-Full per-contract schema validation remains deferred, including required metric vocabulary checks, row sorting rules, and provider-specific display semantics. The current validator is a safety gate and fixture/handoff integrity check, not a provider exporter or dashboard importer.
+Full per-contract schema validation remains deferred, including required metric vocabulary checks, row sorting rules, and provider-specific display semantics. The current validator is a safety gate and fixture/handoff integrity check, not a provider exporter or dashboard importer. Contract-specific data sourcing is enforced by the writer and writer tests before validation; do not use validator success as permission to relabel broad rows into a different contract.
+
+## Current Contract-Specific Notes
+
+The validator recognizes the current Phase 1 contract set:
+
+- `ga4_metric_display.v1`
+- `ga4_top_sources_display.v1`
+- `ga4_top_landing_pages_display.v1`
+- `ga4_most_viewed_pages_display.v1`
+- `gsc_summary_display.v1`
+- `gsc_queries_display.v1`
+- `local_falcon_display.v1`
+
+The writer and tests enforce these current semantic boundaries:
+
+- `ga4_metric_display.v1.json` carries GA4 top metrics, trend charts, broad Top Traffic Channels, and engagement display data from sanitized GA4 summary/snapshot inputs.
+- `ga4_top_sources_display.v1.json` is generated only from true source/source-medium rows, currently `sessionSourceMedium` / `source_medium`. Broad channel rows such as Organic Search, Direct, Paid Search, Referral, or Organic Social are not valid substitutes.
+- `ga4_top_landing_pages_display.v1.json` is generated only from landing-page-scoped rows, currently `landingPagePlusQueryString` / `landing_pages`. Broad page popularity or page-title rows are not valid substitutes.
+- `ga4_most_viewed_pages_display.v1.json` is generated from broad page popularity/page-title rows. Landing-page-scoped rows are not valid substitutes.
+- `gsc_summary_display.v1.json` carries Search Console summary metrics such as clicks, impressions, CTR, and average position.
+- `gsc_queries_display.v1.json` carries bounded top search query rows and top search page rows.
+- `local_falcon_display.v1.json` is approval-gated and must contain sanitized local visibility display data only.
+
+If scoped source/source-medium or landing-page rows are unavailable, the writer skips the corresponding scoped contract and records a warning. It must not fake the file, copy a broad channel/page contract, or reshape another display list into the missing contract.
+
+Real generated handoff files belong under ignored `exports/local-real/` output and must remain uncommitted. Only fake, reviewed fixtures belong in tracked fixture paths.
 
 ## Forbidden Fields
 
