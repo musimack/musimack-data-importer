@@ -89,6 +89,14 @@ A fully populated Phase 1 handoff can include:
 
 The manifest must list only files present in the folder and must use the matching schema versions.
 
+## Forward-Looking YoY Planning
+
+YoY comparable-period handoffs are planned in [Client Report Publisher YoY Handoff Contract Plan](client_report_publisher_yoy_handoff_contract_plan.md). For YoY readiness, future real local pulls should include available GA4/GSC history back to `2025-01-01` where provider availability allows.
+
+Current 2026-only pulls are not enough to make a client YoY-ready. Aluma should be included in this broader historical pull requirement even though its 2026 YTD and weekly handoffs already exist. Missing historical data should remain explicit unavailable/deferred metadata, not fake zeros or inferred comparisons.
+
+The current v1 handoff flow remains unchanged until YoY contracts are implemented.
+
 ## GA4 Data Semantics
 
 GA4 contracts have intentionally separate meanings:
