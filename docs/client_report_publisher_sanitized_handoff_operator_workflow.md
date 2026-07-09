@@ -132,6 +132,8 @@ GSC handoff data is sanitized Search Console reporting for the same period:
 
 Rows should be bounded, deterministic, and client-report safe. Do not include raw Search Console request bodies, property identifiers, OAuth material, unbounded row dumps, or raw API response containers.
 
+Dashboard-lab GSC output support uses the tracked profile registry in `config/dashboard_lab_profiles.json` for current Client Portal profiles. This keeps normalized local-real output paths available for profiles such as `western-wood-structures`, `lucy-escobar`, `pinnacle-contractors`, `steadfast-decks-and-fences`, and `avs` without adding provider credentials or real values to tracked files.
+
 ## Local Falcon Boundary
 
 Local Falcon support remains approval-gated.

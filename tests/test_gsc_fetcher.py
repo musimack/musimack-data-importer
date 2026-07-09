@@ -5,6 +5,7 @@ import pytest
 
 from scripts.fetch_gsc_api import resolve_output_dir
 from src.config import ConfigError
+from src.profile_aliases import resolve_profile_slug
 from src.providers.gsc.client import GSC_READONLY_SCOPE, GscFetchConfig, GscSearchConsoleClient
 from src.providers.gsc.summary import (
     GscSummaryError,
@@ -260,6 +261,77 @@ def test_real_output_path_resolution_and_explicit_out_override(tmp_path):
 
     with pytest.raises(ConfigError, match="--out is required"):
         resolve_output_dir("aluma-seo-geo", None, False)
+
+
+def test_current_client_portal_profiles_are_accepted_for_gsc_real_output():
+    current_profiles = [
+        "aluma-seo-geo",
+        "inn-at-spanish-head",
+        "western-wood-structures",
+        "lucy-escobar",
+        "pinnacle-contractors",
+        "steadfast-decks-and-fences",
+        "avs",
+    ]
+
+    for profile in current_profiles:
+        assert real_output_dir(profile).as_posix().endswith(f"exports/local-real/dashboard-lab/{profile}")
+
+
+def test_gsc_profile_aliases_resolve_before_output_lookup():
+    aliases = {
+        "aluma": "aluma-seo-geo",
+        "spanish-head": "inn-at-spanish-head",
+        "wws": "western-wood-structures",
+        "lucy": "lucy-escobar",
+        "pinnacle": "pinnacle-contractors",
+        "steadfast": "steadfast-decks-and-fences",
+        "avs": "avs",
+    }
+
+    for alias, canonical in aliases.items():
+        assert resolve_output_dir(resolve_profile_slug(alias), None, True) == real_output_dir(canonical)
+
+
+def test_write_and_validate_western_wood_gsc_outputs_from_registry_profile(tmp_path):
+    summary = build_gsc_summary(
+        "western-wood-structures",
+        "https://example.invalid/",
+        "2026-01-01",
+        "2026-01-02",
+        _sample_gsc_response(),
+    )
+
+    files = write_gsc_dashboard_outputs(tmp_path, summary)
+    validated = validate_gsc_output_dir(tmp_path, "western-wood-structures")
+
+    assert [path.name for path in files] == [
+        "client-profile.json",
+        "ga4-summary.json",
+        "gsc-summary.json",
+        "combined-dashboard-summary.json",
+    ]
+    assert [path.name for path in validated] == [path.name for path in files]
+    combined = json.loads((tmp_path / "combined-dashboard-summary.json").read_text(encoding="utf-8"))
+    assert combined["fixture_profile"] == "western-wood-structures"
+    assert combined["provider_summaries"] == {
+        "ga4": "ga4-summary.json",
+        "gsc": "gsc-summary.json",
+    }
+    serialized = json.dumps(combined).lower()
+    assert "client_secret" not in serialized
+    assert "refresh_token" not in serialized
+
+
+def test_unknown_gsc_profile_fails_safely_without_secret_words():
+    with pytest.raises(GscSummaryError) as excinfo:
+        real_output_dir("not-a-real-profile")
+
+    message = str(excinfo.value).lower()
+    assert "unknown profile" in message
+    assert "client_secret" not in message
+    assert "refresh_token" not in message
+    assert "token" not in message
 
 
 def test_wc_land_renewal_gsc_support_files_use_current_paid_search_filename(tmp_path):

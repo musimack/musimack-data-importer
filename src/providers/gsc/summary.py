@@ -6,8 +6,9 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from ...dashboard_lab.fixture_builder import PROVIDER_FILES, PROFILES
-from ...dashboard_lab.fixture_builder import profile_payloads
+from ...dashboard_lab.fixture_builder import PROVIDER_FILES, PROFILES as STATIC_PROFILES, FixtureProfile
+from ...dashboard_lab.fixture_builder import profile_payloads as static_profile_payloads
+from ...operator_console import PROVIDER_OUTPUT_FILES, load_dashboard_lab_profiles
 
 
 FORBIDDEN_OUTPUT_TERMS = {
@@ -165,7 +166,7 @@ def ensure_dashboard_profile_files(
 ) -> list[Path]:
     _profile(profile_slug)
     output_dir.mkdir(parents=True, exist_ok=True)
-    fallback_payloads = profile_payloads(profile_slug)
+    fallback_payloads = _profile_payloads(profile_slug)
     copied = []
     source_dir = synthetic_root / profile_slug
     for filename in _expected_support_files(profile_slug):
@@ -362,11 +363,173 @@ def _number(value: Any) -> float:
 
 
 def _profile(profile_slug: str):
+    if profile_slug in STATIC_PROFILES:
+        return STATIC_PROFILES[profile_slug]
+    registry_profiles = _registry_profiles()
     try:
-        return PROFILES[profile_slug]
+        return registry_profiles[profile_slug]
     except KeyError as exc:
-        valid = ", ".join(sorted(PROFILES))
+        valid = ", ".join(sorted({*STATIC_PROFILES, *registry_profiles}))
         raise GscSummaryError(f"unknown profile '{profile_slug}'. Valid profiles: {valid}") from exc
+
+
+def _registry_profiles() -> dict[str, FixtureProfile]:
+    profiles: dict[str, FixtureProfile] = {}
+    for profile in load_dashboard_lab_profiles():
+        providers = [
+            provider
+            for provider in profile.data_sources
+            if provider in PROVIDER_OUTPUT_FILES or provider in PROVIDER_FILES
+        ]
+        if "gsc" not in providers:
+            providers.append("gsc")
+        provider_file_overrides = {
+            provider: _provider_file(profile, provider)
+            for provider in providers
+            if _provider_file(profile, provider) != PROVIDER_FILES.get(provider)
+        }
+        profiles[profile.slug] = FixtureProfile(
+            slug=profile.slug,
+            client_name=profile.display_name,
+            domain=profile.domain,
+            primary_market=profile.vertical or "Client reporting",
+            active_services=_active_services(profile, providers),
+            providers=providers,
+            primary_service_priority=profile.service_model or "Client Report Publisher readiness",
+            modules_enabled=_modules_enabled(profile, providers),
+            above_fold_module_order=_above_fold_modules(providers),
+            below_fold_module_order=_below_fold_modules(profile, providers),
+            top_strategy_focus=[
+                profile.service_model or "Prepare sanitized dashboard-lab reporting outputs.",
+                "Use validated GA4 and GSC local-real outputs before Client Report Publisher handoff generation.",
+            ],
+            current_tasks=[
+                {
+                    "title": "Validate historical GA4/GSC normalized outputs",
+                    "service": "dashboard readiness",
+                    "status": "planned",
+                }
+            ],
+            recent_insights=[
+                "Profile metadata is loaded from the tracked dashboard-lab profile registry.",
+                "Provider summaries remain local-only and sanitized.",
+            ],
+            provider_file_overrides=provider_file_overrides,
+        )
+    return profiles
+
+
+def _provider_file(profile, provider: str) -> str:
+    for capability in profile.capabilities:
+        if capability.provider == provider and capability.expected_output_file:
+            return capability.expected_output_file
+    return PROVIDER_OUTPUT_FILES.get(provider) or PROVIDER_FILES[provider]
+
+
+def _active_services(profile, providers: list[str]) -> list[str]:
+    labels = [
+        capability.label
+        for capability in profile.capabilities
+        if capability.status == "enabled"
+        and (capability.provider in providers or capability.key in {"content", "strategy", "reports", "support"})
+    ]
+    return labels or ["Client Report Publisher readiness"]
+
+
+def _modules_enabled(profile, providers: list[str]) -> list[str]:
+    modules = ["executive_summary"]
+    if "ga4" in providers:
+        modules.append("website_performance")
+    if "gsc" in providers:
+        modules.append("search_console")
+    if "local_falcon" in providers:
+        modules.append("local_map_rankings")
+    if "google_ads_search" in providers:
+        modules.append("paid_search")
+    if "callrail" in providers:
+        modules.append("call_tracking")
+    if any(capability.key == "content" and capability.status == "enabled" for capability in profile.capabilities):
+        modules.append("content_performance")
+    modules.extend(["tasks", "insights"])
+    return _dedupe(modules)
+
+
+def _above_fold_modules(providers: list[str]) -> list[str]:
+    modules = ["executive_summary"]
+    if "ga4" in providers:
+        modules.append("website_performance")
+    if "gsc" in providers:
+        modules.append("search_console")
+    return modules
+
+
+def _below_fold_modules(profile, providers: list[str]) -> list[str]:
+    modules = []
+    if "local_falcon" in providers:
+        modules.append("local_map_rankings")
+    if "google_ads_search" in providers:
+        modules.append("paid_search")
+    if "callrail" in providers:
+        modules.append("call_tracking")
+    if any(capability.key == "content" and capability.status == "enabled" for capability in profile.capabilities):
+        modules.append("content_performance")
+    modules.extend(["tasks", "insights"])
+    return _dedupe(modules)
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen = set()
+    result = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+def _profile_payloads(profile_slug: str) -> dict[str, dict[str, Any]]:
+    if profile_slug in STATIC_PROFILES:
+        return static_profile_payloads(profile_slug)
+    profile = _profile(profile_slug)
+    payloads = {"client-profile.json": _client_profile_payload(profile)}
+    for provider in profile.providers:
+        if provider == "gsc":
+            continue
+        payloads[profile.provider_file(provider)] = _support_provider_payload(provider, profile)
+    return payloads
+
+
+def _client_profile_payload(profile: FixtureProfile) -> dict[str, Any]:
+    return {
+        "schema_version": "dashboard_lab_client_profile.v1",
+        "fixture_profile": profile.slug,
+        "client_name": profile.client_name,
+        "domain": profile.domain,
+        "active_services": profile.active_services,
+        "enabled_providers": profile.providers,
+        "reporting_period": profile.period,
+        "local_only": True,
+        "mock_data": True,
+        "source_mode": "registry_profile_placeholder",
+    }
+
+
+def _support_provider_payload(provider: str, profile: FixtureProfile) -> dict[str, Any]:
+    return {
+        "schema_version": "dashboard_lab_provider_summary.v1",
+        "provider": provider,
+        "fixture_profile": profile.slug,
+        "source_mode": "registry_profile_placeholder",
+        "local_only": True,
+        "mock_data": True,
+        "reporting_period": profile.period,
+        "summary_metrics": {},
+        "time_series": [],
+        "warnings": [
+            "Placeholder support file generated for dashboard-lab output validation; replace with validated provider output when available."
+        ],
+    }
 
 
 def _require_fields(payload: dict[str, Any], filename: str, fields: list[str]) -> None:
