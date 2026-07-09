@@ -17,6 +17,7 @@ PROVIDER_FILES = {
     "google_ads_lsa": "google-ads-lsa-summary.json",
     "local_falcon": "local-falcon-summary.json",
     "callrail": "callrail-summary.json",
+    "form_fills": "form-fills-summary.json",
     "website_maintenance": "website-maintenance-summary.json",
     "hosting": "hosting-summary.json",
 }
