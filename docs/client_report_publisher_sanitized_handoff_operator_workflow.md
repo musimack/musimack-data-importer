@@ -65,6 +65,8 @@ Preferred cadence is weekly Monday through Sunday.
 
 Historical, YTD, and custom ranges remain supported, but each handoff folder must represent exactly one period. Do not mix weekly and YTD data in one output folder. Weekly folders should be separate from historical folders.
 
+Broad historical pulls are source foundations, not report handoffs. The seven-client `2025-01-01` through `2026-07-08` GA4/GSC backfill is documented in [Client Report Publisher Historical Data Pull Closeout - 2026-07-08](client_report_publisher_historical_data_pull_closeout_20260708.md); use those normalized outputs for later period-specific handoffs instead of handing the broad foundation range to `client-dashboard`.
+
 Recommended local-real shape:
 
 ```text
