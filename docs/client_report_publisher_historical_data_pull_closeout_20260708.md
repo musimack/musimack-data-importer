@@ -6,7 +6,7 @@ Documentation-only closeout for the completed seven-client historical GA4/GSC no
 
 This closeout summarizes the completed historical GA4 and Google Search Console normalized-output pull for Client Portal/reporting profiles.
 
-The broad output range is a historical foundation for future YoY, backfill, and comparable-period work. It should not be treated as a single Client Report Publisher report handoff. Client Report Publisher handoffs should still be generated for specific report periods such as weekly, monthly, YTD, or custom report instances.
+The broad output range is a historical foundation for future custom reporting periods, YoY, backfill, and comparable-period work. It should not automatically become one Client Report Publisher report handoff. Client Report Publisher handoffs should be generated for specific custom report periods selected by David.
 
 ## Date Range
 
@@ -65,18 +65,22 @@ This closeout records the workflow status only. It does not change runtime prefl
 - No direct `client-dashboard` writes occurred.
 - No Client Report Publisher handoffs were generated from the broad historical foundation range.
 
-## Follow-Up Recommendations
+## Custom Report Handoff Strategy
 
-Generate Client Report Publisher handoffs period-specifically, not from the broad `2025-01-01` through `2026-07-08` foundation range.
+Generate Client Report Publisher handoffs for specific custom periods selected by David, not automatically from the broad `2025-01-01` through `2026-07-08` foundation range.
 
-Recommended first handoff periods:
+Rules:
 
-- Monthly June 2026: `2026-06-01` through `2026-06-30`
-- Weekly Jun 29 to Jul 5, 2026: `2026-06-29` through `2026-07-05`
-- YTD 2026 through Jul 5, 2026: `2026-01-01` through `2026-07-05`
+- Each custom report period should produce its own sanitized handoff folder.
+- Each sanitized handoff should map to one saved Client Report Publisher report instance.
+- Custom report periods may be weekly, monthly, YTD, campaign-specific, client-specific, or another date range David chooses.
+- The importer should not mix data across report periods.
+- The dashboard should not query live providers.
+- Do not generate a broad historical handoff unless David explicitly requests that custom range.
 
 ## Known Follow-Ups
 
 - Confirm WWS GSC property/date range if GSC reporting is expected.
 - Consider updating AVS preflight status wording now that the local property was confirmed and real pulls validated.
 - Later YoY contract work should use this historical foundation but still produce sanitized comparable-period contracts.
+- David needs to choose the first custom report period before sanitized handoffs are generated.
