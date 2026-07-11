@@ -10,6 +10,23 @@
     "start": "2026-04-01",
     "end": "2026-04-30"
   },
+  "daily_series_coverage": {
+    "schema_version": "daily_series_coverage.v1",
+    "grain": "day",
+    "timezone": "provider_local_unspecified",
+    "requested_period_start": "2026-04-01",
+    "requested_period_end": "2026-04-30",
+    "expected_observation_count": 30,
+    "actual_observation_count": 3,
+    "first_observation_date": "2026-04-01",
+    "last_observation_date": "2026-04-03",
+    "coverage_state": "partial",
+    "gap_state": "gaps_present",
+    "missing_observation_count": 27,
+    "quality_notes": [
+      "Fake fixture intentionally contains partial daily coverage."
+    ]
+  },
   "summary_metrics": {
     "clicks": 512,
     "impressions": 18420,

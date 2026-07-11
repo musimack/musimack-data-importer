@@ -99,6 +99,14 @@ Current 2026-only pulls are not enough to make a client YoY-ready. Aluma should 
 
 The current v1 handoff flow remains unchanged until YoY contracts are implemented.
 
+## Daily-Series Coverage
+
+GA4 Website Traffic Trends and GSC summary trend data now preserve the complete valid daily series for the requested handoff period. Their v1 display files carry `daily_series_coverage.v1` metadata with requested dates, expected and actual counts, first and last observations, coverage and gap states, missing-count information, and sanitized quality notes. Daily arrays use a contract-specific ceiling; ranked query, page, channel, source, and landing-page lists remain separately bounded.
+
+Before portal import, confirm the validator reports a consistent coverage state. Do not import a file that claims complete coverage while dates are missing, duplicated, unordered, or outside the manifest period. Explicit partial, empty, and unavailable coverage is allowed when it truthfully reflects the sanitized source. Never pad or interpolate missing dates.
+
+Older v1 handoffs without coverage metadata remain compatible only when their daily series is structurally safe. The validator rejects the known legacy pattern of exactly 100 points in a period longer than 100 days. Regenerate those handoffs with the stabilized writer instead of treating the truncated series as complete.
+
 ## GA4 Data Semantics
 
 GA4 contracts have intentionally separate meanings:

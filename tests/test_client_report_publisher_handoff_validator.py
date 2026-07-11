@@ -2,6 +2,7 @@ import json
 import shutil
 import subprocess
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 from src.client_report_publisher_handoff_validator import validate_handoff_directory
@@ -163,6 +164,99 @@ def test_list_count_limit_is_enforced(tmp_path):
     assert any("list exceeds maximum item count" in error for error in result.errors)
 
 
+def test_valid_189_day_daily_series_passes_contract_specific_limit(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2026-01-01", "2026-07-08")
+    _set_ga4_daily_series(handoff_dir, "2026-01-01", 189, state="complete")
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is True
+    assert not any("maximum item count" in error for error in result.errors)
+
+
+def test_valid_leap_year_daily_series_passes(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2024-01-01", "2024-12-31")
+    _set_ga4_daily_series(handoff_dir, "2024-01-01", 366, state="complete")
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is True
+
+
+def test_truncated_series_cannot_claim_complete_coverage(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2026-01-01", "2026-07-08")
+    _set_ga4_daily_series(handoff_dir, "2026-01-01", 100, state="complete")
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("claims complete daily coverage" in error for error in result.errors)
+
+
+def test_explicit_partial_100_point_series_is_valid(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2026-01-01", "2026-07-08")
+    _set_ga4_daily_series(handoff_dir, "2026-01-01", 100, state="partial")
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is True
+
+
+def test_known_truncated_legacy_series_fails_safely(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2026-01-01", "2026-07-08")
+    _set_ga4_daily_series(handoff_dir, "2026-01-01", 100, state="partial")
+    payload_path = handoff_dir / "ga4_metric_display.v1.json"
+    payload = _load_json(payload_path)
+    del payload["daily_series_coverage"]
+    _write_json(payload_path, payload)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("possible silent truncation" in error for error in result.errors)
+
+
+def test_daily_series_duplicate_unordered_and_out_of_period_dates_fail(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2026-01-01", "2026-01-07")
+    _set_ga4_daily_series(handoff_dir, "2026-01-01", 3, state="partial")
+    payload_path = handoff_dir / "ga4_metric_display.v1.json"
+    payload = _load_json(payload_path)
+    points = payload["trend_charts"][0]["series"][0]["points"]
+    points[1]["date"] = points[0]["date"]
+    points[2]["date"] = "2025-12-31"
+    _write_json(payload_path, payload)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("unique" in error for error in result.errors)
+    assert any("ascending" in error for error in result.errors)
+    assert any("inside the requested period" in error for error in result.errors)
+
+
+def test_daily_coverage_count_and_timezone_contradictions_fail(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    _set_manifest_period(handoff_dir, "2026-01-01", "2026-01-07")
+    _set_ga4_daily_series(handoff_dir, "2026-01-01", 7, state="complete")
+    payload_path = handoff_dir / "ga4_metric_display.v1.json"
+    payload = _load_json(payload_path)
+    payload["daily_series_coverage"]["actual_observation_count"] = 6
+    payload["daily_series_coverage"]["timezone"] = "not a timezone"
+    _write_json(payload_path, payload)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("actual_observation_count is inconsistent" in error for error in result.errors)
+    assert any("timezone is invalid" in error for error in result.errors)
+
+
 def test_cli_returns_success_on_fake_fixture():
     completed = subprocess.run(
         [
@@ -198,3 +292,57 @@ def _write_json(path: Path, payload: dict) -> None:
 def _safe_error_text(errors: list[str]) -> bool:
     joined = "\n".join(errors).lower()
     return all(term not in joined for term in ("bearer ", "ya29.", "private_key_value"))
+
+
+def _set_manifest_period(handoff_dir: Path, start: str, end: str) -> None:
+    manifest_path = handoff_dir / "manifest.json"
+    manifest = _load_json(manifest_path)
+    manifest["period_start"] = start
+    manifest["period_end"] = end
+    _write_json(manifest_path, manifest)
+    gsc_path = handoff_dir / "gsc_summary_display.v1.json"
+    gsc = _load_json(gsc_path)
+    gsc["report_period"]["start"] = start
+    gsc["report_period"]["end"] = end
+    gsc["trend_points"] = []
+    gsc.pop("daily_series_coverage", None)
+    _write_json(gsc_path, gsc)
+
+
+def _set_ga4_daily_series(
+    handoff_dir: Path,
+    start: str,
+    count: int,
+    *,
+    state: str,
+) -> None:
+    payload_path = handoff_dir / "ga4_metric_display.v1.json"
+    payload = _load_json(payload_path)
+    first = date.fromisoformat(start)
+    dates = [(first + timedelta(days=index)).isoformat() for index in range(count)]
+    for chart in payload["trend_charts"]:
+        chart["grain"] = "day"
+        for series in chart["series"]:
+            series["points"] = [
+                {"date": observed, "value": index + 1}
+                for index, observed in enumerate(dates)
+            ]
+    period_start = date.fromisoformat(_load_json(handoff_dir / "manifest.json")["period_start"])
+    period_end = date.fromisoformat(_load_json(handoff_dir / "manifest.json")["period_end"])
+    expected = (period_end - period_start).days + 1
+    payload["daily_series_coverage"] = {
+        "schema_version": "daily_series_coverage.v1",
+        "grain": "day",
+        "timezone": "provider_local_unspecified",
+        "requested_period_start": period_start.isoformat(),
+        "requested_period_end": period_end.isoformat(),
+        "expected_observation_count": expected,
+        "actual_observation_count": count,
+        "first_observation_date": dates[0] if dates else None,
+        "last_observation_date": dates[-1] if dates else None,
+        "coverage_state": state,
+        "gap_state": "none" if state == "complete" else "gaps_present",
+        "missing_observation_count": expected - count,
+        "quality_notes": [] if state == "complete" else ["Fake partial coverage fixture."],
+    }
+    _write_json(payload_path, payload)

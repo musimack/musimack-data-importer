@@ -4,7 +4,7 @@ import json
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,11 @@ RECOGNIZED_CONTRACTS = {
     "gsc_summary_display.v1",
     "local_falcon_display.v1",
 }
+
+DAILY_SERIES_COVERAGE_VERSION = "daily_series_coverage.v1"
+MAX_DAILY_SERIES_ITEMS = 3660
+DAILY_SERIES_CONTRACTS = {"ga4_metric_display.v1", "gsc_summary_display.v1"}
+DAILY_SERIES_TIMEZONES = {"UTC", "provider_local_unspecified"}
 
 REQUIRED_MANIFEST_FIELDS = {
     "client_slug",
@@ -174,6 +179,16 @@ def validate_handoff_directory(
         if schema_version:
             referenced_contracts.add(schema_version)
         _scan_payload(payload, safe_rel_path, errors, max_list_items=max_list_items)
+        if schema_version in DAILY_SERIES_CONTRACTS:
+            _validate_daily_series_contract(
+                payload,
+                schema_version,
+                safe_rel_path,
+                manifest.get("period_start"),
+                manifest.get("period_end"),
+                errors,
+                warnings,
+            )
 
         for key in ("provider", "report_type"):
             if not isinstance(payload.get(key), str) or not payload.get(key):
@@ -272,7 +287,8 @@ def _scan_payload(
             _scan_payload(value, label, errors, max_list_items=max_list_items, path=(*path, str(key)))
     elif isinstance(payload, list):
         path_label = _path_label(label, path)
-        if len(payload) > max_list_items:
+        item_limit = MAX_DAILY_SERIES_ITEMS if _is_daily_series_path(path) else max_list_items
+        if len(payload) > item_limit:
             errors.append(f"list exceeds maximum item count at {path_label}")
         for index, value in enumerate(payload):
             _scan_payload(value, label, errors, max_list_items=max_list_items, path=(*path, str(index)))
@@ -285,6 +301,181 @@ def _scan_payload(
             errors.append(f"secret-like value found at {path_label}")
     elif isinstance(payload, float) and not math.isfinite(payload):
         errors.append(f"non-finite number found at {_path_label(label, path)}")
+
+
+def _is_daily_series_path(path: tuple[str, ...]) -> bool:
+    if path == ("trend_points",):
+        return True
+    return (
+        len(path) == 5
+        and path[0] == "trend_charts"
+        and path[1].isdigit()
+        and path[2] == "series"
+        and path[3].isdigit()
+        and path[4] == "points"
+    )
+
+
+def _validate_daily_series_contract(
+    payload: dict[str, Any],
+    schema_version: str,
+    label: str,
+    period_start_raw: Any,
+    period_end_raw: Any,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    period_start = _parse_date(period_start_raw)
+    period_end = _parse_date(period_end_raw)
+    if period_start is None or period_end is None or period_start > period_end:
+        return
+    expected_dates = [
+        (period_start + timedelta(days=offset)).isoformat()
+        for offset in range((period_end - period_start).days + 1)
+    ]
+    series_dates = _daily_series_dates(payload, schema_version, label, errors)
+    if not series_dates:
+        return
+
+    expected_date_set = set(expected_dates)
+    if any(
+        observed not in expected_date_set
+        for dates in series_dates
+        for observed in dates
+    ):
+        errors.append(f"{label} daily observations must stay inside the requested period")
+
+    coverage = payload.get("daily_series_coverage")
+    if coverage is None:
+        if len(expected_dates) > 100 and any(len(dates) == 100 for dates in series_dates):
+            errors.append(
+                f"{label} legacy daily series has 100 points inside a longer report period; possible silent truncation"
+            )
+        else:
+            warnings.append(f"{label} uses legacy daily-series coverage without explicit metadata")
+        return
+    if not isinstance(coverage, dict):
+        errors.append(f"{label}.daily_series_coverage must be an object")
+        return
+
+    required_fields = {
+        "schema_version",
+        "grain",
+        "timezone",
+        "requested_period_start",
+        "requested_period_end",
+        "expected_observation_count",
+        "actual_observation_count",
+        "first_observation_date",
+        "last_observation_date",
+        "coverage_state",
+        "gap_state",
+        "missing_observation_count",
+        "quality_notes",
+    }
+    for field_name in sorted(required_fields - coverage.keys()):
+        errors.append(f"{label}.daily_series_coverage.{field_name} is required")
+    if required_fields - coverage.keys():
+        return
+
+    if coverage.get("schema_version") != DAILY_SERIES_COVERAGE_VERSION:
+        errors.append(f"{label}.daily_series_coverage.schema_version is unsupported")
+    if coverage.get("grain") != "day":
+        errors.append(f"{label}.daily_series_coverage.grain must be day")
+    timezone = coverage.get("timezone")
+    if not isinstance(timezone, str) or not _valid_daily_timezone(timezone):
+        errors.append(f"{label}.daily_series_coverage.timezone is invalid")
+    if coverage.get("requested_period_start") != period_start.isoformat():
+        errors.append(f"{label}.daily_series_coverage.requested_period_start does not match manifest")
+    if coverage.get("requested_period_end") != period_end.isoformat():
+        errors.append(f"{label}.daily_series_coverage.requested_period_end does not match manifest")
+
+    expected_count = len(expected_dates)
+    actual_count = len(series_dates[0])
+    if any(dates != series_dates[0] for dates in series_dates[1:]):
+        errors.append(f"{label} daily series must use the same ordered observation dates")
+    if coverage.get("expected_observation_count") != expected_count:
+        errors.append(f"{label}.daily_series_coverage.expected_observation_count is inconsistent")
+    if coverage.get("actual_observation_count") != actual_count:
+        errors.append(f"{label}.daily_series_coverage.actual_observation_count is inconsistent")
+    if coverage.get("missing_observation_count") != expected_count - actual_count:
+        errors.append(f"{label}.daily_series_coverage.missing_observation_count is inconsistent")
+
+    observed_dates = series_dates[0]
+    first_date = observed_dates[0] if observed_dates else None
+    last_date = observed_dates[-1] if observed_dates else None
+    if coverage.get("first_observation_date") != first_date:
+        errors.append(f"{label}.daily_series_coverage.first_observation_date is inconsistent")
+    if coverage.get("last_observation_date") != last_date:
+        errors.append(f"{label}.daily_series_coverage.last_observation_date is inconsistent")
+
+    state = coverage.get("coverage_state")
+    gap_state = coverage.get("gap_state")
+    if state not in {"complete", "partial", "empty", "unavailable"}:
+        errors.append(f"{label}.daily_series_coverage.coverage_state is invalid")
+    elif state == "complete" and observed_dates != expected_dates:
+        errors.append(f"{label} claims complete daily coverage but observations contain gaps")
+    elif state == "partial" and (not observed_dates or observed_dates == expected_dates):
+        errors.append(f"{label} partial daily coverage contradicts serialized observations")
+    elif state in {"empty", "unavailable"} and observed_dates:
+        errors.append(f"{label} {state} daily coverage must not contain observations")
+
+    expected_gap_state = (
+        "none" if state == "complete" else "gaps_present" if state == "partial" else "not_applicable"
+    )
+    if gap_state != expected_gap_state:
+        errors.append(f"{label}.daily_series_coverage.gap_state contradicts coverage_state")
+    quality_notes = coverage.get("quality_notes")
+    if not isinstance(quality_notes, list) or len(quality_notes) > 10 or not all(
+        isinstance(note, str) for note in quality_notes
+    ):
+        errors.append(f"{label}.daily_series_coverage.quality_notes must be a bounded string list")
+
+
+def _daily_series_dates(
+    payload: dict[str, Any],
+    schema_version: str,
+    label: str,
+    errors: list[str],
+) -> list[list[str]]:
+    if schema_version == "gsc_summary_display.v1":
+        point_sets = [payload.get("trend_points")]
+    else:
+        point_sets = []
+        charts = payload.get("trend_charts")
+        if isinstance(charts, list):
+            for chart in charts:
+                if isinstance(chart, dict) and chart.get("grain") == "day":
+                    series = chart.get("series")
+                    if isinstance(series, list):
+                        point_sets.extend(
+                            item.get("points") for item in series if isinstance(item, dict)
+                        )
+    results: list[list[str]] = []
+    for series_index, points in enumerate(point_sets):
+        if not isinstance(points, list):
+            errors.append(f"{label} daily series {series_index} points must be a list")
+            continue
+        dates: list[str] = []
+        for point_index, point in enumerate(points):
+            raw_date = point.get("date") if isinstance(point, dict) else None
+            parsed = _parse_date(raw_date)
+            if parsed is None:
+                errors.append(f"{label} daily series {series_index} point {point_index} has an invalid date")
+                continue
+            dates.append(parsed.isoformat())
+        if dates != sorted(dates):
+            errors.append(f"{label} daily series {series_index} dates must be in ascending order")
+        if len(dates) != len(set(dates)):
+            errors.append(f"{label} daily series {series_index} dates must be unique")
+        results.append(dates)
+    return results
+
+
+def _valid_daily_timezone(value: str) -> bool:
+    if value in DAILY_SERIES_TIMEZONES:
+        return True
+    return bool(re.fullmatch(r"[A-Za-z][A-Za-z0-9_+-]*/[A-Za-z][A-Za-z0-9_+./-]*", value))
 
 
 def _load_json_object(path: Path, label: str, errors: list[str]) -> dict[str, Any] | None:

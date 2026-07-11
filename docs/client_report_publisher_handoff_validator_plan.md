@@ -64,6 +64,7 @@ The current validator checks:
 - Manifest `files[].schema_version` matches the referenced file's `schema_version`.
 - Manifest contract versions match the included display files.
 - Display rows are bounded.
+- Daily GA4/GSC trend arrays use contract-specific bounds and coverage validation instead of the generic ranked-list bound.
 - Numeric metric fields are finite.
 - Notes are intentionally sanitized and client-safe.
 - Output contains no forbidden keys.
@@ -72,6 +73,16 @@ The current validator checks:
 - Validation output itself is safe to print.
 
 Full per-contract schema validation remains deferred, including required metric vocabulary checks, row sorting rules, and provider-specific display semantics. The current validator is a safety gate and fixture/handoff integrity check, not a provider exporter or dashboard importer. Contract-specific data sourcing is enforced by the writer and writer tests before validation; do not use validator success as permission to relabel broad rows into a different contract.
+
+## Stabilized Daily-Series Contract
+
+`ga4_metric_display.v1` trend-chart points and `gsc_summary_display.v1` trend points may contain up to 3,660 daily observations. This field-specific ceiling supports bounded multi-year daily series without weakening the existing 100-item limit for ranked lists or arbitrary JSON arrays. The writer preserves every valid daily observation for the requested report period; it does not slice, pad, interpolate, or fabricate dates.
+
+Both contracts now include `daily_series_coverage` using `daily_series_coverage.v1`. The metadata declares the daily grain, source-timezone precision, requested period, expected and actual observation counts, first and last observation dates, coverage state, gap state, missing observation count, and sanitized quality notes. The current timezone value is `provider_local_unspecified`; this is intentionally honest because the sanitized inputs do not provide a more precise timezone.
+
+The validator requires ISO calendar dates, ascending unique observations, finite values, dates inside the manifest period, internally consistent counts and boundaries, and coverage/gap states that match the serialized points. Complete coverage cannot contain gaps. Partial, empty, and unavailable states remain distinct, and zero observations are represented explicitly rather than treated as import failure.
+
+Legacy v1 files without `daily_series_coverage` remain accepted when their dated series is structurally safe and does not match the known silent-truncation pattern. A legacy series with exactly 100 points inside a requested period longer than 100 days is rejected because it may be the former truncated output. Operators must regenerate that handoff or provide explicit partial coverage metadata; the validator never reinterprets it as complete.
 
 ## Current Contract-Specific Notes
 

@@ -1,5 +1,8 @@
 import json
+from datetime import date, timedelta
 from pathlib import Path
+
+import pytest
 
 from src.client_report_publisher_handoff_validator import validate_handoff_directory
 from src.client_report_publisher_handoff_writer import write_client_report_publisher_handoff
@@ -93,10 +96,15 @@ def test_handoff_writer_can_use_ga4_snapshot_override_for_weekly_period(tmp_path
     ga4_snapshot = _ga4_snapshot()
     ga4_snapshot["date_range"] = {"start": "2026-06-29", "end": "2026-07-05"}
     ga4_snapshot["time_series"] = [{"date": "2026-06-29", "users": 1, "sessions": 2}]
+    gsc_summary = _gsc_summary()
+    gsc_summary["reporting_period"] = {"start": "2026-06-29", "end": "2026-07-05"}
+    gsc_summary["time_series"] = [
+        {"date": "2026-06-29", "clicks": 1, "impressions": 10, "ctr": 0.1, "average_position": 4.0}
+    ]
     _write_json(source / "ga4-summary.json", _ga4_summary())
     _write_json(source / "ga4-snapshot.json", _ga4_snapshot())
     _write_json(source / "ga4-snapshot-weekly.json", ga4_snapshot)
-    _write_json(source / "gsc-summary.json", _gsc_summary())
+    _write_json(source / "gsc-summary.json", gsc_summary)
 
     write_client_report_publisher_handoff(
         profile="sample-client",
@@ -112,6 +120,104 @@ def test_handoff_writer_can_use_ga4_snapshot_override_for_weekly_period(tmp_path
     assert metric_display["trend_charts"][0]["series"][0]["points"] == [
         {"date": "2026-06-29", "value": 1}
     ]
+
+
+def test_handoff_writer_preserves_complete_189_day_series_and_coverage(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    ga4_summary = _ga4_summary()
+    ga4_snapshot = _ga4_snapshot()
+    gsc_summary = _gsc_summary()
+    period = {"start": "2026-01-01", "end": "2026-07-08"}
+    daily_rows = _daily_rows(period["start"], 189)
+    for payload in (ga4_summary, gsc_summary):
+        payload["reporting_period"] = period
+        payload["time_series"] = daily_rows
+    ga4_snapshot["date_range"] = period
+    ga4_snapshot["time_series"] = daily_rows
+    _write_json(source / "ga4-summary.json", ga4_summary)
+    _write_json(source / "ga4-snapshot.json", ga4_snapshot)
+    _write_json(source / "gsc-summary.json", gsc_summary)
+
+    write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    ga4 = json.loads((tmp_path / "handoff" / "ga4_metric_display.v1.json").read_text())
+    gsc = json.loads((tmp_path / "handoff" / "gsc_summary_display.v1.json").read_text())
+    for series in ga4["trend_charts"][0]["series"]:
+        assert len(series["points"]) == 189
+        assert series["points"][0]["date"] == "2026-01-01"
+        assert series["points"][-1]["date"] == "2026-07-08"
+    assert len(gsc["trend_points"]) == 189
+    for payload in (ga4, gsc):
+        coverage = payload["daily_series_coverage"]
+        assert coverage["expected_observation_count"] == 189
+        assert coverage["actual_observation_count"] == 189
+        assert coverage["coverage_state"] == "complete"
+        assert coverage["gap_state"] == "none"
+        assert coverage["first_observation_date"] == "2026-01-01"
+        assert coverage["last_observation_date"] == "2026-07-08"
+    assert len(ga4["breakdowns"][0]["rows"]) <= 10
+    assert validate_handoff_directory(tmp_path / "handoff").valid is True
+
+
+def test_handoff_writer_marks_partial_and_empty_daily_coverage(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    ga4 = _ga4_summary()
+    ga4["time_series"] = [
+        {"date": "2026-01-01", "users": 1, "sessions": 1},
+        {"date": "2026-01-03", "users": 2, "sessions": 2},
+    ]
+    gsc = _gsc_summary()
+    gsc["time_series"] = []
+    _write_json(source / "ga4-summary.json", ga4)
+    _write_json(source / "ga4-snapshot.json", _ga4_snapshot())
+    _write_json(source / "gsc-summary.json", gsc)
+
+    write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    ga4_output = json.loads((tmp_path / "handoff" / "ga4_metric_display.v1.json").read_text())
+    gsc_output = json.loads((tmp_path / "handoff" / "gsc_summary_display.v1.json").read_text())
+    assert ga4_output["daily_series_coverage"]["coverage_state"] == "partial"
+    assert ga4_output["daily_series_coverage"]["gap_state"] == "gaps_present"
+    assert gsc_output["daily_series_coverage"]["coverage_state"] == "empty"
+    assert gsc_output["daily_series_coverage"]["gap_state"] == "not_applicable"
+
+
+@pytest.mark.parametrize(
+    "rows,error_text",
+    [
+        ([{"date": "2026-01-01"}, {"date": "2026-01-01"}], "unique"),
+        ([{"date": "2026-01-02"}, {"date": "2026-01-01"}], "ascending"),
+        ([{"date": "2025-12-31"}], "inside the report period"),
+    ],
+)
+def test_handoff_writer_rejects_unsafe_daily_dates(tmp_path, rows, error_text):
+    source = tmp_path / "source"
+    source.mkdir()
+    ga4 = _ga4_summary()
+    ga4["time_series"] = rows
+    _write_json(source / "ga4-summary.json", ga4)
+    _write_json(source / "ga4-snapshot.json", _ga4_snapshot())
+    _write_json(source / "gsc-summary.json", _gsc_summary())
+
+    with pytest.raises(ValueError, match=error_text):
+        write_client_report_publisher_handoff(
+            profile="sample-client",
+            client_name="Sample Client",
+            source_dir=source,
+            output_dir=tmp_path / "handoff",
+        )
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -227,3 +333,19 @@ def _gsc_summary() -> dict:
         "top_queries": [{"query": "sample query", "clicks": 5, "impressions": 50, "ctr": 0.1, "average_position": 3.0}],
         "top_pages": [{"path": "https://example.com/", "clicks": 6, "impressions": 60, "ctr": 0.1, "average_position": 2.5}],
     }
+
+
+def _daily_rows(start: str, count: int) -> list[dict]:
+    first = date.fromisoformat(start)
+    return [
+        {
+            "date": (first + timedelta(days=index)).isoformat(),
+            "users": index + 1,
+            "sessions": index + 2,
+            "clicks": index,
+            "impressions": index * 10,
+            "ctr": 0.1,
+            "average_position": 4.0,
+        }
+        for index in range(count)
+    ]

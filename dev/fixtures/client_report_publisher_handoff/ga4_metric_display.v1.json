@@ -11,6 +11,23 @@
     "grain": "month",
     "data_freshness_label": "Fake fixture period"
   },
+  "daily_series_coverage": {
+    "schema_version": "daily_series_coverage.v1",
+    "grain": "day",
+    "timezone": "provider_local_unspecified",
+    "requested_period_start": "2026-04-01",
+    "requested_period_end": "2026-04-30",
+    "expected_observation_count": 30,
+    "actual_observation_count": 5,
+    "first_observation_date": "2026-04-01",
+    "last_observation_date": "2026-04-05",
+    "coverage_state": "partial",
+    "gap_state": "gaps_present",
+    "missing_observation_count": 25,
+    "quality_notes": [
+      "Fake fixture intentionally contains partial daily coverage."
+    ]
+  },
   "comparison_period": {
     "label": "March 2026",
     "start": "2026-03-01",

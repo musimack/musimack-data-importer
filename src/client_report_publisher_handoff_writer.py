@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +10,8 @@ from typing import Any
 HANDOFF_MANIFEST_VERSION = "client_report_publisher_handoff_manifest.v1"
 DEFAULT_OUTPUT_ROOT = Path("exports") / "local-real" / "client-report-publisher-handoff"
 DEFAULT_SOURCE_ROOT = Path("exports") / "local-real" / "dashboard-lab"
+DAILY_SERIES_COVERAGE_VERSION = "daily_series_coverage.v1"
+DAILY_SERIES_TIMEZONE = "provider_local_unspecified"
 
 
 @dataclass(frozen=True)
@@ -160,6 +162,7 @@ def _build_ga4_metric_display(
     period: dict[str, str],
 ) -> dict[str, Any]:
     metrics = ga4_summary.get("summary_metrics") or {}
+    daily_rows, daily_coverage = _daily_series_rows_and_coverage(ga4_summary, period)
     return {
         "schema_version": "ga4_metric_display.v1",
         "provider": "ga4",
@@ -167,6 +170,7 @@ def _build_ga4_metric_display(
         "client_slug": profile,
         "client_name": client_name,
         "report_period": _report_period(period),
+        "daily_series_coverage": daily_coverage,
         "metric_cards": [
             _metric_card("users", "Website Visitors", metrics.get("users"), "count"),
             _metric_card("sessions", "Visits", metrics.get("sessions"), "count"),
@@ -192,13 +196,13 @@ def _build_ga4_metric_display(
                         "key": "users",
                         "label": "Website Visitors",
                         "unit": "count",
-                        "points": _trend_points(ga4_summary.get("time_series") or [], "users"),
+                        "points": _trend_points(daily_rows, "users"),
                     },
                     {
                         "key": "sessions",
                         "label": "Visits",
                         "unit": "count",
-                        "points": _trend_points(ga4_summary.get("time_series") or [], "sessions"),
+                        "points": _trend_points(daily_rows, "sessions"),
                     },
                 ],
                 "availability": "available",
@@ -336,6 +340,7 @@ def _build_gsc_summary_display(
     period: dict[str, str],
 ) -> dict[str, Any]:
     metrics = gsc_summary.get("summary_metrics") or {}
+    daily_rows, daily_coverage = _daily_series_rows_and_coverage(gsc_summary, period)
     return {
         "schema_version": "gsc_summary_display.v1",
         "provider": "gsc",
@@ -343,6 +348,7 @@ def _build_gsc_summary_display(
         "client_slug": profile,
         "site_label": "spanishhead.com",
         "report_period": _report_period(period),
+        "daily_series_coverage": daily_coverage,
         "summary_metrics": {
             "clicks": _number_or_none(metrics.get("clicks")),
             "impressions": _number_or_none(metrics.get("impressions")),
@@ -357,7 +363,7 @@ def _build_gsc_summary_display(
                 "ctr": _number_or_none(row.get("ctr")),
                 "average_position": _number_or_none(row.get("average_position")),
             }
-            for row in (gsc_summary.get("time_series") or [])[:100]
+            for row in daily_rows
         ],
         "notes": ["Generated from sanitized local-real GSC summary output."],
     }
@@ -445,9 +451,92 @@ def _compact_metric(key: str, label: str, value: Any, unit: str) -> dict[str, An
 def _trend_points(rows: list[dict[str, Any]], metric: str) -> list[dict[str, Any]]:
     return [
         {"date": row.get("date"), "value": _number_or_none(row.get(metric))}
-        for row in rows[:100]
+        for row in rows
         if row.get("date")
     ]
+
+
+def _daily_series_rows_and_coverage(
+    payload: dict[str, Any],
+    period: dict[str, str],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    start = _parse_iso_date(period["start"], "report period start")
+    end = _parse_iso_date(period["end"], "report period end")
+    expected_dates = [
+        (start + timedelta(days=offset)).isoformat()
+        for offset in range((end - start).days + 1)
+    ]
+
+    source_present = "time_series" in payload
+    raw_rows = payload.get("time_series")
+    if raw_rows is None:
+        rows: list[dict[str, Any]] = []
+    elif not isinstance(raw_rows, list):
+        raise ValueError("time_series must be a list when provided")
+    else:
+        rows = []
+        dates: list[str] = []
+        for index, row in enumerate(raw_rows):
+            if not isinstance(row, dict):
+                raise ValueError(f"time_series[{index}] must be an object")
+            raw_date = row.get("date")
+            observed_date = _parse_iso_date(raw_date, f"time_series[{index}].date")
+            date_text = observed_date.isoformat()
+            if observed_date < start or observed_date > end:
+                raise ValueError(f"time_series[{index}].date must stay inside the report period")
+            dates.append(date_text)
+            rows.append(row)
+        if dates != sorted(dates):
+            raise ValueError("time_series dates must be in ascending order")
+        if len(dates) != len(set(dates)):
+            raise ValueError("time_series dates must be unique")
+
+    serialized_dates = [str(row["date"]) for row in rows]
+    expected_count = len(expected_dates)
+    actual_count = len(serialized_dates)
+    missing_count = expected_count - actual_count
+    if not source_present:
+        coverage_state = "unavailable"
+        gap_state = "not_applicable"
+        quality_notes = ["Source did not provide a daily observation series."]
+    elif actual_count == 0:
+        coverage_state = "empty"
+        gap_state = "not_applicable"
+        quality_notes = ["Source returned no daily observations for the requested period."]
+    elif serialized_dates == expected_dates:
+        coverage_state = "complete"
+        gap_state = "none"
+        quality_notes = []
+    else:
+        coverage_state = "partial"
+        gap_state = "gaps_present"
+        quality_notes = ["Daily observations do not cover every requested date."]
+
+    coverage = {
+        "schema_version": DAILY_SERIES_COVERAGE_VERSION,
+        "grain": "day",
+        "timezone": DAILY_SERIES_TIMEZONE,
+        "requested_period_start": start.isoformat(),
+        "requested_period_end": end.isoformat(),
+        "expected_observation_count": expected_count,
+        "actual_observation_count": actual_count,
+        "first_observation_date": serialized_dates[0] if serialized_dates else None,
+        "last_observation_date": serialized_dates[-1] if serialized_dates else None,
+        "coverage_state": coverage_state,
+        "gap_state": gap_state,
+        "missing_observation_count": missing_count,
+        "quality_notes": quality_notes,
+    }
+    return rows, coverage
+
+
+def _parse_iso_date(value: Any, label: str) -> date:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be an ISO date")
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"{label} must be an ISO date") from exc
 
 
 def _format_value(value: int | float | None, unit: str) -> str:
