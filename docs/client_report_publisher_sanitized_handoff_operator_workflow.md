@@ -87,6 +87,25 @@ A fully populated Phase 1 handoff can include:
 - `ga4_most_viewed_pages_display.v1.json`
 - `gsc_summary_display.v1.json`
 - `gsc_queries_display.v1.json`
+
+The six current GA4/GSC contracts use stable schema identifiers and canonical scopes:
+
+| Contract | Provider | Report type | Data scope |
+| --- | --- | --- | --- |
+| `ga4_metric_display.v1` | `ga4` | `metric_display` | `ga4_report_summary` |
+| `ga4_top_sources_display.v1` | `ga4` | `top_sources_display` | `source_medium` |
+| `ga4_top_landing_pages_display.v1` | `ga4` | `top_landing_pages_display` | `landing_page` |
+| `ga4_most_viewed_pages_display.v1` | `ga4` | `most_viewed_pages_display` | `page_popularity` |
+| `gsc_summary_display.v1` | `gsc` | `summary_display` | `search_summary` |
+| `gsc_queries_display.v1` | `gsc` | `queries_display` | `search_query_and_page` |
+
+Every newly written contract also declares `data_state`. Use `available` only when the
+contract contains renderable display data, `empty` when the source was evaluated but
+returned no renderable result, and `unavailable` when the source could not be produced.
+A missing file means the contract was not handed off. Do not manufacture an empty file,
+borrow rows from another scope, or relabel one of these states to make a section appear
+ready. Safe legacy v1 files that omit scope/state remain validator-compatible, but should
+be regenerated before new operator use.
 - `local_falcon_display.v1.json`, only when Local Falcon was approved, imported, and validated
 
 The manifest must list only files present in the folder and must use the matching schema versions.
@@ -126,6 +145,10 @@ Current useful metrics include the safe metrics already supported by the GA4 sna
 Rules:
 
 - Do not generate Top Sources from Top Traffic Channels.
+- Do not generate Top Landing Pages from page-title or page-popularity rows.
+- Do not generate Most Viewed Pages from landing-page-scoped rows.
+- Keep GSC query rows and page rows distinct even though both live in
+  `gsc_queries_display.v1`.
 - Do not generate Top Landing Pages from Most Viewed Pages.
 - Do not relabel broad page popularity rows as landing-page-scoped rows.
 - Do not invent missing data.

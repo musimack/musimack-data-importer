@@ -2,6 +2,8 @@
   "schema_version": "gsc_queries_display.v1",
   "provider": "gsc",
   "report_type": "queries_display",
+  "data_scope": "search_query_and_page",
+  "data_state": "available",
   "client_slug": "sample-client",
   "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
   "report_period": {

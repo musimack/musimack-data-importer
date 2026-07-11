@@ -257,6 +257,79 @@ def test_daily_coverage_count_and_timezone_contradictions_fail(tmp_path):
     assert any("timezone is invalid" in error for error in result.errors)
 
 
+def test_legacy_dataset_without_scope_or_state_remains_explicitly_compatible(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    payload_path = handoff_dir / "ga4_top_sources_display.v1.json"
+    payload = _load_json(payload_path)
+    payload.pop("data_scope")
+    payload.pop("data_state")
+    _write_json(payload_path, payload)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is True
+    assert any("without explicit data_scope" in warning for warning in result.warnings)
+    assert any("without explicit data_state" in warning for warning in result.warnings)
+
+
+def test_semantic_substitution_between_ga4_contracts_fails(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    sources_path = handoff_dir / "ga4_top_sources_display.v1.json"
+    sources = _load_json(sources_path)
+    sources["rows"][0]["path"] = "/not-a-source/"
+    _write_json(sources_path, sources)
+    landing_path = handoff_dir / "ga4_top_landing_pages_display.v1.json"
+    landing = _load_json(landing_path)
+    landing["rows"][0]["views"] = 100
+    _write_json(landing_path, landing)
+    popularity_path = handoff_dir / "ga4_most_viewed_pages_display.v1.json"
+    popularity = _load_json(popularity_path)
+    popularity["rows"][0].pop("views")
+    popularity["rows"][0]["sessions"] = 100
+    _write_json(popularity_path, popularity)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("non-source scoped fields" in error for error in result.errors)
+    assert any("non-landing-page scoped fields" in error for error in result.errors)
+    assert any("page-popularity path and views" in error for error in result.errors)
+
+
+def test_gsc_query_and_page_scopes_cannot_substitute_for_each_other(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    payload_path = handoff_dir / "gsc_queries_display.v1.json"
+    payload = _load_json(payload_path)
+    payload["query_rows"][0]["page"] = payload["query_rows"][0].pop("query")
+    payload["page_rows"][0]["query"] = payload["page_rows"][0].pop("page")
+    _write_json(payload_path, payload)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("requires query scope" in error for error in result.errors)
+    assert any("requires page scope" in error for error in result.errors)
+
+
+def test_empty_ranked_dataset_is_distinct_from_available_or_unavailable(tmp_path):
+    handoff_dir = _copy_fixture(tmp_path)
+    payload_path = handoff_dir / "gsc_queries_display.v1.json"
+    payload = _load_json(payload_path)
+    payload["query_rows"] = []
+    payload["page_rows"] = []
+    payload["data_state"] = "empty"
+    _write_json(payload_path, payload)
+
+    empty_result = validate_handoff_directory(handoff_dir)
+    assert empty_result.valid is True
+
+    payload["data_state"] = "available"
+    _write_json(payload_path, payload)
+    invalid_result = validate_handoff_directory(handoff_dir)
+    assert invalid_result.valid is False
+    assert any("available requires scoped rows" in error for error in invalid_result.errors)
+
+
 def test_cli_returns_success_on_fake_fixture():
     completed = subprocess.run(
         [

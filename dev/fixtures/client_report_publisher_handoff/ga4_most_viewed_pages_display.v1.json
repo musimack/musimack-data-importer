@@ -2,6 +2,8 @@
   "schema_version": "ga4_most_viewed_pages_display.v1",
   "provider": "ga4",
   "report_type": "most_viewed_pages_display",
+  "data_scope": "page_popularity",
+  "data_state": "available",
   "client_slug": "sample-client",
   "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
   "report_period": {

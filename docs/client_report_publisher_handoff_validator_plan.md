@@ -72,7 +72,15 @@ The current validator checks:
 - Output contains no raw payload fields.
 - Validation output itself is safe to print.
 
-Full per-contract schema validation remains deferred, including required metric vocabulary checks, row sorting rules, and provider-specific display semantics. The current validator is a safety gate and fixture/handoff integrity check, not a provider exporter or dashboard importer. Contract-specific data sourcing is enforced by the writer and writer tests before validation; do not use validator success as permission to relabel broad rows into a different contract.
+The validator now enforces the canonical provider, report type, data scope, and data state
+for the six current GA4/GSC display contracts. New files declare `data_scope` and
+`data_state`; structurally safe legacy v1 files that omit those fields remain compatible
+with warnings. Source rows cannot substitute for channels, landing-page rows cannot
+substitute for page-popularity rows, and GSC query rows cannot substitute for page rows.
+Ranked `available` output must contain renderable rows, while truthful `empty` and
+`unavailable` states must not claim ranked output. Full metric-vocabulary and provider-
+specific display validation beyond these stabilized boundaries remains deferred. The
+validator remains a safety gate, not a provider exporter or dashboard importer.
 
 ## Stabilized Daily-Series Contract
 

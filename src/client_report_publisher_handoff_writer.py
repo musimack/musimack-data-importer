@@ -6,6 +6,8 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
+
 
 HANDOFF_MANIFEST_VERSION = "client_report_publisher_handoff_manifest.v1"
 DEFAULT_OUTPUT_ROOT = Path("exports") / "local-real" / "client-report-publisher-handoff"
@@ -163,10 +165,13 @@ def _build_ga4_metric_display(
 ) -> dict[str, Any]:
     metrics = ga4_summary.get("summary_metrics") or {}
     daily_rows, daily_coverage = _daily_series_rows_and_coverage(ga4_summary, period)
+    contract = CANONICAL_DATASET_CONTRACTS["ga4_metric_display.v1"]
     return {
         "schema_version": "ga4_metric_display.v1",
         "provider": "ga4",
         "report_type": "metric_display",
+        "data_scope": contract.data_scope,
+        "data_state": "available" if metrics or daily_rows or ga4_summary.get("traffic_channels") else "empty",
         "client_slug": profile,
         "client_name": client_name,
         "report_period": _report_period(period),
@@ -240,10 +245,13 @@ def _build_ga4_most_viewed_pages(
     ga4_summary: dict[str, Any],
     period: dict[str, str],
 ) -> dict[str, Any]:
+    contract = CANONICAL_DATASET_CONTRACTS["ga4_most_viewed_pages_display.v1"]
     return {
         "schema_version": "ga4_most_viewed_pages_display.v1",
         "provider": "ga4",
         "report_type": "most_viewed_pages_display",
+        "data_scope": contract.data_scope,
+        "data_state": "available",
         "client_slug": profile,
         "report_period": _report_period(period),
         "rows": [
@@ -269,10 +277,13 @@ def _build_ga4_top_sources(
     source_rows: list[dict[str, Any]],
     period: dict[str, str],
 ) -> dict[str, Any]:
+    contract = CANONICAL_DATASET_CONTRACTS["ga4_top_sources_display.v1"]
     return {
         "schema_version": "ga4_top_sources_display.v1",
         "provider": "ga4",
         "report_type": "top_sources_display",
+        "data_scope": contract.data_scope,
+        "data_state": "available",
         "client_slug": profile,
         "report_period": _report_period(period),
         "rows": [
@@ -303,10 +314,13 @@ def _build_ga4_top_landing_pages(
     landing_page_rows: list[dict[str, Any]],
     period: dict[str, str],
 ) -> dict[str, Any]:
+    contract = CANONICAL_DATASET_CONTRACTS["ga4_top_landing_pages_display.v1"]
     return {
         "schema_version": "ga4_top_landing_pages_display.v1",
         "provider": "ga4",
         "report_type": "top_landing_pages_display",
+        "data_scope": contract.data_scope,
+        "data_state": "available",
         "client_slug": profile,
         "report_period": _report_period(period),
         "rows": [
@@ -341,12 +355,14 @@ def _build_gsc_summary_display(
 ) -> dict[str, Any]:
     metrics = gsc_summary.get("summary_metrics") or {}
     daily_rows, daily_coverage = _daily_series_rows_and_coverage(gsc_summary, period)
+    contract = CANONICAL_DATASET_CONTRACTS["gsc_summary_display.v1"]
     return {
         "schema_version": "gsc_summary_display.v1",
         "provider": "gsc",
         "report_type": "summary_display",
+        "data_scope": contract.data_scope,
+        "data_state": "available" if metrics or daily_rows else "empty",
         "client_slug": profile,
-        "site_label": "spanishhead.com",
         "report_period": _report_period(period),
         "daily_series_coverage": daily_coverage,
         "summary_metrics": {
@@ -374,10 +390,15 @@ def _build_gsc_queries_display(
     gsc_summary: dict[str, Any],
     period: dict[str, str],
 ) -> dict[str, Any]:
+    query_rows = gsc_summary.get("top_queries") or []
+    page_rows = gsc_summary.get("top_pages") or []
+    contract = CANONICAL_DATASET_CONTRACTS["gsc_queries_display.v1"]
     return {
         "schema_version": "gsc_queries_display.v1",
         "provider": "gsc",
         "report_type": "queries_display",
+        "data_scope": contract.data_scope,
+        "data_state": "available" if query_rows or page_rows else "empty",
         "client_slug": profile,
         "report_period": _report_period(period),
         "query_rows": [
@@ -389,7 +410,7 @@ def _build_gsc_queries_display(
                 "ctr": _number_or_none(row.get("ctr")),
                 "average_position": _number_or_none(row.get("average_position")),
             }
-            for index, row in enumerate((gsc_summary.get("top_queries") or [])[:20])
+            for index, row in enumerate(query_rows[:20])
         ],
         "page_rows": [
             {
@@ -400,7 +421,7 @@ def _build_gsc_queries_display(
                 "ctr": _number_or_none(row.get("ctr")),
                 "average_position": _number_or_none(row.get("average_position")),
             }
-            for index, row in enumerate((gsc_summary.get("top_pages") or [])[:20])
+            for index, row in enumerate(page_rows[:20])
         ],
         "notes": ["Generated from sanitized local-real GSC query and page rows."],
     }

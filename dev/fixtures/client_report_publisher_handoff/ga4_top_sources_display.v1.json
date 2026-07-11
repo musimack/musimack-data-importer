@@ -2,6 +2,8 @@
   "schema_version": "ga4_top_sources_display.v1",
   "provider": "ga4",
   "report_type": "top_sources_display",
+  "data_scope": "source_medium",
+  "data_state": "available",
   "client_slug": "sample-client",
   "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
   "report_period": {

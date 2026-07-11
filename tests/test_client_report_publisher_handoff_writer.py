@@ -165,6 +165,38 @@ def test_handoff_writer_preserves_complete_189_day_series_and_coverage(tmp_path)
     assert validate_handoff_directory(tmp_path / "handoff").valid is True
 
 
+def test_writer_emits_only_canonical_dataset_metadata(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    ga4 = _ga4_summary()
+    ga4["top_sources"] = [{"label": "example / organic", "sessions": 5, "users": 4}]
+    ga4["top_landing_pages"] = [{"path": "/", "label": "Home", "sessions": 5}]
+    _write_json(source / "ga4-summary.json", ga4)
+    _write_json(source / "ga4-snapshot.json", _ga4_snapshot())
+    _write_json(source / "gsc-summary.json", _gsc_summary())
+
+    write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    expected = {
+        "ga4_metric_display.v1.json": ("ga4_report_summary", "available"),
+        "ga4_top_sources_display.v1.json": ("source_medium", "available"),
+        "ga4_top_landing_pages_display.v1.json": ("landing_page", "available"),
+        "ga4_most_viewed_pages_display.v1.json": ("page_popularity", "available"),
+        "gsc_summary_display.v1.json": ("search_summary", "available"),
+        "gsc_queries_display.v1.json": ("search_query_and_page", "available"),
+    }
+    for filename, (scope, state) in expected.items():
+        payload = json.loads((tmp_path / "handoff" / filename).read_text())
+        assert payload["data_scope"] == scope
+        assert payload["data_state"] == state
+        assert "site_label" not in payload
+
+
 def test_handoff_writer_marks_partial_and_empty_daily_coverage(tmp_path):
     source = tmp_path / "source"
     source.mkdir()

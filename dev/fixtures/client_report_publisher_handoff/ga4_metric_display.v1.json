@@ -2,6 +2,8 @@
   "schema_version": "ga4_metric_display.v1",
   "provider": "ga4",
   "report_type": "metric_display",
+  "data_scope": "ga4_report_summary",
+  "data_state": "available",
   "client_slug": "sample-client",
   "fixture_notice": "Fake sample fixture for planning and validation tests only. Not real client data.",
   "report_period": {
@@ -103,6 +105,7 @@
       "availability": "available"
     }
   ],
+  "breakdowns": [],
   "notes": [
     "Sample client traffic increased modestly in this fake reporting period."
   ]

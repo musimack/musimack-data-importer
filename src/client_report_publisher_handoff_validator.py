@@ -8,15 +8,12 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
+
 
 RECOGNIZED_CONTRACTS = {
     "client_report_publisher_handoff_manifest.v1",
-    "ga4_metric_display.v1",
-    "ga4_most_viewed_pages_display.v1",
-    "ga4_top_landing_pages_display.v1",
-    "ga4_top_sources_display.v1",
-    "gsc_queries_display.v1",
-    "gsc_summary_display.v1",
+    *CANONICAL_DATASET_CONTRACTS,
     "local_falcon_display.v1",
 }
 
@@ -179,6 +176,14 @@ def validate_handoff_directory(
         if schema_version:
             referenced_contracts.add(schema_version)
         _scan_payload(payload, safe_rel_path, errors, max_list_items=max_list_items)
+        if schema_version in CANONICAL_DATASET_CONTRACTS:
+            _validate_canonical_dataset_contract(
+                payload,
+                schema_version,
+                safe_rel_path,
+                errors,
+                warnings,
+            )
         if schema_version in DAILY_SERIES_CONTRACTS:
             _validate_daily_series_contract(
                 payload,
@@ -314,6 +319,117 @@ def _is_daily_series_path(path: tuple[str, ...]) -> bool:
         and path[3].isdigit()
         and path[4] == "points"
     )
+
+
+def _validate_canonical_dataset_contract(
+    payload: dict[str, Any],
+    schema_version: str,
+    label: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    contract = CANONICAL_DATASET_CONTRACTS[schema_version]
+    if payload.get("provider") != contract.provider:
+        errors.append(f"{label}.provider does not match canonical dataset contract")
+    if payload.get("report_type") != contract.report_type:
+        errors.append(f"{label}.report_type does not match canonical dataset contract")
+
+    data_scope = payload.get("data_scope")
+    if data_scope is None:
+        warnings.append(f"{label} uses legacy dataset metadata without explicit data_scope")
+    elif data_scope != contract.data_scope:
+        errors.append(f"{label}.data_scope does not match canonical dataset contract")
+
+    data_state = payload.get("data_state")
+    if data_state is None:
+        warnings.append(f"{label} uses legacy dataset metadata without explicit data_state")
+    elif data_state not in {"available", "empty"}:
+        errors.append(f"{label}.data_state must be available or empty")
+
+    if schema_version == "ga4_metric_display.v1":
+        _require_list_fields(payload, label, ("metric_cards", "trend_charts", "breakdowns"), errors)
+    elif schema_version == "gsc_summary_display.v1":
+        if not isinstance(payload.get("summary_metrics"), dict):
+            errors.append(f"{label}.summary_metrics must be an object")
+        _require_list_fields(payload, label, ("trend_points",), errors)
+    elif schema_version == "gsc_queries_display.v1":
+        _require_list_fields(payload, label, ("query_rows", "page_rows"), errors)
+        _validate_scoped_rows(payload.get("query_rows"), label, "query", "page", errors)
+        _validate_scoped_rows(payload.get("page_rows"), label, "page", "query", errors)
+    elif schema_version == "ga4_top_sources_display.v1":
+        _require_list_fields(payload, label, ("rows",), errors)
+        _validate_source_rows(payload.get("rows"), label, errors)
+    elif schema_version == "ga4_top_landing_pages_display.v1":
+        _require_list_fields(payload, label, ("rows",), errors)
+        _validate_landing_page_rows(payload.get("rows"), label, errors)
+    elif schema_version == "ga4_most_viewed_pages_display.v1":
+        _require_list_fields(payload, label, ("rows",), errors)
+        _validate_page_popularity_rows(payload.get("rows"), label, errors)
+
+    row_count = sum(
+        len(payload.get(field_name, []))
+        for field_name in contract.ranked_row_fields
+        if isinstance(payload.get(field_name), list)
+    )
+    if data_state == "empty" and row_count > 0:
+        errors.append(f"{label}.data_state empty contradicts ranked rows")
+    if data_state == "available" and contract.ranked_row_fields and row_count == 0:
+        errors.append(f"{label}.data_state available requires scoped rows")
+
+
+def _require_list_fields(
+    payload: dict[str, Any], label: str, field_names: tuple[str, ...], errors: list[str]
+) -> None:
+    for field_name in field_names:
+        if not isinstance(payload.get(field_name), list):
+            errors.append(f"{label}.{field_name} must be a list")
+
+
+def _validate_scoped_rows(
+    rows: Any, label: str, required_key: str, rejected_key: str, errors: list[str]
+) -> None:
+    if not isinstance(rows, list):
+        return
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or not _is_non_empty_string(row.get(required_key)):
+            errors.append(f"{label}.{required_key}_rows[{index}] requires {required_key} scope")
+        elif rejected_key in row:
+            errors.append(f"{label}.{required_key}_rows[{index}] contains mismatched {rejected_key} scope")
+
+
+def _validate_source_rows(rows: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(rows, list):
+        return
+    forbidden_scope_keys = {"path", "landing_page", "channel", "channel_group"}
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or not _is_non_empty_string(row.get("label")):
+            errors.append(f"{label}.rows[{index}] requires a source/source-medium label")
+        elif forbidden_scope_keys.intersection(row):
+            errors.append(f"{label}.rows[{index}] contains non-source scoped fields")
+
+
+def _validate_landing_page_rows(rows: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(rows, list):
+        return
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or not _is_non_empty_string(row.get("path")):
+            errors.append(f"{label}.rows[{index}] requires a landing-page path")
+        elif any(key in row for key in ("source", "source_medium", "channel", "views")):
+            errors.append(f"{label}.rows[{index}] contains non-landing-page scoped fields")
+
+
+def _validate_page_popularity_rows(rows: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(rows, list):
+        return
+    for index, row in enumerate(rows):
+        if (
+            not isinstance(row, dict)
+            or not _is_non_empty_string(row.get("path"))
+            or not isinstance(row.get("views"), (int, float))
+        ):
+            errors.append(f"{label}.rows[{index}] requires page-popularity path and views")
+        elif any(key in row for key in ("source", "source_medium", "landing_page")):
+            errors.append(f"{label}.rows[{index}] contains mismatched scoped fields")
 
 
 def _validate_daily_series_contract(
