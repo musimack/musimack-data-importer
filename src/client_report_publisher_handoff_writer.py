@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from src.client_report_presentation_ranges import build_client_report_presentation_ranges
 from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
 
 
@@ -50,11 +51,14 @@ def write_client_report_publisher_handoff(
 
     generated: list[tuple[Path, dict[str, Any], str, str, str]] = []
     skipped: list[str] = []
+    generated_datasets: dict[str, dict[str, Any]] = {}
 
+    ga4_metric_display = _build_ga4_metric_display(profile, client_name, ga4_summary, period)
+    generated_datasets["ga4_metric_display.v1"] = ga4_metric_display
     generated.append(
         (
             output / "ga4_metric_display.v1.json",
-            _build_ga4_metric_display(profile, client_name, ga4_summary, period),
+            ga4_metric_display,
             "ga4",
             "metric_display",
             "ga4_metric_display.v1",
@@ -63,10 +67,12 @@ def write_client_report_publisher_handoff(
 
     page_rows = list(ga4_summary.get("top_pages") or [])
     if page_rows:
+        most_viewed_pages = _build_ga4_most_viewed_pages(profile, ga4_summary, period)
+        generated_datasets["ga4_most_viewed_pages_display.v1"] = most_viewed_pages
         generated.append(
             (
                 output / "ga4_most_viewed_pages_display.v1.json",
-                _build_ga4_most_viewed_pages(profile, ga4_summary, period),
+                most_viewed_pages,
                 "ga4",
                 "most_viewed_pages_display",
                 "ga4_most_viewed_pages_display.v1",
@@ -77,10 +83,12 @@ def write_client_report_publisher_handoff(
 
     source_rows = _top_sources_from_summary_or_snapshot(ga4_summary, ga4_snapshot)
     if source_rows:
+        top_sources = _build_ga4_top_sources(profile, source_rows, period)
+        generated_datasets["ga4_top_sources_display.v1"] = top_sources
         generated.append(
             (
                 output / "ga4_top_sources_display.v1.json",
-                _build_ga4_top_sources(profile, source_rows, period),
+                top_sources,
                 "ga4",
                 "top_sources_display",
                 "ga4_top_sources_display.v1",
@@ -91,10 +99,12 @@ def write_client_report_publisher_handoff(
 
     landing_page_rows = _top_landing_pages_from_summary_or_snapshot(ga4_summary, ga4_snapshot)
     if landing_page_rows:
+        top_landing_pages = _build_ga4_top_landing_pages(profile, landing_page_rows, period)
+        generated_datasets["ga4_top_landing_pages_display.v1"] = top_landing_pages
         generated.append(
             (
                 output / "ga4_top_landing_pages_display.v1.json",
-                _build_ga4_top_landing_pages(profile, landing_page_rows, period),
+                top_landing_pages,
                 "ga4",
                 "top_landing_pages_display",
                 "ga4_top_landing_pages_display.v1",
@@ -103,22 +113,43 @@ def write_client_report_publisher_handoff(
     else:
         skipped.append("ga4_top_landing_pages_display.v1: landing-page scoped rows unavailable")
 
+    gsc_summary_display = _build_gsc_summary_display(profile, gsc_summary, period)
+    generated_datasets["gsc_summary_display.v1"] = gsc_summary_display
     generated.append(
         (
             output / "gsc_summary_display.v1.json",
-            _build_gsc_summary_display(profile, gsc_summary, period),
+            gsc_summary_display,
             "gsc",
             "summary_display",
             "gsc_summary_display.v1",
         )
     )
+    gsc_queries_display = _build_gsc_queries_display(profile, gsc_summary, period)
+    generated_datasets["gsc_queries_display.v1"] = gsc_queries_display
+    exact_ranges_path = source / "presentation-exact-ranges.v1.json"
+    if exact_ranges_path.exists():
+        generated_datasets["presentation_exact_ranges.v1"] = _load_json_object(exact_ranges_path)
     generated.append(
         (
             output / "gsc_queries_display.v1.json",
-            _build_gsc_queries_display(profile, gsc_summary, period),
+            gsc_queries_display,
             "gsc",
             "queries_display",
             "gsc_queries_display.v1",
+        )
+    )
+    presentation_ranges = build_client_report_presentation_ranges(
+        client_slug=profile,
+        period=period,
+        datasets=generated_datasets,
+    )
+    generated.append(
+        (
+            output / "client_report_presentation_ranges.v2.json",
+            presentation_ranges,
+            "presentation",
+            "range_dataset",
+            "client_report_presentation_ranges.v2",
         )
     )
 

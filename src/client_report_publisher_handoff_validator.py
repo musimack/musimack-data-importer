@@ -8,12 +8,22 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
+from src.client_report_presentation_ranges import (
+    CANONICAL_RANGE_KEYS,
+    CANONICAL_SECTION_KEYS,
+    PRESENTATION_RANGES_SCHEMA_VERSION,
+    validate_presentation_range_package,
+)
+from src.client_report_publisher_contracts import (
+    CANONICAL_DATASET_CONTRACTS,
+    CANONICAL_SECTION_SOURCE_MATRIX,
+)
 
 
 RECOGNIZED_CONTRACTS = {
     "client_report_publisher_handoff_manifest.v1",
     *CANONICAL_DATASET_CONTRACTS,
+    PRESENTATION_RANGES_SCHEMA_VERSION,
     "local_falcon_display.v1",
 }
 
@@ -194,6 +204,14 @@ def validate_handoff_directory(
                 errors,
                 warnings,
             )
+        if schema_version == PRESENTATION_RANGES_SCHEMA_VERSION:
+            _validate_presentation_range_contract(
+                payload,
+                safe_rel_path,
+                manifest.get("period_start"),
+                manifest.get("period_end"),
+                errors,
+            )
 
         for key in ("provider", "report_type"):
             if not isinstance(payload.get(key), str) or not payload.get(key):
@@ -292,7 +310,13 @@ def _scan_payload(
             _scan_payload(value, label, errors, max_list_items=max_list_items, path=(*path, str(key)))
     elif isinstance(payload, list):
         path_label = _path_label(label, path)
-        item_limit = MAX_DAILY_SERIES_ITEMS if _is_daily_series_path(path) else max_list_items
+        item_limit = (
+            MAX_DAILY_SERIES_ITEMS
+            if _is_daily_series_path(path)
+            else 200
+            if _is_presentation_range_path(path)
+            else max_list_items
+        )
         if len(payload) > item_limit:
             errors.append(f"list exceeds maximum item count at {path_label}")
         for index, value in enumerate(payload):
@@ -311,6 +335,8 @@ def _scan_payload(
 def _is_daily_series_path(path: tuple[str, ...]) -> bool:
     if path == ("trend_points",):
         return True
+    if len(path) >= 1 and path[-1] == "points":
+        return True
     return (
         len(path) == 5
         and path[0] == "trend_charts"
@@ -319,6 +345,14 @@ def _is_daily_series_path(path: tuple[str, ...]) -> bool:
         and path[3].isdigit()
         and path[4] == "points"
     )
+
+
+def _is_presentation_range_path(path: tuple[str, ...]) -> bool:
+    return path in {
+        ("range_manifest",),
+        ("section_capabilities",),
+        ("section_buckets",),
+    }
 
 
 def _validate_canonical_dataset_contract(
@@ -375,6 +409,53 @@ def _validate_canonical_dataset_contract(
         errors.append(f"{label}.data_state empty contradicts ranked rows")
     if data_state == "available" and contract.ranked_row_fields and row_count == 0:
         errors.append(f"{label}.data_state available requires scoped rows")
+
+
+def _validate_presentation_range_contract(
+    payload: dict[str, Any],
+    label: str,
+    period_start_raw: Any,
+    period_end_raw: Any,
+    errors: list[str],
+) -> None:
+    try:
+        validate_presentation_range_package(payload)
+    except ValueError as exc:
+        errors.append(f"{label}: {exc}")
+        return
+    report_period = payload.get("report_period") or {}
+    if report_period.get("start_date") != period_start_raw:
+        errors.append(f"{label}.report_period.start_date does not match manifest")
+    if report_period.get("end_date") != period_end_raw:
+        errors.append(f"{label}.report_period.end_date does not match manifest")
+
+    manifest_keys = {
+        item.get("range_key")
+        for item in payload.get("range_manifest") or []
+        if isinstance(item, dict)
+    }
+    for range_key in CANONICAL_RANGE_KEYS:
+        if range_key not in manifest_keys:
+            errors.append(f"{label}.range_manifest is missing {range_key}")
+
+    section_keys = {
+        item.get("section_key")
+        for item in payload.get("section_capabilities") or []
+        if isinstance(item, dict)
+    }
+    for section_key in CANONICAL_SECTION_KEYS:
+        if section_key not in section_keys:
+            errors.append(f"{label}.section_capabilities is missing {section_key}")
+
+    for index, bucket in enumerate(payload.get("section_buckets") or []):
+        if not isinstance(bucket, dict):
+            continue
+        source_contract = bucket.get("source_contract")
+        section_key = bucket.get("section_key")
+        if section_key in CANONICAL_SECTION_KEYS:
+            expected_contract = CANONICAL_SECTION_SOURCE_MATRIX[section_key][0]
+            if source_contract != expected_contract:
+                errors.append(f"{label}.section_buckets[{index}].source_contract does not match section")
 
 
 def _require_list_fields(

@@ -6,6 +6,7 @@ import pytest
 
 from src.client_report_publisher_handoff_validator import validate_handoff_directory
 from src.client_report_publisher_handoff_writer import write_client_report_publisher_handoff
+from src.client_report_presentation_ranges import resolve_range_key
 
 
 def test_handoff_writer_generates_valid_supported_contracts(tmp_path):
@@ -24,6 +25,7 @@ def test_handoff_writer_generates_valid_supported_contracts(tmp_path):
 
     generated_names = sorted(path.name for path in result.files)
     assert generated_names == [
+        "client_report_presentation_ranges.v2.json",
         "ga4_metric_display.v1.json",
         "ga4_most_viewed_pages_display.v1.json",
         "gsc_queries_display.v1.json",
@@ -35,6 +37,75 @@ def test_handoff_writer_generates_valid_supported_contracts(tmp_path):
 
     validation = validate_handoff_directory(tmp_path / "handoff")
     assert validation.valid is True
+
+
+def test_handoff_writer_generates_production_presentation_ranges(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    ga4_summary = _ga4_summary_with_scoped_rows()
+    ga4_snapshot = _ga4_snapshot_with_scoped_rows()
+    gsc_summary = _gsc_summary()
+    period = {"start": "2026-01-01", "end": "2026-07-08"}
+    daily_rows = _daily_rows(period["start"], 189)
+    ga4_summary["reporting_period"] = period
+    ga4_summary["time_series"] = daily_rows
+    ga4_snapshot["date_range"] = period
+    ga4_snapshot["time_series"] = daily_rows
+    gsc_summary["reporting_period"] = period
+    gsc_summary["time_series"] = daily_rows
+    _write_json(source / "ga4-summary.json", ga4_summary)
+    _write_json(source / "ga4-snapshot.json", ga4_snapshot)
+    _write_json(source / "gsc-summary.json", gsc_summary)
+
+    write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    ranges = json.loads((tmp_path / "handoff" / "client_report_presentation_ranges.v2.json").read_text())
+    assert ranges["schema_version"] == "client_report_presentation_ranges.v2"
+    assert ranges["reference_date"] == "2026-07-08"
+    assert ranges["anchor_rule"] == "report_period_end"
+    assert len(ranges["range_manifest"]) == 9
+    assert len(ranges["section_capabilities"]) == 10
+    trend_last_30 = next(
+        bucket
+        for bucket in ranges["section_buckets"]
+        if bucket["section_key"] == "ga4_website_traffic_trends"
+        and bucket["range_key"] == "last_30_days"
+    )
+    assert trend_last_30["data_state"] == "available"
+    assert trend_last_30["aggregation_status"] == "existing_daily_observation_slice"
+    assert trend_last_30["display_data"]["trends"][0]["points"][0]["date"] == "2026-06-09"
+    assert trend_last_30["display_data"]["trends"][0]["points"][-1]["date"] == "2026-07-08"
+    assert len(trend_last_30["display_data"]["trends"][0]["points"]) == 30
+    top_sources_last_30 = next(
+        bucket
+        for bucket in ranges["section_buckets"]
+        if bucket["section_key"] == "ga4_top_sources" and bucket["range_key"] == "last_30_days"
+    )
+    assert top_sources_last_30["data_state"] == "unavailable"
+    assert top_sources_last_30["display_data"] is None
+    assert "full-period data" in top_sources_last_30["unsupported_reason"]
+    assert validate_handoff_directory(tmp_path / "handoff").valid is True
+
+
+def test_presentation_range_resolution_uses_report_end_anchor():
+    reference = date.fromisoformat("2026-07-08")
+    assert resolve_range_key("last_3_days", reference).start_date.isoformat() == "2026-07-06"
+    assert resolve_range_key("last_3_days", reference).end_date.isoformat() == "2026-07-08"
+    assert resolve_range_key("this_month", reference).start_date.isoformat() == "2026-07-01"
+    assert resolve_range_key("last_month", reference).start_date.isoformat() == "2026-06-01"
+    assert resolve_range_key("last_month", reference).end_date.isoformat() == "2026-06-30"
+
+
+def test_presentation_range_resolution_handles_leap_year_month_boundary():
+    reference = date.fromisoformat("2024-03-31")
+    assert resolve_range_key("last_month", reference).start_date.isoformat() == "2024-02-01"
+    assert resolve_range_key("last_month", reference).end_date.isoformat() == "2024-02-29"
+    assert resolve_range_key("last_6_months", reference).start_date.isoformat() == "2023-10-01"
 
 
 def test_handoff_writer_preserves_channel_source_distinction(tmp_path):

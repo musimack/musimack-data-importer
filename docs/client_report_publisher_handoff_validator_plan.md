@@ -178,3 +178,29 @@ The current tests cover:
 - the CLI succeeds on the fake fixture folder
 
 Full schema validation, exporter commands, real local output validation, and dashboard import behavior should be added only after the fake contract and validator expectations are reviewed.
+
+## Production Presentation Range Package
+
+R1 production date-range generation adds optional `client_report_presentation_ranges.v2.json` to generated Client Report Publisher handoff folders. The package is sanitized, report-scoped, and does not replace the canonical report-period display files.
+
+Contract rules:
+
+- Schema version: `client_report_presentation_ranges.v2`.
+- Provider/report type: `presentation` / `range_dataset`.
+- Anchor rule: `reference_date` equals the saved report `period_end`.
+- Timezone: package-level IANA-style timezone, currently `America/Los_Angeles` for generated fake/local handoffs.
+- Date behavior: requested and effective start/end dates are inclusive.
+- Canonical range keys: `last_3_days`, `last_7_days`, `last_14_days`, `last_30_days`, `last_90_days`, `last_6_months`, `last_12_months`, `this_month`, `last_month`, plus bounded `custom*` keys when explicitly supplied.
+- Identity: section key, range key, requested start, requested end, source contract, and package dataset version. Volatile timestamps are not identity.
+
+The validator checks the package period against the manifest, requires the standard range manifest and all ten canonical section capabilities, rejects unknown section keys, rejects unknown range keys, rejects duplicate bucket identity, rejects mismatched section/source contracts, and rejects unavailable buckets that carry display data.
+
+Availability semantics:
+
+- `ga4_website_traffic_trends` may generate ready buckets by slicing existing dated `users` and `sessions` observations. Source point values are preserved unchanged; no interpolation, padding, smoothing, or aggregation is performed.
+- Summary metrics and ranked tables require exact-range sanitized source data. The writer must not reuse full-period metric cards, rankings, query rows, page rows, source rows, landing-page rows, or viewed-page rows for shorter ranges.
+- Missing exact-range source data produces `data_state: unavailable` with an explanatory reason.
+- Valid zero-row exact-range source data may produce `data_state: empty`; this is distinct from unavailable.
+- Partial coverage may be declared only when source coverage is explicitly partial. It must not be presented as complete.
+
+The package is designed to feed `client-dashboard` Presentation Mode range selection while keeping Published Preview/PDF output unchanged.
