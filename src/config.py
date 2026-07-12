@@ -81,7 +81,6 @@ def env_value(name: str, required: bool = True) -> str | None:
 
 
 def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
-    load_local_operator_config()
     profile_ga4 = {}
     if profile_slug:
         profile_ga4 = load_profile_local_config(
@@ -89,9 +88,25 @@ def load_ga4_config(profile_slug: str | None = None) -> Ga4Config:
             config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR,
             env=os.environ,
         ).provider("ga4")
-    property_id_env = str(profile_ga4.get("property_id_env") or "MUSIMACK_GA4_PROPERTY_ID")
-    oauth_client_env = str(profile_ga4.get("oauth_client_secrets_env") or "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS")
-    oauth_token_env = str(profile_ga4.get("oauth_token_file_env") or "MUSIMACK_GA4_OAUTH_TOKEN_FILE")
+    load_local_operator_config()
+    if profile_slug:
+        env_loaded_profile_ga4 = load_profile_local_config(
+            profile_slug,
+            config_dir=DEFAULT_LOCAL_PROFILE_CONFIG_DIR,
+            env=os.environ,
+        ).provider("ga4")
+        if not profile_ga4.get("credentials_configured"):
+            profile_ga4 = env_loaded_profile_ga4
+    property_id_env = str(
+        profile_ga4.get("property_id_env") or ("" if profile_slug else "MUSIMACK_GA4_PROPERTY_ID")
+    )
+    oauth_client_env = str(
+        profile_ga4.get("oauth_client_secrets_env")
+        or ("" if profile_slug else "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS")
+    )
+    oauth_token_env = str(
+        profile_ga4.get("oauth_token_file_env") or ("" if profile_slug else "MUSIMACK_GA4_OAUTH_TOKEN_FILE")
+    )
 
     property_id = _env_or_profile_value(
         property_id_env, profile_ga4.get("_resolved_property_id"), required=True

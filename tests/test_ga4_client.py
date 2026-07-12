@@ -2,6 +2,9 @@ from datetime import date
 
 from src.config import DateRange
 from src.ga4_client import (
+    GA4_EXACT_RANGE_SUMMARY_METRICS,
+    GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS,
+    build_exact_range_summary_request,
     build_channel_breakdown_request,
     build_landing_pages_request,
     build_source_medium_request,
@@ -37,6 +40,30 @@ def test_traffic_overview_request_is_minimal_date_trend():
         {"name": "averageSessionDuration"},
         {"name": "eventCount"},
     ]
+
+
+def test_exact_range_summary_request_is_dimensionless_summary_row():
+    request = build_exact_range_summary_request(DateRange(date(2026, 7, 2), date(2026, 7, 8)))
+
+    assert "dimensions" not in request
+    assert request["metrics"] == [{"name": name} for name in GA4_EXACT_RANGE_SUMMARY_METRICS]
+    assert {"name": "activeUsers"} in request["metrics"]
+    assert {"name": "newUsers"} in request["metrics"]
+    assert {"name": "engagedSessions"} in request["metrics"]
+    assert {"name": "averageEngagementTime"} in request["metrics"]
+    assert {"name": "keyEvents"} in request["metrics"]
+    assert request["dateRanges"] == [{"startDate": "2026-07-02", "endDate": "2026-07-08"}]
+    assert request["limit"] == 1
+
+
+def test_exact_range_summary_request_can_use_required_metric_fallback():
+    request = build_exact_range_summary_request(
+        DateRange(date(2026, 7, 2), date(2026, 7, 8)),
+        metric_names=GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS,
+    )
+
+    assert request["metrics"] == [{"name": name} for name in GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS]
+    assert "dimensions" not in request
 
 
 def test_channel_breakdown_request_uses_safe_channel_dimensions():

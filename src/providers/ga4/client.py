@@ -14,6 +14,25 @@ from ...config import DateRange, Ga4Config
 
 GA4_DATA_API_SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
 GA4_RUN_REPORT_URL = "https://analyticsdata.googleapis.com/v1beta/{property_resource}:runReport"
+GA4_EXACT_RANGE_SUMMARY_METRICS = (
+    "activeUsers",
+    "newUsers",
+    "sessions",
+    "screenPageViews",
+    "engagedSessions",
+    "engagementRate",
+    "averageSessionDuration",
+    "averageEngagementTime",
+    "eventCount",
+    "keyEvents",
+    "conversions",
+)
+GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS = (
+    "activeUsers",
+    "sessions",
+    "screenPageViews",
+    "engagementRate",
+)
 
 
 class Ga4ClientError(RuntimeError):
@@ -60,6 +79,14 @@ class Ga4DataClient:
             "landing_pages": landing_pages,
             "warnings": warnings,
         }
+
+    def run_exact_range_summary(
+        self,
+        date_range: DateRange,
+        *,
+        metric_names: tuple[str, ...] = GA4_EXACT_RANGE_SUMMARY_METRICS,
+    ) -> dict[str, Any]:
+        return self._run_report(build_exact_range_summary_request(date_range, metric_names=metric_names))
 
     def _run_report(self, body: dict[str, Any]) -> dict[str, Any]:
         credentials = self._credentials()
@@ -214,6 +241,19 @@ def build_traffic_overview_request(date_range: DateRange) -> dict[str, Any]:
             {"name": "eventCount"},
         ],
         "limit": 10000,
+        "keepEmptyRows": False,
+    }
+
+
+def build_exact_range_summary_request(
+    date_range: DateRange,
+    *,
+    metric_names: tuple[str, ...] = GA4_EXACT_RANGE_SUMMARY_METRICS,
+) -> dict[str, Any]:
+    return {
+        "dateRanges": [date_range.as_ga4()],
+        "metrics": [{"name": name} for name in metric_names],
+        "limit": 1,
         "keepEmptyRows": False,
     }
 

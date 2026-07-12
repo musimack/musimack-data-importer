@@ -9,6 +9,11 @@ GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION = "ga4_metric_display_exact_ranges.v1"
 GA4_EXACT_RANGE_SUMMARY_REPORT_TYPE = "metric_display_exact_ranges"
 GA4_EXACT_RANGE_SUMMARY_DATA_SCOPE = "ga4_exact_range_summary"
 GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSION = "ga4_summary_exact_ranges.synthetic.v1"
+GA4_EXACT_RANGE_SUMMARY_PROVIDER_CALCULATION_VERSION = "ga4_summary_exact_ranges.provider.v1"
+GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSIONS = {
+    GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSION,
+    GA4_EXACT_RANGE_SUMMARY_PROVIDER_CALCULATION_VERSION,
+}
 
 TOP_METRICS_SECTION = "ga4_top_metrics"
 USER_ENGAGEMENT_SECTION = "ga4_user_engagement"
@@ -168,7 +173,7 @@ def validate_ga4_exact_range_summary_contract(payload: dict[str, Any]) -> None:
         raise ValueError("exact-range GA4 summary data_scope is invalid")
     if payload.get("dataset_version") != GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION:
         raise ValueError("exact-range GA4 summary dataset_version is invalid")
-    if payload.get("calculation_version") != GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSION:
+    if payload.get("calculation_version") not in GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSIONS:
         raise ValueError("exact-range GA4 summary calculation_version is invalid")
 
     period = payload.get("report_period")
@@ -280,7 +285,7 @@ def _validate_range_entry(
     seen.add(identity)
     if item.get("inclusive_dates") is not True:
         raise ValueError(f"exact-range GA4 summary ranges[{index}].inclusive_dates must be true")
-    if item.get("calculation_version") != GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSION:
+    if item.get("calculation_version") not in GA4_EXACT_RANGE_SUMMARY_CALCULATION_VERSIONS:
         raise ValueError(f"exact-range GA4 summary ranges[{index}].calculation_version is invalid")
 
     data_state = item.get("data_state")
