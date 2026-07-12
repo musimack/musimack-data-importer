@@ -375,7 +375,7 @@ def test_presentation_range_exact_summary_references_must_resolve(tmp_path):
     result = validate_handoff_directory(handoff_dir)
 
     assert result.valid is False
-    assert any("references missing GA4 exact-range summary source" in error for error in result.errors)
+    assert any("references missing GA4 exact-range source" in error for error in result.errors)
 
     manifest["files"].append(
         {

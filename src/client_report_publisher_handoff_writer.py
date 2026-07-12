@@ -11,6 +11,11 @@ from src.client_report_ga4_exact_ranges import (
     GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
     validate_ga4_exact_range_summary_contract,
 )
+from src.client_report_ga4_ranked_exact_ranges import (
+    RANKED_EXACT_RANGE_SOURCE_FILES,
+    contract_for_ranked_exact_schema,
+    validate_ga4_ranked_exact_range_contract,
+)
 from src.client_report_presentation_ranges import build_client_report_presentation_ranges
 from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
 
@@ -143,6 +148,25 @@ def write_client_report_publisher_handoff(
                 "ga4",
                 GA4_EXACT_RANGE_SUMMARY_REPORT_TYPE,
                 GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+            )
+        )
+    for schema_version, file_name in RANKED_EXACT_RANGE_SOURCE_FILES.items():
+        ranked_exact_ranges_path = source / file_name
+        if not ranked_exact_ranges_path.exists():
+            continue
+        ranked_exact_ranges = _load_json_object(ranked_exact_ranges_path)
+        validate_ga4_ranked_exact_range_contract(ranked_exact_ranges)
+        contract = contract_for_ranked_exact_schema(schema_version)
+        if contract is None:
+            raise ValueError(f"unsupported ranked exact-range source: {schema_version}")
+        generated_datasets[schema_version] = ranked_exact_ranges
+        generated.append(
+            (
+                output / file_name,
+                ranked_exact_ranges,
+                "ga4",
+                contract.report_type,
+                schema_version,
             )
         )
     exact_ranges_path = source / "presentation-exact-ranges.v1.json"

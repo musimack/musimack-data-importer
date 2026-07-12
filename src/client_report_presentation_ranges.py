@@ -12,6 +12,12 @@ from src.client_report_ga4_exact_ranges import (
     exact_range_entry_for,
     validate_ga4_exact_range_summary_contract,
 )
+from src.client_report_ga4_ranked_exact_ranges import (
+    RANKED_EXACT_RANGE_SOURCE_BY_SECTION,
+    display_data_for_ranked_section,
+    exact_ranked_range_entry_for,
+    validate_ga4_ranked_exact_range_contract,
+)
 from src.client_report_publisher_contracts import CANONICAL_SECTION_SOURCE_MATRIX
 
 
@@ -392,6 +398,30 @@ def _exact_range_bucket_from_source(
                     display_data["_exact_source"] = {
                         "source_contract": GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
                         "dataset_version": ga4_exact_ranges.get("dataset_version"),
+                        "range_key": entry.get("range_key"),
+                        "requested_start_date": entry.get("requested_start_date"),
+                        "requested_end_date": entry.get("requested_end_date"),
+                        "source_identity": entry.get("source_identity"),
+                    }
+                    return display_data
+
+    ranked_schema = RANKED_EXACT_RANGE_SOURCE_BY_SECTION.get(section_key)
+    if ranked_schema:
+        ranked_exact_ranges = datasets.get(ranked_schema)
+        if isinstance(ranked_exact_ranges, dict):
+            validate_ga4_ranked_exact_range_contract(ranked_exact_ranges)
+            entry = exact_ranked_range_entry_for(
+                ranked_exact_ranges,
+                range_key=resolved.range_key,
+                start_date=resolved.start_date.isoformat(),
+                end_date=resolved.end_date.isoformat(),
+            )
+            if isinstance(entry, dict):
+                display_data = display_data_for_ranked_section(entry, section_key)
+                if display_data is not None:
+                    display_data["_exact_source"] = {
+                        "source_contract": ranked_schema,
+                        "dataset_version": ranked_exact_ranges.get("dataset_version"),
                         "range_key": entry.get("range_key"),
                         "requested_start_date": entry.get("requested_start_date"),
                         "requested_end_date": entry.get("requested_end_date"),

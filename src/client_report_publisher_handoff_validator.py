@@ -12,6 +12,11 @@ from src.client_report_ga4_exact_ranges import (
     GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
     validate_ga4_exact_range_summary_contract,
 )
+from src.client_report_ga4_ranked_exact_ranges import (
+    RANKED_EXACT_RANGE_CONTRACTS,
+    RANKED_EXACT_RANGE_SOURCE_BY_SECTION,
+    validate_ga4_ranked_exact_range_contract,
+)
 from src.client_report_presentation_ranges import (
     CANONICAL_RANGE_KEYS,
     CANONICAL_SECTION_KEYS,
@@ -28,6 +33,7 @@ RECOGNIZED_CONTRACTS = {
     "client_report_publisher_handoff_manifest.v1",
     *CANONICAL_DATASET_CONTRACTS,
     GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+    *RANKED_EXACT_RANGE_CONTRACTS,
     PRESENTATION_RANGES_SCHEMA_VERSION,
     "local_falcon_display.v1",
 }
@@ -203,6 +209,8 @@ def validate_handoff_directory(
             )
         if schema_version == GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION:
             _validate_ga4_exact_range_summary_source(payload, safe_rel_path, errors)
+        if schema_version in RANKED_EXACT_RANGE_CONTRACTS:
+            _validate_ga4_ranked_exact_range_source(payload, safe_rel_path, errors)
         if schema_version in DAILY_SERIES_CONTRACTS:
             _validate_daily_series_contract(
                 payload,
@@ -468,11 +476,17 @@ def _validate_presentation_range_contract(
             if source_contract != expected_contract:
                 errors.append(f"{label}.section_buckets[{index}].source_contract does not match section")
         exact_source = bucket.get("exact_source")
+        ranked_source_contract = RANKED_EXACT_RANGE_SOURCE_BY_SECTION.get(str(section_key))
         if bucket.get("data_state") == "available" and section_key in {"ga4_top_metrics", "ga4_user_engagement"}:
             if not isinstance(exact_source, dict):
                 errors.append(f"{label}.section_buckets[{index}].exact_source is required for GA4 summary exact ranges")
             elif exact_source.get("source_contract") != GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION:
                 errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid")
+        elif bucket.get("data_state") == "available" and ranked_source_contract:
+            if not isinstance(exact_source, dict):
+                errors.append(f"{label}.section_buckets[{index}].exact_source is required for GA4 ranked exact ranges")
+            elif exact_source.get("source_contract") != ranked_source_contract:
+                errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid for ranked section")
 
 
 def _validate_ga4_exact_range_summary_source(
@@ -486,6 +500,17 @@ def _validate_ga4_exact_range_summary_source(
         errors.append(f"{label}: {exc}")
 
 
+def _validate_ga4_ranked_exact_range_source(
+    payload: dict[str, Any],
+    label: str,
+    errors: list[str],
+) -> None:
+    try:
+        validate_ga4_ranked_exact_range_contract(payload)
+    except ValueError as exc:
+        errors.append(f"{label}: {exc}")
+
+
 def _validate_cross_contract_references(
     payloads_by_schema: dict[str, dict[str, Any]],
     errors: list[str],
@@ -493,19 +518,28 @@ def _validate_cross_contract_references(
     package = payloads_by_schema.get(PRESENTATION_RANGES_SCHEMA_VERSION)
     if not isinstance(package, dict):
         return
-    exact_source = payloads_by_schema.get(GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION)
     for index, bucket in enumerate(package.get("section_buckets") or []):
         if not isinstance(bucket, dict):
             continue
-        if bucket.get("section_key") not in {"ga4_top_metrics", "ga4_user_engagement"}:
+        section_key = bucket.get("section_key")
+        expected_source_contract = None
+        if section_key in {"ga4_top_metrics", "ga4_user_engagement"}:
+            expected_source_contract = GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION
+        elif isinstance(section_key, str):
+            expected_source_contract = RANKED_EXACT_RANGE_SOURCE_BY_SECTION.get(section_key)
+        if expected_source_contract is None:
             continue
         if bucket.get("data_state") != "available":
             continue
         source = bucket.get("exact_source")
         if not isinstance(source, dict):
             continue
+        if source.get("source_contract") != expected_source_contract:
+            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] exact source contract does not match section")
+            continue
+        exact_source = payloads_by_schema.get(expected_source_contract)
         if not isinstance(exact_source, dict):
-            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] references missing GA4 exact-range summary source")
+            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] references missing GA4 exact-range source")
             continue
         if source.get("dataset_version") != exact_source.get("dataset_version"):
             errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] exact source dataset_version does not resolve")
