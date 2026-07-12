@@ -140,6 +140,7 @@ def write_client_report_publisher_handoff(
     if ga4_exact_ranges_path.exists():
         ga4_exact_ranges = _load_json_object(ga4_exact_ranges_path)
         validate_ga4_exact_range_summary_contract(ga4_exact_ranges)
+        _require_exact_source_period(ga4_exact_ranges, period)
         generated_datasets[GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION] = ga4_exact_ranges
         generated.append(
             (
@@ -156,6 +157,7 @@ def write_client_report_publisher_handoff(
             continue
         ranked_exact_ranges = _load_json_object(ranked_exact_ranges_path)
         validate_ga4_ranked_exact_range_contract(ranked_exact_ranges)
+        _require_exact_source_period(ranked_exact_ranges, period)
         contract = contract_for_ranked_exact_schema(schema_version)
         if contract is None:
             raise ValueError(f"unsupported ranked exact-range source: {schema_version}")
@@ -769,6 +771,14 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path.name} must contain a JSON object")
     return payload
+
+
+def _require_exact_source_period(payload: dict[str, Any], period: dict[str, str]) -> None:
+    source_period = payload.get("report_period")
+    if not isinstance(source_period, dict):
+        raise ValueError("exact-range source report_period is required")
+    if source_period.get("start_date") != period["start"] or source_period.get("end_date") != period["end"]:
+        raise ValueError("exact-range source period does not match handoff report period")
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

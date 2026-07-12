@@ -59,6 +59,8 @@ The normal importer-side flow is:
 
 The handoff writer transforms existing sanitized local-real summaries and snapshots. It does not call GA4, GSC, Local Falcon, BigQuery, or `client-dashboard`.
 
+Exact-range source files are generated before the handoff writer runs. The controlled GA4 ranked exact-range provider command is a local importer-side command only; it is not called by `client-dashboard` and it does not add portal runtime provider behavior.
+
 ## Period Discipline
 
 Preferred cadence is weekly Monday through Sunday.
@@ -76,6 +78,8 @@ exports/local-real/client-report-publisher-handoff/{profile}/weekly-YYYY-MM-DD_Y
 
 Before handing a folder to `client-dashboard`, confirm that `manifest.json` has the intended `period_start` and `period_end`.
 
+Exact-range source files must carry the same embedded `report_period` as the handoff manifest. The writer and validator reject mismatched exact-range source periods rather than silently mixing stale exact-range data into a new report period.
+
 ## Current Handoff Contracts
 
 A fully populated Phase 1 handoff can include:
@@ -87,6 +91,12 @@ A fully populated Phase 1 handoff can include:
 - `ga4_most_viewed_pages_display.v1.json`
 - `gsc_summary_display.v1.json`
 - `gsc_queries_display.v1.json`
+- `ga4_metric_display_exact_ranges.v1.json`
+- `ga4_channel_performance_exact_ranges.v1.json`
+- `ga4_top_sources_exact_ranges.v1.json`
+- `ga4_top_landing_pages_exact_ranges.v1.json`
+- `ga4_most_viewed_pages_exact_ranges.v1.json`
+- `client_report_presentation_ranges.v2.json`
 
 The six current GA4/GSC contracts use stable schema identifiers and canonical scopes:
 
@@ -130,7 +140,16 @@ Older v1 handoffs without coverage metadata remain compatible only when their da
 
 Current handoff generation also writes `client_report_presentation_ranges.v2.json` when the Client Report Publisher writer runs. This package is optional for Phase 1 report-period PDF/export output, but it is the production replacement path for the temporary manual Presentation Mode bucket bridge.
 
-Fake-only GA4 exact-range summary prototype support may also include `ga4_metric_display_exact_ranges.v1.json` in local test handoffs. That file is a sanitized source contract for exact-range Top Metrics and User Engagement buckets only; it is not a provider export, does not authorize GA4 calls, and does not make GA4 ranked sections or GSC sections range-ready.
+GA4 exact-range summary support may include `ga4_metric_display_exact_ranges.v1.json`. That file is a sanitized source contract for exact-range Top Metrics and User Engagement buckets.
+
+Controlled GA4 ranked exact-range support may include these sanitized source contracts:
+
+- `ga4_channel_performance_exact_ranges.v1.json`
+- `ga4_top_sources_exact_ranges.v1.json`
+- `ga4_top_landing_pages_exact_ranges.v1.json`
+- `ga4_most_viewed_pages_exact_ranges.v1.json`
+
+For the R1 controlled real provider checkpoint, the ranked provider path is limited to the Aluma profile and the four exact range keys `last_7_days`, `last_30_days`, `this_month`, and `last_month`. The command performs 16 GA4 ranked Data API requests for one report period: four ranked datasets times four exact ranges. Do not expand the profile list, range list, provider list, or portal runtime behavior without a separate approved milestone.
 
 Range generation uses the report period end as the deterministic anchor. Standard preset identifiers are `last_3_days`, `last_7_days`, `last_14_days`, `last_30_days`, `last_90_days`, `last_6_months`, `last_12_months`, `this_month`, and `last_month`. Custom ranges are generated only when explicit bounded sanitized range input is supplied.
 
@@ -231,6 +250,16 @@ python scripts/write_client_report_publisher_handoff.py --profile inn-at-spanish
 python scripts/validate_client_report_publisher_handoff.py exports\local-real\client-report-publisher-handoff\inn-at-spanish-head
 ```
 
+Controlled Aluma GA4 ranked exact-range source generation shape:
+
+```powershell
+python scripts\pull_ga4_ranked_exact_ranges.py --profile aluma --report-start-date 2025-01-01 --report-end-date 2026-07-08 --real-output
+python scripts\write_client_report_publisher_handoff.py --profile aluma-seo-geo --client-name "Aluma Aesthetic Medicine" --source-dir exports\local-real\dashboard-lab\aluma-seo-geo --out exports\local-real\client-report-publisher-handoff\aluma-seo-geo
+python scripts\validate_client_report_publisher_handoff.py exports\local-real\client-report-publisher-handoff\aluma-seo-geo
+```
+
+Use the exact same report start/end as the report-period GA4/GSC source files and the intended portal report. If one exact-range source file was generated for a different report period, regenerate all exact-range source files for the intended period before writing the handoff.
+
 For weekly output, use a separate output folder:
 
 ```powershell
@@ -288,6 +317,7 @@ Common importer-side blockers:
 - GA4 source/source-medium dimension returns no rows.
 - GA4 landing-page dimension returns no rows.
 - Weekly output accidentally overwrites historical output.
+- Exact-range source files were generated for a different report period than the handoff manifest.
 - A handoff contract is missing because scoped rows were unavailable.
 - Validator rejects raw/provider/secret-like fields.
 - Real outputs were written outside ignored local-real folders.

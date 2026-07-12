@@ -1,10 +1,10 @@
 # Client Report Publisher exact-range non-trend dataset plan
 
-Status: R1 planning and technical design. This document is evidence from tracked importer/portal code and non-provider local readiness checks only. It does not authorize provider calls, real client data generation, runtime exact-range generation, backfill, publication, exports, schema changes, or portal runtime changes.
+Status: R1 planning, technical design, and implementation checkpoint. This document is evidence from tracked importer/portal code plus operator-approved local Aluma GA4 verification. It does not authorize portal runtime provider calls, unattended provider generation, GSC exact-range generation, publication, exports, schema changes, or portal runtime changes.
 
 ## Executive summary
 
-Exact-range generation for non-trend Client Report Publisher sections is partially ready at the query-shape level and not ready as an automated production workflow.
+Exact-range generation for non-trend Client Report Publisher sections is partially ready. GA4 summary exact-range source generation exists for Top Metrics/User Engagement, and GA4 ranked exact-range provider generation now exists for a controlled Aluma local workflow covering Top Traffic Channels, Top Sources, Top Landing Pages, and Most Viewed Pages. It is still not an automated production workflow.
 
 The current importer already has report-period GA4 query builders for the six GA4 non-trend sections and one GSC query path that can produce GSC summary, top query, and top page display data. Evidence:
 
@@ -12,19 +12,28 @@ The current importer already has report-period GA4 query builders for the six GA
 - `tests/test_ga4_client.py` asserts the GA4 dimensions, metrics, sort order, and row limits for those request builders.
 - `src/providers/gsc/client.py` builds one Search Console Search Analytics request with dimensions `query`, `page`, and `date`, `rowLimit`, and `startRow: 0`.
 - `tests/test_gsc_fetcher.py` asserts the GSC request shape and that `src/providers/gsc/summary.py` aggregates sanitized rows into summary, top queries, top pages, and daily time series.
-- `src/client_report_publisher_handoff_writer.py` emits report-period display contracts and reads optional `presentation-exact-ranges.v1.json` only as precomputed exact-range source input; it does not query providers for ranges.
+- `src/client_report_publisher_handoff_writer.py` emits report-period display contracts and reads optional exact-range source files as precomputed source input; it does not query providers for ranges.
+- `src/client_report_ga4_ranked_exact_range_provider.py` builds sanitized GA4 ranked exact-range source contracts from controlled provider calls for `ga4_channel_performance`, `ga4_top_sources`, `ga4_top_landing_pages`, and `ga4_most_viewed_pages`.
+- `scripts/pull_ga4_ranked_exact_ranges.py` is the controlled local CLI for the Aluma ranked exact-range provider path. It is profile-gated, writes only ignored local-real outputs unless an explicit output directory is supplied, and prints only safe summaries.
 - `src/client_report_presentation_ranges.py` only makes GA4 Website Traffic Trends ready from existing daily observations. All summary/ranked non-trend buckets require exact-range source data and otherwise become `unavailable`.
 
 Recommended architecture: hybrid, with direct provider queries for every non-trend exact range at the same query shape as the report-period dataset, plus limited local reuse only where the source is already exact for the requested range. Do not derive non-trend ranges from report-period aggregate/ranked rows. Do not locally recompute users, new users, engagement rate, average engagement time, average position, or top-N rankings from insufficient full-period data.
 
-Main blockers:
+Remaining blockers:
 
-- No importer orchestration currently loops over standard range keys and calls GA4/GSC provider queries per exact range.
-- No first-class exact-range source contract exists beyond the optional, local-only `presentation-exact-ranges.v1` bridge consumed by `src/client_report_presentation_ranges.py`.
+- Full exact-range generation is not implemented for all standard ranges. The controlled real GA4 ranked provider path currently generates only `last_7_days`, `last_30_days`, `this_month`, and `last_month`.
+- The controlled real GA4 ranked provider path is intentionally limited to the Aluma profile for this R1 checkpoint.
 - GSC currently issues one high-cardinality `query,page,date` request with no pagination loop; complete top query/page accuracy for larger properties may require separate lower-cardinality summary/query/page requests and pagination.
 - Provider verification is still required for thresholding, property history, GSC freshness delay, and client-specific zero-row cases.
 
-Smallest next coding milestone: add a fake-only importer exact-range source contract and writer path for GA4 summary datasets serving `ga4_top_metrics` and `ga4_user_engagement`, without provider calls. The milestone should define and validate the exact-range contract, feed it into `client_report_presentation_ranges.v2`, and prove that exact-range summary buckets become ready only when a matching sanitized exact-range source is present.
+Completed R1 implementation checkpoints:
+
+- Fake-only GA4 exact-range summary contract for `ga4_top_metrics` and `ga4_user_engagement`.
+- Fake-only GA4 ranked exact-range contracts for `ga4_channel_performance`, `ga4_top_sources`, `ga4_top_landing_pages`, and `ga4_most_viewed_pages`.
+- Controlled real Aluma GA4 ranked exact-range provider implementation for those four ranked contracts.
+- Handoff writer and validator period checks now reject exact-range source files whose embedded `report_period` does not match the target handoff manifest period.
+
+Smallest next coding milestone: decide whether to expand the controlled provider path beyond Aluma and/or beyond the four currently approved range keys. GSC exact-range generation remains a separate design milestone because the current high-cardinality request shape is not sufficient evidence for complete exact-range ranked correctness.
 
 ## Current provider query inventory
 
@@ -53,11 +62,11 @@ Sampling/thresholding evidence and gaps:
 | Section | Required exact query | Dimensions | Metrics/calculations | Row limit | Empty behavior | Partial behavior | Provider dependency | Local aggregation safe? | Readiness |
 |---|---|---|---|---|---|---|---|---|---|
 | GA4 Top Metrics | GA4 summary request matching `build_traffic_overview_request` or a future no-dimension equivalent for the exact range | Prefer no dimension for summary; current code uses `date` and rolls up | users/activeUsers, sessions, views/screenPageViews, new users if added, engagement rate, average session duration/time, event/key events/conversions. Current code weights engagement/session-duration by sessions in `src/providers/ga4/normalize.py`. | none or 10000 daily rows | valid empty only if provider returns zero activity for exact range | partial if provider response incomplete/thresholded | GA4 required | Only additive daily fields are safe; users/new users and rankings are not safe from daily sums without provider confirmation. | Partially ready; best first milestone. |
-| GA4 Top Traffic Channels | `build_channel_breakdown_request` for exact range | `sessionDefaultChannelGroup` | sessions, users/activeUsers, views, engagement rate, event/key events/conversions as available | 10 | empty when no channel rows | partial if thresholded/incomplete | GA4 required | Unsafe from full-period rows; direct exact-range query recommended. | Query-shape ready. |
+| GA4 Top Traffic Channels | `build_channel_breakdown_request` for exact range | `sessionDefaultChannelGroup` | sessions, users/activeUsers, views, engagement rate, event/key events/conversions as available | 10 | empty when no channel rows | partial if thresholded/incomplete | GA4 required | Unsafe from full-period rows; direct exact-range query recommended. | Implemented for controlled Aluma local provider path for four R1 keys. |
 | GA4 User Engagement | same summary exact-range query as Top Metrics if canonical fields align | Prefer no dimension or current `date` rollup | engaged sessions if added, engagement rate, average engagement/session duration, event/key events. Do not fabricate from Top Metrics unless same exact source fields feed both. | none or 10000 daily rows | empty if no activity | partial on missing required fields | GA4 required | Unsafe for rates/averages unless weighted numerator/denominator inputs are present. | Partially ready; pair with Top Metrics after contract validation. |
-| GA4 Top Sources | `build_source_medium_request` for exact range | `sessionSourceMedium` | sessions, active users, engagement rate, average session duration, event/key events/conversions | 10 | empty when no source rows | partial if provider/threshold/pagination incomplete | GA4 required | Unsafe from channel rows or full-period source rows. | Query-shape ready. |
-| GA4 Top Landing Pages | `build_landing_pages_request` for exact range | `landingPagePlusQueryString` | sessions, active users, engaged sessions, engagement rate, average session duration, event/key events/conversions | 10 | empty when no landing rows | partial if provider/threshold incomplete | GA4 required | Unsafe from page popularity rows. | Query-shape ready; needs normalization policy. |
-| GA4 Most Viewed Pages | `build_top_pages_request` for exact range | `pageTitle`, `pagePath` | screenPageViews/views, active users, event count, average session duration | 10 | empty when no page rows | partial if provider/threshold incomplete | GA4 required | Unsafe from landing-page rows; direct query recommended. | Query-shape ready. |
+| GA4 Top Sources | `build_source_medium_request` for exact range | `sessionSourceMedium` | sessions, active users, engagement rate, average session duration, event/key events/conversions | 10 | empty when no source rows | partial if provider/threshold/pagination incomplete | GA4 required | Unsafe from channel rows or full-period source rows. | Implemented for controlled Aluma local provider path for four R1 keys. |
+| GA4 Top Landing Pages | `build_landing_pages_request` for exact range | `landingPagePlusQueryString` | sessions, active users, engaged sessions, engagement rate, average session duration, event/key events/conversions | 10 | empty when no landing rows | partial if provider/threshold incomplete | GA4 required | Unsafe from page popularity rows. | Implemented for controlled Aluma local provider path for four R1 keys. |
+| GA4 Most Viewed Pages | `build_top_pages_request` for exact range | `pageTitle`, `pagePath` | screenPageViews/views, active users, event count, average session duration | 10 | empty when no page rows | partial if provider/threshold incomplete | GA4 required | Unsafe from landing-page rows; direct query recommended. | Implemented for controlled Aluma local provider path for four R1 keys. |
 | GSC Summary | Prefer a zero-dimension Search Analytics query for exact range, or complete paginated dated rows if proven complete | none, or `date` for daily display | clicks, impressions direct totals; CTR = clicks/impressions; average position weighted by impressions | no row limit for zero-dimension; date rows bounded by date count | empty when clicks/impressions zero from provider | partial if freshness/pagination incomplete | GSC required | Safe from complete daily rows for clicks/impressions/weighted CTR/position only if rows are complete, not truncated by high-cardinality dimensions. | Partially ready; current query may be too high-cardinality for totals. |
 | GSC Top Queries | Search Analytics query by `query` for exact range | `query` | clicks, impressions, CTR, position | 20 display rows; provider row limit/pagination TBD | empty when no query rows | partial if anonymized/truncated/paginated incomplete | GSC required | Unsafe from report-period top queries; current query/page/date can aggregate only if complete. | Partially ready; needs separate query-dimension request/pagination policy. |
 | GSC Top Pages | Search Analytics query by `page` for exact range | `page` | clicks, impressions, CTR, position | 20 display rows; provider row limit/pagination TBD | empty when no page rows | partial if truncated/paginated incomplete | GSC required | Unsafe from report-period top pages; current query/page/date can aggregate only if complete. | Partially ready; needs separate page-dimension request/pagination policy. |
@@ -115,7 +124,7 @@ Estimated calls:
 - GSC per exact range: 3 minimum; more if pagination is required.
 - All nine ranges for one report: 45 GA4 + 27 GSC = 72 provider requests minimum.
 - Across six clients: 270 GA4 + 162 GSC = 432 provider requests minimum.
-- If only the first milestone implements GA4 summary exact ranges for Top Metrics/User Engagement: 1 GA4 summary request per range = 9 per report, 54 across six clients.
+- Current controlled Aluma ranked implementation: 4 ranked GA4 requests per approved exact range. With four R1 range keys this is 16 GA4 ranked requests for one report.
 
 Safe sharing:
 
@@ -205,7 +214,7 @@ Evidence comes from `config/dashboard_lab_profiles.json`, `local-profile-configs
 | Profile | Canonical slug | GA4 readiness | GSC readiness | Existing report-period support | Existing exact-range support | Known blockers |
 |---|---|---|---|---|---|---|
 | `inn-at-spanish-head` | `inn-at-spanish-head` | registry enabled, local canonical config missing in this checkout | registry enabled, local canonical config missing in this checkout | supported by command shape, provider verification required | not implemented | add local config or alias mapping before real exact-range run |
-| `aluma` | `aluma-seo-geo` | local config present; outside-repo files exist | local config present; outside-repo files exist | ready for operator-approved local fetch | not implemented | provider verification still required |
+| `aluma` | `aluma-seo-geo` | local config present; outside-repo files exist | local config present; outside-repo files exist | ready for operator-approved local fetch | controlled GA4 summary/ranked exact-range local path verified for approved R1 keys | broader range/client expansion still requires explicit approval |
 | `wws` | `western-wood-structures` | local config present; outside-repo files exist | local config present; outside-repo files exist | ready for operator-approved local fetch | not implemented | provider verification still required |
 | `lucy` | `lucy-escobar` | local config present; outside-repo files exist | local config present; outside-repo files exist | ready for operator-approved local fetch | not implemented | provider verification still required |
 | `pinnacle` | `pinnacle-contractors` | local config present; outside-repo files exist | local config present; outside-repo files exist | ready for operator-approved local fetch | not implemented | provider verification still required |

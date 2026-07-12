@@ -88,6 +88,18 @@ class Ga4DataClient:
     ) -> dict[str, Any]:
         return self._run_report(build_exact_range_summary_request(date_range, metric_names=metric_names))
 
+    def run_exact_range_channel_performance(self, date_range: DateRange) -> dict[str, Any]:
+        return self._run_report(build_channel_breakdown_request(date_range))
+
+    def run_exact_range_top_sources(self, date_range: DateRange) -> dict[str, Any]:
+        return self._run_report(build_source_medium_request(date_range))
+
+    def run_exact_range_top_landing_pages(self, date_range: DateRange) -> dict[str, Any]:
+        return self._run_report(build_landing_pages_request(date_range))
+
+    def run_exact_range_most_viewed_pages(self, date_range: DateRange) -> dict[str, Any]:
+        return self._run_report(build_top_pages_request(date_range))
+
     def _run_report(self, body: dict[str, Any]) -> dict[str, Any]:
         credentials = self._credentials()
         if not credentials.valid:

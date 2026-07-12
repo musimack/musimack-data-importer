@@ -30,6 +30,8 @@ python scripts/write_client_report_publisher_handoff.py --profile inn-at-spanish
 
 This writer is also local-only. It does not call GA4, GSC, Local Falcon, Google Ads, CallRail, BigQuery, or `client-dashboard`; it only transforms existing sanitized JSON files into versioned handoff JSON under ignored `exports/local-real/`.
 
+Exact-range source files are generated before the writer runs. The writer consumes those sanitized files only when their embedded `report_period` exactly matches the manifest period it is writing.
+
 ## Expected Input
 
 A handoff folder should contain:
@@ -60,6 +62,7 @@ The current validator checks:
 - `provider` and `report_type` exist where expected.
 - Manifest `provider`, `report_type`, and `schema_version` metadata matches each referenced display file.
 - Date ranges are valid ISO dates and `period_start` is not after `period_end`.
+- Exact-range source contracts carry a `report_period` that matches the manifest period.
 - Manifest `files[].path` entries exist and stay inside the handoff folder.
 - Manifest `files[].schema_version` matches the referenced file's `schema_version`.
 - Manifest contract versions match the included display files.
@@ -103,6 +106,12 @@ The validator recognizes the current Phase 1 contract set:
 - `gsc_summary_display.v1`
 - `gsc_queries_display.v1`
 - `local_falcon_display.v1`
+- `ga4_metric_display_exact_ranges.v1`
+- `ga4_channel_performance_exact_ranges.v1`
+- `ga4_top_sources_exact_ranges.v1`
+- `ga4_top_landing_pages_exact_ranges.v1`
+- `ga4_most_viewed_pages_exact_ranges.v1`
+- `client_report_presentation_ranges.v2`
 
 The writer and tests enforce these current semantic boundaries:
 
@@ -194,6 +203,8 @@ Contract rules:
 - Identity: section key, range key, requested start, requested end, source contract, and package dataset version. Volatile timestamps are not identity.
 
 The validator checks the package period against the manifest, requires the standard range manifest and all ten canonical section capabilities, rejects unknown section keys, rejects unknown range keys, rejects duplicate bucket identity, rejects mismatched section/source contracts, and rejects unavailable buckets that carry display data.
+
+The validator also checks exact-range source periods against the manifest. A handoff that mixes a fresh manifest with stale exact-range source files fails validation. This protects Presentation Mode ranges from silently reusing a prior report period's exact provider output.
 
 Availability semantics:
 

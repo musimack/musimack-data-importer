@@ -208,9 +208,21 @@ def validate_handoff_directory(
                 warnings,
             )
         if schema_version == GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION:
-            _validate_ga4_exact_range_summary_source(payload, safe_rel_path, errors)
+            _validate_ga4_exact_range_summary_source(
+                payload,
+                safe_rel_path,
+                manifest.get("period_start"),
+                manifest.get("period_end"),
+                errors,
+            )
         if schema_version in RANKED_EXACT_RANGE_CONTRACTS:
-            _validate_ga4_ranked_exact_range_source(payload, safe_rel_path, errors)
+            _validate_ga4_ranked_exact_range_source(
+                payload,
+                safe_rel_path,
+                manifest.get("period_start"),
+                manifest.get("period_end"),
+                errors,
+            )
         if schema_version in DAILY_SERIES_CONTRACTS:
             _validate_daily_series_contract(
                 payload,
@@ -492,23 +504,48 @@ def _validate_presentation_range_contract(
 def _validate_ga4_exact_range_summary_source(
     payload: dict[str, Any],
     label: str,
+    period_start_raw: Any,
+    period_end_raw: Any,
     errors: list[str],
 ) -> None:
     try:
         validate_ga4_exact_range_summary_contract(payload)
     except ValueError as exc:
         errors.append(f"{label}: {exc}")
+        return
+    _validate_exact_source_period(payload, label, period_start_raw, period_end_raw, errors)
 
 
 def _validate_ga4_ranked_exact_range_source(
     payload: dict[str, Any],
     label: str,
+    period_start_raw: Any,
+    period_end_raw: Any,
     errors: list[str],
 ) -> None:
     try:
         validate_ga4_ranked_exact_range_contract(payload)
     except ValueError as exc:
         errors.append(f"{label}: {exc}")
+        return
+    _validate_exact_source_period(payload, label, period_start_raw, period_end_raw, errors)
+
+
+def _validate_exact_source_period(
+    payload: dict[str, Any],
+    label: str,
+    period_start_raw: Any,
+    period_end_raw: Any,
+    errors: list[str],
+) -> None:
+    report_period = payload.get("report_period")
+    if not isinstance(report_period, dict):
+        errors.append(f"{label}.report_period is required")
+        return
+    if report_period.get("start_date") != period_start_raw:
+        errors.append(f"{label}.report_period.start_date does not match manifest")
+    if report_period.get("end_date") != period_end_raw:
+        errors.append(f"{label}.report_period.end_date does not match manifest")
 
 
 def _validate_cross_contract_references(
