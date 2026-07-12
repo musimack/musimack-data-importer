@@ -1,0 +1,9 @@
+# Controlled GSC Exact-Range Provider
+
+The controlled provider implementation is limited to `aluma-seo-geo`. `GscSearchConsoleClient.query_search_analytics` is the canonical POST boundary and accepts a dimension set, web search type, and bounded row limit. Exact summary uses no dimensions and row limit 1; Top Queries uses only `query` and limit 10; Top Pages uses only `page` and limit 10. The client performs one request per section/range, does not paginate, and propagates sanitized provider/OAuth/HTTP/malformed-response failures instead of converting them to empty activity.
+
+`client_report_gsc_exact_range_provider.py` converts provider responses into `gsc_summary_exact_ranges.v1`, `gsc_top_queries_exact_ranges.v1`, and `gsc_top_pages_exact_ranges.v1`. Summary reads the dimensionless provider total row. Ranked rows are sorted by clicks descending with deterministic identity ascending ties and capped at ten. CTR is normalized from exact-range total clicks/impressions; average position comes from the provider result. Source identities and query fingerprints are deterministic and sanitized.
+
+Freshness is anchored to the latest observation date in the existing provider-generated report-period GSC daily series. Requests are never shifted backward. A range ending after that date is queried only through the available date and recorded partial with requested and actual dates preserved. Current Presentation Ranges v2 deliberately leaves partial GSC ranges unavailable; only complete exact ranges become ready. Successful zero rows remain distinct from permission, OAuth, timeout, request, pagination, and response-shape failures.
+
+The operator command is `scripts/pull_gsc_exact_ranges.py`. It requires the approved profile, report period, ignored output selection, outside-repository OAuth material, and existing GSC daily coverage evidence. Generated real data remains ignored and must not be committed.

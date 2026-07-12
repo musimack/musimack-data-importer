@@ -8,6 +8,11 @@ from typing import Any
 
 
 GSC_EXACT_RANGE_CALCULATION_VERSION = "gsc_exact_ranges.synthetic.v1"
+GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION = "gsc_exact_ranges.provider.v1"
+GSC_EXACT_RANGE_CALCULATION_VERSIONS = {
+    GSC_EXACT_RANGE_CALCULATION_VERSION,
+    GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
+}
 PROTOTYPE_RANGES = (
     ("last_7_days", "2026-07-02", "2026-07-08"),
     ("last_30_days", "2026-06-09", "2026-07-08"),
@@ -107,12 +112,14 @@ def validate_gsc_exact_range_contract(payload: dict[str, Any]) -> None:
         "provider_family": "google_search_console", "report_type": contract.report_type,
         "data_scope": contract.data_scope, "section_key": contract.section_key,
         "search_type": "web", "inclusive_dates": True,
-        "calculation_version": GSC_EXACT_RANGE_CALCULATION_VERSION,
+        "calculation_version": payload.get("calculation_version"),
         "row_limit": contract.row_limit,
     }
     for key, expected in required_equal.items():
         if payload.get(key) != expected:
             raise ValueError(f"GSC exact-range {key} is invalid")
+    if payload.get("calculation_version") not in GSC_EXACT_RANGE_CALCULATION_VERSIONS:
+        raise ValueError("GSC exact-range calculation_version is invalid")
     if payload.get("dimensions") != ([] if contract.dimension is None else [contract.dimension]):
         raise ValueError("GSC exact-range dimensions do not match section scope")
     if payload.get("metrics") != ["clicks", "impressions", "ctr", "average_position"]:
@@ -134,7 +141,7 @@ def exact_range_entry_for(payload: dict[str, Any], *, range_key: str, start_date
 
 
 def display_data_for_section(entry: dict[str, Any], section_key: str) -> dict[str, Any] | None:
-    if entry.get("data_state") not in {"available", "partial"}: return None
+    if entry.get("data_state") != "available": return None
     if section_key == "gsc_summary":
         metrics = entry.get("summary_metrics")
         if not isinstance(metrics, dict): return None
@@ -162,7 +169,7 @@ def _validate_entry(entry: Any, index: int, contract: GscExactRangeContract, per
     if state not in allowed or coverage not in {"complete", "empty", "partial", "unavailable"} or freshness not in {"complete", "partial", "unavailable"}: raise ValueError("GSC exact-range state is invalid")
     available_through = entry.get("available_through_date")
     actual_end = entry.get("actual_coverage_end_date")
-    if state == "available" and (coverage != "complete" or freshness != "complete" or actual_end != entry.get("requested_end_date") or available_through != entry.get("requested_end_date")): raise ValueError("complete GSC exact-range has a freshness gap")
+    if state == "available" and (coverage != "complete" or freshness != "complete" or actual_end != entry.get("requested_end_date") or not isinstance(available_through, str) or _date(available_through) < end): raise ValueError("complete GSC exact-range has a freshness gap")
     if state == "partial" and (coverage != "partial" or freshness != "partial" or not isinstance(actual_end, str) or actual_end >= entry.get("requested_end_date")): raise ValueError("partial GSC exact-range freshness is contradictory")
     content_key = "summary_metrics" if contract.row_field is None else contract.row_field
     content = entry.get(content_key)

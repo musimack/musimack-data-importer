@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+import requests
 
 from scripts.fetch_gsc_api import resolve_output_dir
 from src.config import ConfigError
@@ -109,7 +110,31 @@ def test_gsc_client_uses_readonly_scope_and_query_page_date_request(monkeypatch)
     assert call["json"]["rowLimit"] == 500
     assert call["json"]["startDate"] == "2026-01-01"
     assert call["json"]["endDate"] == "2026-05-19"
+    assert call["json"]["type"] == "web"
     assert call["headers"]["Authorization"] == "Bearer fake-token"
+
+
+def test_gsc_client_exact_range_wrappers_use_canonical_dimensions(monkeypatch):
+    monkeypatch.setattr("src.providers.gsc.client.load_gsc_oauth_credentials", lambda *_: _FakeCredentials())
+    session = _FakeSession()
+    client = GscSearchConsoleClient(GscFetchConfig("client.json", "token.json", "https://example.test/"), session=session)
+    client.query_exact_range_summary("2026-07-02", "2026-07-08")
+    client.query_exact_range_queries("2026-07-02", "2026-07-08")
+    client.query_exact_range_pages("2026-07-02", "2026-07-08")
+    assert [call["json"]["dimensions"] for call in session.calls] == [[], ["query"], ["page"]]
+    assert [call["json"]["rowLimit"] for call in session.calls] == [1, 10, 10]
+    assert all(call["json"]["type"] == "web" for call in session.calls)
+
+
+def test_gsc_client_timeout_fails_safely_without_request_or_token_details(monkeypatch):
+    monkeypatch.setattr("src.providers.gsc.client.load_gsc_oauth_credentials", lambda *_: _FakeCredentials())
+    class TimeoutSession:
+        def post(self, *args, **kwargs): raise requests.Timeout("private transport detail")
+    client = GscSearchConsoleClient(GscFetchConfig("client.json", "token.json", "https://example.test/"), session=TimeoutSession())
+    with pytest.raises(Exception) as excinfo:
+        client.query_exact_range_summary("2026-07-02", "2026-07-08")
+    assert str(excinfo.value) == "GSC API request failed before a response was received"
+    assert "private" not in str(excinfo.value)
 
 
 def test_build_gsc_summary_aggregates_rows_without_secret_fields():

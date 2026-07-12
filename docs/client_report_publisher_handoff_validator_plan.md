@@ -218,3 +218,5 @@ The package is designed to feed `client-dashboard` Presentation Mode range selec
 ## GSC exact-range validation
 
 The validator recognizes the three GSC exact-range v1 contracts and enforces exact report-period identity, web search type, section-specific dimensions, deterministic ranking, bounded rows, CTR consistency, non-negative average position, total-level summary provenance, and truthful freshness/coverage states. Presentation Ranges v2 references must resolve to the matching summary, query, or page contract and exact requested dates; cross-section references fail closed.
+
+Provider-backed contracts use calculation version `gsc_exact_ranges.provider.v1`; synthetic contracts retain their original version. The validator accepts both while preserving every semantic and freshness check. Provider markers must not contain synthetic identity, raw provider payloads, property identifiers, OAuth material, or local paths. Partial exact sources validate but do not resolve to ready Presentation buckets under the current UI contract.
