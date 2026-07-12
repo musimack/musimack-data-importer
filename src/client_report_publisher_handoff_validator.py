@@ -17,6 +17,11 @@ from src.client_report_ga4_ranked_exact_ranges import (
     RANKED_EXACT_RANGE_SOURCE_BY_SECTION,
     validate_ga4_ranked_exact_range_contract,
 )
+from src.client_report_gsc_exact_ranges import (
+    GSC_EXACT_RANGE_CONTRACTS,
+    GSC_EXACT_RANGE_SOURCE_BY_SECTION,
+    validate_gsc_exact_range_contract,
+)
 from src.client_report_presentation_ranges import (
     CANONICAL_RANGE_KEYS,
     CANONICAL_SECTION_KEYS,
@@ -34,6 +39,7 @@ RECOGNIZED_CONTRACTS = {
     *CANONICAL_DATASET_CONTRACTS,
     GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
     *RANKED_EXACT_RANGE_CONTRACTS,
+    *GSC_EXACT_RANGE_CONTRACTS,
     PRESENTATION_RANGES_SCHEMA_VERSION,
     "local_falcon_display.v1",
 }
@@ -217,6 +223,14 @@ def validate_handoff_directory(
             )
         if schema_version in RANKED_EXACT_RANGE_CONTRACTS:
             _validate_ga4_ranked_exact_range_source(
+                payload,
+                safe_rel_path,
+                manifest.get("period_start"),
+                manifest.get("period_end"),
+                errors,
+            )
+        if schema_version in GSC_EXACT_RANGE_CONTRACTS:
+            _validate_gsc_exact_range_source(
                 payload,
                 safe_rel_path,
                 manifest.get("period_start"),
@@ -499,6 +513,10 @@ def _validate_presentation_range_contract(
                 errors.append(f"{label}.section_buckets[{index}].exact_source is required for GA4 ranked exact ranges")
             elif exact_source.get("source_contract") != ranked_source_contract:
                 errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid for ranked section")
+        elif bucket.get("data_state") in {"available", "partial"} and section_key in GSC_EXACT_RANGE_SOURCE_BY_SECTION:
+            expected = GSC_EXACT_RANGE_SOURCE_BY_SECTION[section_key]
+            if not isinstance(exact_source, dict) or exact_source.get("source_contract") != expected:
+                errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid for GSC section")
 
 
 def _validate_ga4_exact_range_summary_source(
@@ -525,6 +543,15 @@ def _validate_ga4_ranked_exact_range_source(
 ) -> None:
     try:
         validate_ga4_ranked_exact_range_contract(payload)
+    except ValueError as exc:
+        errors.append(f"{label}: {exc}")
+        return
+    _validate_exact_source_period(payload, label, period_start_raw, period_end_raw, errors)
+
+
+def _validate_gsc_exact_range_source(payload, label, period_start_raw, period_end_raw, errors):
+    try:
+        validate_gsc_exact_range_contract(payload)
     except ValueError as exc:
         errors.append(f"{label}: {exc}")
         return
@@ -564,6 +591,8 @@ def _validate_cross_contract_references(
             expected_source_contract = GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION
         elif isinstance(section_key, str):
             expected_source_contract = RANKED_EXACT_RANGE_SOURCE_BY_SECTION.get(section_key)
+            if expected_source_contract is None:
+                expected_source_contract = GSC_EXACT_RANGE_SOURCE_BY_SECTION.get(section_key)
         if expected_source_contract is None:
             continue
         if bucket.get("data_state") != "available":
@@ -576,7 +605,8 @@ def _validate_cross_contract_references(
             continue
         exact_source = payloads_by_schema.get(expected_source_contract)
         if not isinstance(exact_source, dict):
-            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] references missing GA4 exact-range source")
+            family = "GA4" if expected_source_contract.startswith("ga4_") else "GSC"
+            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] references missing {family} exact-range source")
             continue
         if source.get("dataset_version") != exact_source.get("dataset_version"):
             errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] exact source dataset_version does not resolve")

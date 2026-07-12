@@ -8,6 +8,10 @@ from src.client_report_ga4_ranked_exact_ranges import (
     RANKED_EXACT_RANGE_SOURCE_BY_SECTION,
     build_fake_ga4_ranked_exact_range_dataset,
 )
+from src.client_report_gsc_exact_ranges import (
+    GSC_EXACT_RANGE_SOURCE_BY_SECTION,
+    build_fake_gsc_exact_range_dataset,
+)
 from src.client_report_publisher_handoff_validator import validate_handoff_directory
 from src.client_report_publisher_handoff_writer import write_client_report_publisher_handoff
 from src.client_report_presentation_ranges import resolve_range_key
@@ -232,9 +236,36 @@ def test_handoff_writer_emits_ranked_exact_range_buckets_for_four_sections(tmp_p
     for bucket in ready_ranked:
         assert bucket["exact_source"]["source_contract"] == RANKED_EXACT_RANGE_SOURCE_BY_SECTION[bucket["section_key"]]
         assert bucket["display_data"]["rows"]
+    assert validate_handoff_directory(tmp_path / "handoff").valid is True
 
-    validation = validate_handoff_directory(tmp_path / "handoff")
-    assert validation.valid is True
+
+def test_handoff_writer_emits_distinct_gsc_exact_range_buckets(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    period = {"start": "2026-01-01", "end": "2026-07-08"}
+    ga4_summary = _ga4_summary_with_scoped_rows()
+    ga4_snapshot = _ga4_snapshot_with_scoped_rows()
+    gsc_summary = _gsc_summary()
+    ga4_summary["reporting_period"] = period
+    ga4_snapshot["date_range"] = period
+    gsc_summary["reporting_period"] = period
+    _write_json(source / "ga4-summary.json", ga4_summary)
+    _write_json(source / "ga4-snapshot.json", ga4_snapshot)
+    _write_json(source / "gsc-summary.json", gsc_summary)
+    for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values():
+        _write_json(source / f"{schema}.json", build_fake_gsc_exact_range_dataset(schema, client_slug="sample-client"))
+
+    result = write_client_report_publisher_handoff(profile="sample-client", client_name="Sample Client", source_dir=source, output_dir=tmp_path / "handoff")
+    assert all((tmp_path / "handoff" / f"{schema}.json").exists() for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values())
+    package = json.loads((tmp_path / "handoff" / "client_report_presentation_ranges.v2.json").read_text())
+    ready = [bucket for bucket in package["section_buckets"] if bucket["section_key"] in GSC_EXACT_RANGE_SOURCE_BY_SECTION and bucket["data_state"] == "available"]
+    assert len(ready) == 12
+    assert {bucket["range_key"] for bucket in ready} == {"last_7_days", "last_30_days", "this_month", "last_month"}
+    assert next(b for b in ready if b["section_key"] == "gsc_summary")["display_data"]["metrics"][2]["value"].endswith("%")
+    assert "query" in next(b for b in ready if b["section_key"] == "gsc_top_queries")["display_data"]["queries"][0]
+    assert "page" in next(b for b in ready if b["section_key"] == "gsc_top_pages")["display_data"]["pages"][0]
+    assert validate_handoff_directory(tmp_path / "handoff").valid is True
+    assert len(result.files) >= 9
 
 
 def test_presentation_range_resolution_uses_report_end_anchor():

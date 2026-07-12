@@ -215,3 +215,6 @@ Availability semantics:
 - Partial coverage may be declared only when source coverage is explicitly partial. It must not be presented as complete.
 
 The package is designed to feed `client-dashboard` Presentation Mode range selection while keeping Published Preview/PDF output unchanged.
+## GSC exact-range validation
+
+The validator recognizes the three GSC exact-range v1 contracts and enforces exact report-period identity, web search type, section-specific dimensions, deterministic ranking, bounded rows, CTR consistency, non-negative average position, total-level summary provenance, and truthful freshness/coverage states. Presentation Ranges v2 references must resolve to the matching summary, query, or page contract and exact requested dates; cross-section references fail closed.

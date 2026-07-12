@@ -315,3 +315,6 @@ Future exact-range implementation must preserve:
 - CSRF and access-control rules remain portal-enforced.
 
 No current GA4/GSC query path observed in this inventory prints token contents or raw credential JSON. Current clients sanitize Google API error messages in `src/providers/ga4/client.py` and `src/providers/gsc/client.py`.
+## Fake-only GSC exact-range prototype
+
+R1 now includes synthetic-only `gsc_summary_exact_ranges.v1`, `gsc_top_queries_exact_ranges.v1`, and `gsc_top_pages_exact_ranges.v1` contracts. They keep total-level summary metrics separate from query- and page-scoped ranked rows, preserve exact-range CTR and average-position semantics, and represent complete, partial, empty, and unavailable coverage with explicit freshness fields. The approved prototype presets are Last 7 Days, Last 30 Days, This Month, and Last Month. This contract milestone adds no GSC calls or provider-query changes; controlled real GSC generation remains separate work.

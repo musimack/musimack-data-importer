@@ -353,3 +353,6 @@ Phase 1 boundaries:
 - no client-customizable report builder.
 
 Any expansion beyond these boundaries needs a separate plan and approval.
+## Synthetic GSC exact-range sources
+
+A fake-only handoff may include `gsc_summary_exact_ranges.v1.json`, `gsc_top_queries_exact_ranges.v1.json`, and `gsc_top_pages_exact_ranges.v1.json`. The writer validates their report period and semantic scope before adding them to the manifest and resolving Presentation Ranges v2 buckets. Summary values must be total-level metrics; ranked query and page files cannot substitute for one another. Freshness gaps must be marked partial and must identify the actual coverage end. These files are sanitized contract fixtures and provide no authority to call Search Console.

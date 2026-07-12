@@ -16,6 +16,10 @@ from src.client_report_ga4_ranked_exact_ranges import (
     contract_for_ranked_exact_schema,
     validate_ga4_ranked_exact_range_contract,
 )
+from src.client_report_gsc_exact_ranges import (
+    GSC_EXACT_RANGE_SOURCE_FILES,
+    validate_gsc_exact_range_contract,
+)
 from src.client_report_presentation_ranges import build_client_report_presentation_ranges
 from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
 
@@ -171,6 +175,15 @@ def write_client_report_publisher_handoff(
                 schema_version,
             )
         )
+    for schema_version, file_name in GSC_EXACT_RANGE_SOURCE_FILES.items():
+        exact_path = source / file_name
+        if not exact_path.exists():
+            continue
+        exact_ranges = _load_json_object(exact_path)
+        validate_gsc_exact_range_contract(exact_ranges)
+        _require_exact_source_period(exact_ranges, period)
+        generated_datasets[schema_version] = exact_ranges
+        generated.append((output / file_name, exact_ranges, "gsc", exact_ranges["report_type"], schema_version))
     exact_ranges_path = source / "presentation-exact-ranges.v1.json"
     if exact_ranges_path.exists():
         generated_datasets["presentation_exact_ranges.v1"] = _load_json_object(exact_ranges_path)
