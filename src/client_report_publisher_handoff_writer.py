@@ -6,6 +6,11 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from src.client_report_ga4_exact_ranges import (
+    GA4_EXACT_RANGE_SUMMARY_REPORT_TYPE,
+    GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+    validate_ga4_exact_range_summary_contract,
+)
 from src.client_report_presentation_ranges import build_client_report_presentation_ranges
 from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
 
@@ -126,6 +131,20 @@ def write_client_report_publisher_handoff(
     )
     gsc_queries_display = _build_gsc_queries_display(profile, gsc_summary, period)
     generated_datasets["gsc_queries_display.v1"] = gsc_queries_display
+    ga4_exact_ranges_path = source / "ga4_metric_display_exact_ranges.v1.json"
+    if ga4_exact_ranges_path.exists():
+        ga4_exact_ranges = _load_json_object(ga4_exact_ranges_path)
+        validate_ga4_exact_range_summary_contract(ga4_exact_ranges)
+        generated_datasets[GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION] = ga4_exact_ranges
+        generated.append(
+            (
+                output / "ga4_metric_display_exact_ranges.v1.json",
+                ga4_exact_ranges,
+                "ga4",
+                GA4_EXACT_RANGE_SUMMARY_REPORT_TYPE,
+                GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+            )
+        )
     exact_ranges_path = source / "presentation-exact-ranges.v1.json"
     if exact_ranges_path.exists():
         generated_datasets["presentation_exact_ranges.v1"] = _load_json_object(exact_ranges_path)

@@ -130,6 +130,8 @@ Older v1 handoffs without coverage metadata remain compatible only when their da
 
 Current handoff generation also writes `client_report_presentation_ranges.v2.json` when the Client Report Publisher writer runs. This package is optional for Phase 1 report-period PDF/export output, but it is the production replacement path for the temporary manual Presentation Mode bucket bridge.
 
+Fake-only GA4 exact-range summary prototype support may also include `ga4_metric_display_exact_ranges.v1.json` in local test handoffs. That file is a sanitized source contract for exact-range Top Metrics and User Engagement buckets only; it is not a provider export, does not authorize GA4 calls, and does not make GA4 ranked sections or GSC sections range-ready.
+
 Range generation uses the report period end as the deterministic anchor. Standard preset identifiers are `last_3_days`, `last_7_days`, `last_14_days`, `last_30_days`, `last_90_days`, `last_6_months`, `last_12_months`, `this_month`, and `last_month`. Custom ranges are generated only when explicit bounded sanitized range input is supplied.
 
 The package can truthfully produce ready `ga4_website_traffic_trends` buckets by slicing existing daily observations. For Top Metrics, User Engagement, Top Traffic Channels, Top Sources, Top Landing Pages, Most Viewed Pages, GSC Summary, Top Search Queries, and Top Search Pages, non-report-period buckets require exact-range sanitized provider results or approved exact-range source display data. The writer marks those ranges unavailable instead of deriving them from full-period rows.

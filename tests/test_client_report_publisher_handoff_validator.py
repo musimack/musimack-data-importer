@@ -348,6 +348,93 @@ def test_cli_returns_success_on_fake_fixture():
     assert completed.stderr == ""
 
 
+def test_presentation_range_exact_summary_references_must_resolve(tmp_path):
+    handoff_dir = tmp_path / "handoff"
+    handoff_dir.mkdir()
+    manifest = {
+        "schema_version": "client_report_publisher_handoff_manifest.v1",
+        "client_slug": "sample-client",
+        "period_start": "2026-01-01",
+        "period_end": "2026-07-08",
+        "generated_at": "2026-07-09T12:00:00Z",
+        "files": [
+            {
+                "path": "client_report_presentation_ranges.v2.json",
+                "provider": "presentation",
+                "report_type": "range_dataset",
+                "schema_version": "client_report_presentation_ranges.v2",
+            }
+        ],
+        "display_contract_versions": ["client_report_presentation_ranges.v2"],
+        "validation_status": "fixture_only_not_real_export",
+    }
+    package = _minimal_exact_summary_range_package()
+    _write_json(handoff_dir / "manifest.json", manifest)
+    _write_json(handoff_dir / "client_report_presentation_ranges.v2.json", package)
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("references missing GA4 exact-range summary source" in error for error in result.errors)
+
+    manifest["files"].append(
+        {
+            "path": "ga4_metric_display_exact_ranges.v1.json",
+            "provider": "ga4",
+            "report_type": "metric_display_exact_ranges",
+            "schema_version": "ga4_metric_display_exact_ranges.v1",
+        }
+    )
+    manifest["display_contract_versions"].append("ga4_metric_display_exact_ranges.v1")
+    _write_json(handoff_dir / "manifest.json", manifest)
+    _write_json(handoff_dir / "ga4_metric_display_exact_ranges.v1.json", _minimal_exact_summary_source())
+
+    valid = validate_handoff_directory(handoff_dir)
+
+    assert valid.valid is True
+
+
+def test_presentation_range_exact_summary_wrong_section_reference_fails(tmp_path):
+    handoff_dir = tmp_path / "handoff"
+    handoff_dir.mkdir()
+    manifest = {
+        "schema_version": "client_report_publisher_handoff_manifest.v1",
+        "client_slug": "sample-client",
+        "period_start": "2026-01-01",
+        "period_end": "2026-07-08",
+        "generated_at": "2026-07-09T12:00:00Z",
+        "files": [
+            {
+                "path": "client_report_presentation_ranges.v2.json",
+                "provider": "presentation",
+                "report_type": "range_dataset",
+                "schema_version": "client_report_presentation_ranges.v2",
+            },
+            {
+                "path": "ga4_metric_display_exact_ranges.v1.json",
+                "provider": "ga4",
+                "report_type": "metric_display_exact_ranges",
+                "schema_version": "ga4_metric_display_exact_ranges.v1",
+            },
+        ],
+        "display_contract_versions": [
+            "client_report_presentation_ranges.v2",
+            "ga4_metric_display_exact_ranges.v1",
+        ],
+        "validation_status": "fixture_only_not_real_export",
+    }
+    package = _minimal_exact_summary_range_package()
+    package["section_buckets"][0]["source_contract"] = "ga4_top_sources_display.v1"
+    _write_json(handoff_dir / "manifest.json", manifest)
+    _write_json(handoff_dir / "client_report_presentation_ranges.v2.json", package)
+    _write_json(handoff_dir / "ga4_metric_display_exact_ranges.v1.json", _minimal_exact_summary_source())
+
+    result = validate_handoff_directory(handoff_dir)
+
+    assert result.valid is False
+    assert any("source_contract does not match section" in error for error in result.errors)
+
+
 def _copy_fixture(tmp_path: Path) -> Path:
     target = tmp_path / "handoff"
     shutil.copytree(FIXTURE_DIR, target)
@@ -419,3 +506,141 @@ def _set_ga4_daily_series(
         "quality_notes": [] if state == "complete" else ["Fake partial coverage fixture."],
     }
     _write_json(payload_path, payload)
+
+
+def _minimal_exact_summary_range_package() -> dict:
+    return {
+        "schema_version": "client_report_presentation_ranges.v2",
+        "provider": "presentation",
+        "report_type": "range_dataset",
+        "client_slug": "sample-client",
+        "report_period": {"start_date": "2026-01-01", "end_date": "2026-07-08"},
+        "reference_date": "2026-07-08",
+        "anchor_rule": "report_period_end",
+        "timezone": "America/Los_Angeles",
+        "dataset_version": "sample-client:2026-01-01:2026-07-08:presentation-ranges.v2",
+        "generated_at": "2026-07-09T12:00:00Z",
+        "source_snapshot_identity": {},
+        "range_manifest": [
+            _range_manifest("last_3_days", "2026-07-06", "2026-07-08"),
+            _range_manifest("last_7_days", "2026-07-02", "2026-07-08"),
+            _range_manifest("last_14_days", "2026-06-25", "2026-07-08"),
+            _range_manifest("last_30_days", "2026-06-09", "2026-07-08"),
+            _range_manifest("last_90_days", "2026-04-10", "2026-07-08"),
+            _range_manifest("last_6_months", "2026-01-09", "2026-07-08"),
+            _range_manifest("last_12_months", "2025-07-09", "2026-07-08", coverage="partial", effective_start="2026-01-01"),
+            _range_manifest("this_month", "2026-07-01", "2026-07-08"),
+            _range_manifest("last_month", "2026-06-01", "2026-06-30"),
+        ],
+        "section_capabilities": [{"section_key": key} for key in [
+            "ga4_top_metrics",
+            "ga4_website_traffic_trends",
+            "ga4_channel_performance",
+            "ga4_user_engagement",
+            "ga4_top_sources",
+            "ga4_top_landing_pages",
+            "ga4_most_viewed_pages",
+            "gsc_summary",
+            "gsc_top_queries",
+            "gsc_top_pages",
+        ]],
+        "section_buckets": [
+            {
+                "section_key": "ga4_top_metrics",
+                "range_key": "last_7_days",
+                "preset_key": "last_7_days",
+                "requested_start_date": "2026-07-02",
+                "requested_end_date": "2026-07-08",
+                "effective_start_date": "2026-07-02",
+                "effective_end_date": "2026-07-08",
+                "source_contract": "ga4_metric_display.v1",
+                "dataset_version": "presentation_ranges.v2",
+                "precomputed_status": "ready",
+                "aggregation_status": "importer_sanitized_precomputed",
+                "display_schema_version": "generated_section_display.v1",
+                "row_count": 1,
+                "observation_count": 0,
+                "quality_notes": [],
+                "coverage_state": "complete",
+                "data_state": "available",
+                "exact_source": {
+                    "source_contract": "ga4_metric_display_exact_ranges.v1",
+                    "dataset_version": "ga4_metric_display_exact_ranges.v1",
+                    "range_key": "last_7_days",
+                    "requested_start_date": "2026-07-02",
+                    "requested_end_date": "2026-07-08",
+                    "source_identity": "sample-client:last_7_days:2026-07-02:2026-07-08",
+                },
+                "display_data": {"metrics": [{"key": "users", "label": "Users", "value": "707"}]},
+            }
+        ],
+        "validation_summary": {"status": "generated_not_validated", "warnings": []},
+    }
+
+
+def _minimal_exact_summary_source() -> dict:
+    return {
+        "schema_version": "ga4_metric_display_exact_ranges.v1",
+        "provider": "ga4",
+        "report_type": "metric_display_exact_ranges",
+        "data_scope": "ga4_exact_range_summary",
+        "dataset_version": "ga4_metric_display_exact_ranges.v1",
+        "client_slug": "sample-client",
+        "report_period": {"start_date": "2026-01-01", "end_date": "2026-07-08"},
+        "timezone": "America/Los_Angeles",
+        "inclusive_dates": True,
+        "calculation_version": "ga4_summary_exact_ranges.synthetic.v1",
+        "generated_at": "2026-07-09T12:00:00Z",
+        "source_identity": {"source_kind": "synthetic_fixture"},
+        "query_identity": {"shape_id": "synthetic", "fingerprint": "synthetic"},
+        "metric_definitions": [
+            {"key": "users"},
+            {"key": "new_users"},
+            {"key": "sessions"},
+            {"key": "views"},
+            {"key": "engaged_sessions"},
+            {"key": "engagement_rate"},
+            {"key": "average_session_duration_seconds"},
+            {"key": "average_engagement_time_seconds"},
+            {"key": "event_count"},
+            {"key": "key_events"},
+            {"key": "conversions"},
+        ],
+        "ranges": [
+            {
+                "range_key": "last_7_days",
+                "requested_start_date": "2026-07-02",
+                "requested_end_date": "2026-07-08",
+                "inclusive_dates": True,
+                "data_state": "available",
+                "coverage_state": "complete",
+                "quality_state": "passed",
+                "expected_date_count": 7,
+                "actual_date_count": 7,
+                "metrics": {"users": 707, "sessions": 814, "views": 1401, "engagement_rate": 0.62},
+                "calculation_version": "ga4_summary_exact_ranges.synthetic.v1",
+                "source_identity": "sample-client:last_7_days:2026-07-02:2026-07-08",
+                "quality_notes": ["Synthetic exact-range summary fixture."],
+            }
+        ],
+    }
+
+
+def _range_manifest(
+    range_key: str,
+    start: str,
+    end: str,
+    *,
+    coverage: str = "complete",
+    effective_start: str | None = None,
+) -> dict:
+    return {
+        "range_key": range_key,
+        "preset_key": range_key,
+        "requested_start_date": start,
+        "requested_end_date": end,
+        "effective_start_date": effective_start or start,
+        "effective_end_date": end,
+        "coverage_state": coverage,
+        "required": True,
+    }

@@ -4,6 +4,14 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from src.client_report_ga4_exact_ranges import (
+    GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+    TOP_METRICS_SECTION,
+    USER_ENGAGEMENT_SECTION,
+    display_data_for_section,
+    exact_range_entry_for,
+    validate_ga4_exact_range_summary_contract,
+)
 from src.client_report_publisher_contracts import CANONICAL_SECTION_SOURCE_MATRIX
 
 
@@ -302,6 +310,7 @@ def _bucket_for_section(
         }
     exact_bucket = _exact_range_bucket_from_source(section_key, resolved, datasets)
     if exact_bucket is not None:
+        exact_source = exact_bucket.pop("_exact_source", None)
         count = _display_count(exact_bucket)
         return {
             **base,
@@ -311,6 +320,7 @@ def _bucket_for_section(
             "aggregation_status": "importer_sanitized_precomputed",
             "display_schema_version": "generated_section_display.v1",
             "row_count": count,
+            **({"exact_source": exact_source} if isinstance(exact_source, dict) else {}),
             "display_data": exact_bucket,
         }
     return {
@@ -366,6 +376,29 @@ def _exact_range_bucket_from_source(
     resolved: ResolvedRange,
     datasets: dict[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
+    if section_key in {TOP_METRICS_SECTION, USER_ENGAGEMENT_SECTION}:
+        ga4_exact_ranges = datasets.get(GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION)
+        if isinstance(ga4_exact_ranges, dict):
+            validate_ga4_exact_range_summary_contract(ga4_exact_ranges)
+            entry = exact_range_entry_for(
+                ga4_exact_ranges,
+                range_key=resolved.range_key,
+                start_date=resolved.start_date.isoformat(),
+                end_date=resolved.end_date.isoformat(),
+            )
+            if isinstance(entry, dict):
+                display_data = display_data_for_section(entry, section_key)
+                if display_data is not None:
+                    display_data["_exact_source"] = {
+                        "source_contract": GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+                        "dataset_version": ga4_exact_ranges.get("dataset_version"),
+                        "range_key": entry.get("range_key"),
+                        "requested_start_date": entry.get("requested_start_date"),
+                        "requested_end_date": entry.get("requested_end_date"),
+                        "source_identity": entry.get("source_identity"),
+                    }
+                    return display_data
+
     range_sources = datasets.get("presentation_exact_ranges.v1")
     if not isinstance(range_sources, dict):
         return None
@@ -388,6 +421,11 @@ def _exact_range_bucket_from_source(
 
 
 def _display_count(display_data: dict[str, Any]) -> int:
+    if "_exact_source" in display_data and len(display_data) == 2:
+        for key in ("metrics",):
+            value = display_data.get(key)
+            if isinstance(value, list):
+                return len(value)
     for key in ("rows", "queries", "pages", "metrics", "summary_metrics"):
         value = display_data.get(key)
         if isinstance(value, list):
@@ -402,7 +440,12 @@ def _source_identity(datasets: dict[str, dict[str, Any]]) -> dict[str, str]:
     for contract_name in sorted(key for key in datasets if key != "presentation_exact_ranges.v1"):
         payload = datasets[contract_name]
         period = payload.get("report_period") if isinstance(payload, dict) else None
-        identity[contract_name] = f"{contract_name}:{period.get('start') if isinstance(period, dict) else 'unknown'}:{period.get('end') if isinstance(period, dict) else 'unknown'}"
+        start = period.get("start") if isinstance(period, dict) else None
+        end = period.get("end") if isinstance(period, dict) else None
+        if start is None and isinstance(period, dict):
+            start = period.get("start_date")
+            end = period.get("end_date")
+        identity[contract_name] = f"{contract_name}:{start or 'unknown'}:{end or 'unknown'}"
     return identity
 
 

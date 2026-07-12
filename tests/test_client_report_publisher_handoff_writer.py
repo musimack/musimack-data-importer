@@ -92,6 +92,85 @@ def test_handoff_writer_generates_production_presentation_ranges(tmp_path):
     assert validate_handoff_directory(tmp_path / "handoff").valid is True
 
 
+def test_handoff_writer_emits_ga4_exact_range_summary_buckets_for_two_sections(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    ga4_summary = _ga4_summary_with_scoped_rows()
+    ga4_snapshot = _ga4_snapshot_with_scoped_rows()
+    gsc_summary = _gsc_summary()
+    period = {"start": "2026-01-01", "end": "2026-07-08"}
+    daily_rows = _daily_rows(period["start"], 189)
+    ga4_summary["reporting_period"] = period
+    ga4_summary["time_series"] = daily_rows
+    ga4_snapshot["date_range"] = period
+    ga4_snapshot["time_series"] = daily_rows
+    gsc_summary["reporting_period"] = period
+    gsc_summary["time_series"] = daily_rows
+    _write_json(source / "ga4-summary.json", ga4_summary)
+    _write_json(source / "ga4-snapshot.json", ga4_snapshot)
+    _write_json(source / "gsc-summary.json", gsc_summary)
+    _write_json(source / "ga4_metric_display_exact_ranges.v1.json", _ga4_exact_ranges())
+
+    result = write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    generated_names = sorted(path.name for path in result.files)
+    assert "ga4_metric_display_exact_ranges.v1.json" in generated_names
+    ranges = json.loads((tmp_path / "handoff" / "client_report_presentation_ranges.v2.json").read_text())
+    ready = [
+        bucket
+        for bucket in ranges["section_buckets"]
+        if bucket["section_key"] in {"ga4_top_metrics", "ga4_user_engagement"}
+        and bucket["data_state"] == "available"
+    ]
+    assert len(ready) == 8
+    assert {bucket["range_key"] for bucket in ready} == {
+        "last_7_days",
+        "last_30_days",
+        "this_month",
+        "last_month",
+    }
+    top_metrics_last_7 = next(
+        bucket
+        for bucket in ready
+        if bucket["section_key"] == "ga4_top_metrics" and bucket["range_key"] == "last_7_days"
+    )
+    assert top_metrics_last_7["requested_start_date"] == "2026-07-02"
+    assert top_metrics_last_7["requested_end_date"] == "2026-07-08"
+    assert top_metrics_last_7["source_contract"] == "ga4_metric_display.v1"
+    assert top_metrics_last_7["exact_source"]["source_contract"] == "ga4_metric_display_exact_ranges.v1"
+    assert top_metrics_last_7["display_data"]["metrics"][0] == {
+        "key": "users",
+        "label": "Users",
+        "value": "707",
+    }
+    user_engagement_last_7 = next(
+        bucket
+        for bucket in ready
+        if bucket["section_key"] == "ga4_user_engagement" and bucket["range_key"] == "last_7_days"
+    )
+    assert any(
+        metric == {"key": "average_engagement_time", "label": "Average Engagement Time", "value": "74s"}
+        for metric in user_engagement_last_7["display_data"]["metrics"]
+    )
+    traffic_trend_last_7 = next(
+        bucket
+        for bucket in ranges["section_buckets"]
+        if bucket["section_key"] == "ga4_website_traffic_trends" and bucket["range_key"] == "last_7_days"
+    )
+    assert traffic_trend_last_7["aggregation_status"] == "existing_daily_observation_slice"
+    assert not any(
+        bucket["section_key"] in {"ga4_top_sources", "ga4_top_landing_pages", "ga4_most_viewed_pages"}
+        and bucket["data_state"] == "available"
+        for bucket in ranges["section_buckets"]
+    )
+    assert validate_handoff_directory(tmp_path / "handoff").valid is True
+
+
 def test_presentation_range_resolution_uses_report_end_anchor():
     reference = date.fromisoformat("2026-07-08")
     assert resolve_range_key("last_3_days", reference).start_date.isoformat() == "2026-07-06"
@@ -452,3 +531,89 @@ def _daily_rows(start: str, count: int) -> list[dict]:
         }
         for index in range(count)
     ]
+
+
+def _ga4_exact_ranges() -> dict:
+    return {
+        "schema_version": "ga4_metric_display_exact_ranges.v1",
+        "provider": "ga4",
+        "report_type": "metric_display_exact_ranges",
+        "data_scope": "ga4_exact_range_summary",
+        "dataset_version": "ga4_metric_display_exact_ranges.v1",
+        "client_slug": "sample-client",
+        "report_period": {"start_date": "2026-01-01", "end_date": "2026-07-08"},
+        "timezone": "America/Los_Angeles",
+        "inclusive_dates": True,
+        "calculation_version": "ga4_summary_exact_ranges.synthetic.v1",
+        "generated_at": "2026-07-09T12:00:00Z",
+        "source_identity": {
+            "source_kind": "synthetic_fixture",
+            "source_label": "Synthetic GA4 exact-range summary fixture",
+        },
+        "query_identity": {
+            "shape_id": "ga4_summary_exact_range.synthetic.v1",
+            "fingerprint": "sample-client-ga4-summary-exact-ranges-v1",
+        },
+        "metric_definitions": [
+            {"key": "users"},
+            {"key": "new_users"},
+            {"key": "sessions"},
+            {"key": "views"},
+            {"key": "engaged_sessions"},
+            {"key": "engagement_rate"},
+            {"key": "average_session_duration_seconds"},
+            {"key": "average_engagement_time_seconds"},
+            {"key": "event_count"},
+            {"key": "key_events"},
+            {"key": "conversions"},
+        ],
+        "ranges": [
+            _ga4_exact_range("last_7_days", "2026-07-02", "2026-07-08", 7, users=707, sessions=814, views=1401),
+            _ga4_exact_range("last_30_days", "2026-06-09", "2026-07-08", 30, users=3000, sessions=3510, views=7090, key_events=0),
+            _ga4_exact_range("this_month", "2026-07-01", "2026-07-08", 8, users=808, sessions=922, views=1600),
+            _ga4_exact_range("last_month", "2026-06-01", "2026-06-30", 30, users=2900, sessions=3300, views=6800, include_new_users=False),
+        ],
+    }
+
+
+def _ga4_exact_range(
+    range_key: str,
+    start: str,
+    end: str,
+    expected: int,
+    *,
+    users: int,
+    sessions: int,
+    views: int,
+    key_events: int = 42,
+    include_new_users: bool = True,
+) -> dict:
+    metrics = {
+        "users": users,
+        "sessions": sessions,
+        "views": views,
+        "engaged_sessions": int(sessions * 0.62),
+        "engagement_rate": 0.62,
+        "average_engagement_time_seconds": 74,
+        "average_session_duration_seconds": 118,
+        "event_count": views * 2,
+        "key_events": key_events,
+        "conversions": 9,
+    }
+    if include_new_users:
+        metrics["new_users"] = users - 100
+    return {
+        "range_key": range_key,
+        "requested_start_date": start,
+        "requested_end_date": end,
+        "inclusive_dates": True,
+        "data_state": "available",
+        "coverage_state": "complete",
+        "quality_state": "passed",
+        "expected_date_count": expected,
+        "actual_date_count": expected,
+        "metrics": metrics,
+        "calculation_version": "ga4_summary_exact_ranges.synthetic.v1",
+        "source_identity": f"sample-client:{range_key}:{start}:{end}",
+        "quality_notes": ["Synthetic exact-range summary fixture."],
+    }

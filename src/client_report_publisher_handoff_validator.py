@@ -8,6 +8,10 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from src.client_report_ga4_exact_ranges import (
+    GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
+    validate_ga4_exact_range_summary_contract,
+)
 from src.client_report_presentation_ranges import (
     CANONICAL_RANGE_KEYS,
     CANONICAL_SECTION_KEYS,
@@ -23,6 +27,7 @@ from src.client_report_publisher_contracts import (
 RECOGNIZED_CONTRACTS = {
     "client_report_publisher_handoff_manifest.v1",
     *CANONICAL_DATASET_CONTRACTS,
+    GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
     PRESENTATION_RANGES_SCHEMA_VERSION,
     "local_falcon_display.v1",
 }
@@ -108,6 +113,7 @@ def validate_handoff_directory(
     warnings: list[str] = []
     files_checked: list[str] = []
     contracts_seen: set[str] = set()
+    payloads_by_schema: dict[str, dict[str, Any]] = {}
 
     if max_list_items < 1:
         raise ValueError("max_list_items must be positive")
@@ -185,6 +191,7 @@ def validate_handoff_directory(
         schema_version = _validate_schema_version(payload, safe_rel_path, errors, contracts_seen)
         if schema_version:
             referenced_contracts.add(schema_version)
+            payloads_by_schema[schema_version] = payload
         _scan_payload(payload, safe_rel_path, errors, max_list_items=max_list_items)
         if schema_version in CANONICAL_DATASET_CONTRACTS:
             _validate_canonical_dataset_contract(
@@ -194,6 +201,8 @@ def validate_handoff_directory(
                 errors,
                 warnings,
             )
+        if schema_version == GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION:
+            _validate_ga4_exact_range_summary_source(payload, safe_rel_path, errors)
         if schema_version in DAILY_SERIES_CONTRACTS:
             _validate_daily_series_contract(
                 payload,
@@ -230,6 +239,8 @@ def validate_handoff_directory(
             errors.append(f"manifest.display_contract_versions is missing referenced contract {contract}")
         for contract in missing_files:
             errors.append(f"manifest references contract without a file: {contract}")
+
+    _validate_cross_contract_references(payloads_by_schema, errors)
 
     if not files_checked or files_checked == ["manifest.json"]:
         warnings.append("no display files were checked")
@@ -456,6 +467,61 @@ def _validate_presentation_range_contract(
             expected_contract = CANONICAL_SECTION_SOURCE_MATRIX[section_key][0]
             if source_contract != expected_contract:
                 errors.append(f"{label}.section_buckets[{index}].source_contract does not match section")
+        exact_source = bucket.get("exact_source")
+        if bucket.get("data_state") == "available" and section_key in {"ga4_top_metrics", "ga4_user_engagement"}:
+            if not isinstance(exact_source, dict):
+                errors.append(f"{label}.section_buckets[{index}].exact_source is required for GA4 summary exact ranges")
+            elif exact_source.get("source_contract") != GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION:
+                errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid")
+
+
+def _validate_ga4_exact_range_summary_source(
+    payload: dict[str, Any],
+    label: str,
+    errors: list[str],
+) -> None:
+    try:
+        validate_ga4_exact_range_summary_contract(payload)
+    except ValueError as exc:
+        errors.append(f"{label}: {exc}")
+
+
+def _validate_cross_contract_references(
+    payloads_by_schema: dict[str, dict[str, Any]],
+    errors: list[str],
+) -> None:
+    package = payloads_by_schema.get(PRESENTATION_RANGES_SCHEMA_VERSION)
+    if not isinstance(package, dict):
+        return
+    exact_source = payloads_by_schema.get(GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION)
+    for index, bucket in enumerate(package.get("section_buckets") or []):
+        if not isinstance(bucket, dict):
+            continue
+        if bucket.get("section_key") not in {"ga4_top_metrics", "ga4_user_engagement"}:
+            continue
+        if bucket.get("data_state") != "available":
+            continue
+        source = bucket.get("exact_source")
+        if not isinstance(source, dict):
+            continue
+        if not isinstance(exact_source, dict):
+            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] references missing GA4 exact-range summary source")
+            continue
+        if source.get("dataset_version") != exact_source.get("dataset_version"):
+            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] exact source dataset_version does not resolve")
+        matched = False
+        for item in exact_source.get("ranges") or []:
+            if not isinstance(item, dict):
+                continue
+            if (
+                item.get("range_key") == source.get("range_key")
+                and item.get("requested_start_date") == source.get("requested_start_date")
+                and item.get("requested_end_date") == source.get("requested_end_date")
+            ):
+                matched = True
+                break
+        if not matched:
+            errors.append(f"client_report_presentation_ranges.v2 section_buckets[{index}] exact source range identity does not resolve")
 
 
 def _require_list_fields(

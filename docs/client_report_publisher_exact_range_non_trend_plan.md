@@ -287,6 +287,10 @@ Completion criteria:
 - missing exact source remains unavailable;
 - no provider calls or runtime portal behavior changes.
 
+Implementation status: complete as a fake-only prototype. The importer now recognizes `ga4_metric_display_exact_ranges.v1` as a sanitized exact-range GA4 summary source contract for `ga4_top_metrics` and `ga4_user_engagement` only. The contract uses closed canonical metric definitions, inclusive requested date identity, report-period containment, timezone, source/query identity, coverage/data/quality state validation, duplicate identity rejection, and explicit synthetic-fixture lineage. `client_report_presentation_ranges.v2` keeps the existing section source contract (`ga4_metric_display.v1`) for renderer compatibility and adds exact-source lineage metadata on ready Top Metrics/User Engagement buckets. The embedded section `display_data` remains display-only and does not carry raw provider payloads or exact-source metadata.
+
+The first fake fixture path supports four available ranges for both approved sections: `last_7_days`, `last_30_days`, `this_month`, and `last_month`. Other Top Metrics/User Engagement ranges remain unavailable unless a matching exact source exists. GA4 Website Traffic Trends continues to use existing daily observation slicing. GA4 ranked sections and all GSC sections do not become exact-range-ready through this prototype. Portal import compatibility validates the optional exact-range source file and checks the v2 package references without adding a schema migration, provider call, publication behavior, export behavior, or access-control change.
+
 ## Security and secret boundaries
 
 Future exact-range implementation must preserve:
