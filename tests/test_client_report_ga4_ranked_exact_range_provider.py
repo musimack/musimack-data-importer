@@ -44,28 +44,35 @@ class FakeRankedClient:
         return _page_response()
 
 
-def test_provider_builds_four_ranked_contracts_with_four_ranges_each():
+def test_provider_builds_four_ranked_contracts_with_eleven_ranges_each():
     client = FakeRankedClient()
 
     payloads = build_all_ga4_ranked_exact_ranges_from_provider(
         client=client,
         profile="aluma-seo-geo",
-        report_period_start=date(2026, 1, 1),
+        report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
         generated_at="2026-07-09T12:00:00Z",
     )
 
     assert set(payloads) == set(RANKED_EXACT_RANGE_SOURCE_BY_SECTION.values())
-    assert len(client.calls) == 16
-    assert [name for name, _ in client.calls[:4]] == ["channel", "channel", "channel", "channel"]
+    assert len(client.calls) == 44
+    assert [name for name, _ in client.calls[:11]] == ["channel"] * 11
     for payload in payloads.values():
         validate_ga4_ranked_exact_range_contract(payload)
         assert payload["calculation_version"] == "ga4_ranked_exact_ranges.provider.v1"
         assert "synthetic" not in payload["calculation_version"]
         assert "property" not in str(payload).lower()
         assert [item["range_key"] for item in payload["ranges"]] == [
+            "last_3_days",
             "last_7_days",
+            "last_14_days",
             "last_30_days",
+            "last_60_days",
+            "last_90_days",
+            "last_6_months",
+            "last_12_months",
+            "year_to_date",
             "this_month",
             "last_month",
         ]
@@ -81,13 +88,13 @@ def test_provider_uses_correct_exact_dates_and_section_specific_rows():
         client=client,
         profile="aluma-seo-geo",
         section_key="ga4_top_sources",
-        report_period_start=date(2026, 1, 1),
+        report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
         generated_at="2026-07-09T12:00:00Z",
     )
 
     first = payload["ranges"][0]
-    assert first["requested_start_date"] == "2026-07-02"
+    assert first["requested_start_date"] == "2026-07-06"
     assert first["requested_end_date"] == "2026-07-08"
     assert first["rows"][0]["source"] == "google"
     assert first["rows"][0]["medium"] == "organic"
@@ -96,12 +103,29 @@ def test_provider_uses_correct_exact_dates_and_section_specific_rows():
     assert payload["query_identity"]["provider_dimension"] == "sessionSourceMedium"
 
 
+def test_ranked_provider_reuses_standard_and_custom_ranges():
+    custom = [{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}]
+    first = build_ga4_ranked_exact_range_from_provider(
+        client=FakeRankedClient(), profile="aluma-seo-geo", section_key="ga4_top_sources",
+        report_period_start=date(2025, 1, 1), report_period_end=date(2026, 7, 8), custom_ranges=custom,
+    )
+    client = FakeRankedClient()
+    second = build_ga4_ranked_exact_range_from_provider(
+        client=client, profile="aluma-seo-geo", section_key="ga4_top_sources",
+        report_period_start=date(2025, 1, 1), report_period_end=date(2026, 7, 8), custom_ranges=custom,
+        existing_payload=first,
+    )
+    assert client.calls == []
+    assert second["generation_metadata"] == {"provider_calls": 0, "reused_ranges": 12, "requested_ranges": 12}
+    assert all(len(item["query_fingerprint"]) == 64 for item in second["ranges"])
+
+
 def test_provider_empty_result_becomes_empty_not_unavailable():
     payload = build_ga4_ranked_exact_range_from_provider(
         client=FakeRankedClient(mode="empty"),
         profile="aluma-seo-geo",
         section_key="ga4_channel_performance",
-        report_period_start=date(2026, 1, 1),
+        report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
     )
 
@@ -115,7 +139,7 @@ def test_provider_permission_failure_is_not_reported_as_empty():
             client=FakeRankedClient(mode="permission"),
             profile="aluma-seo-geo",
             section_key="ga4_top_sources",
-            report_period_start=date(2026, 1, 1),
+            report_period_start=date(2025, 1, 1),
             report_period_end=date(2026, 7, 8),
         )
 
@@ -126,7 +150,7 @@ def test_provider_malformed_and_duplicate_rows_fail_contract_validation():
             client=FakeRankedClient(mode="malformed"),
             profile="aluma-seo-geo",
             section_key="ga4_top_sources",
-            report_period_start=date(2026, 1, 1),
+            report_period_start=date(2025, 1, 1),
             report_period_end=date(2026, 7, 8),
         )
     with pytest.raises(ValueError, match="duplicate dimension identity"):
@@ -134,13 +158,13 @@ def test_provider_malformed_and_duplicate_rows_fail_contract_validation():
             client=FakeRankedClient(mode="duplicate"),
             profile="aluma-seo-geo",
             section_key="ga4_top_sources",
-            report_period_start=date(2026, 1, 1),
+            report_period_start=date(2025, 1, 1),
             report_period_end=date(2026, 7, 8),
         )
 
 
 def test_provider_rejects_period_that_cannot_contain_required_ranges():
-    with pytest.raises(ValueError, match="last_30_days must stay inside the report period"):
+    with pytest.raises(ValueError, match="last_14_days must stay inside the report period"):
         build_ga4_ranked_exact_range_from_provider(
             client=FakeRankedClient(),
             profile="aluma-seo-geo",

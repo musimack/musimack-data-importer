@@ -13,11 +13,13 @@ from src.client_report_gsc_exact_ranges import (
 
 
 @pytest.mark.parametrize("schema", GSC_EXACT_RANGE_CONTRACTS)
-def test_fake_contracts_have_four_exact_ranges(schema):
+def test_fake_contracts_have_eleven_exact_ranges(schema):
     payload = build_fake_gsc_exact_range_dataset(schema)
     validate_gsc_exact_range_contract(payload)
     assert [item["range_key"] for item in payload["ranges"]] == [
-        "last_7_days", "last_30_days", "this_month", "last_month"
+        "last_3_days", "last_7_days", "last_14_days", "last_30_days",
+        "last_60_days", "last_90_days", "last_6_months", "last_12_months",
+        "year_to_date", "this_month", "last_month"
     ]
     assert all(item["data_state"] == "available" for item in payload["ranges"])
     assert payload["generation_metadata"]["provider_calls"] == 0

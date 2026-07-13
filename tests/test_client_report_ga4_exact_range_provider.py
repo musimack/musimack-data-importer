@@ -22,13 +22,13 @@ class FakeExactRangeClient:
         return _response(metric_names)
 
 
-def test_provider_builds_valid_exact_range_contract_with_four_required_ranges():
+def test_provider_builds_valid_exact_range_contract_with_eleven_required_ranges():
     client = FakeExactRangeClient()
 
     payload = build_ga4_exact_range_summary_from_provider(
         client=client,
         profile="aluma-seo-geo",
-        report_period_start=date(2026, 1, 1),
+        report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
         generated_at="2026-07-09T12:00:00Z",
     )
@@ -37,21 +37,28 @@ def test_provider_builds_valid_exact_range_contract_with_four_required_ranges():
     assert payload["dataset_version"] == "ga4_metric_display_exact_ranges.v1"
     assert payload["calculation_version"] == "ga4_summary_exact_ranges.provider.v1"
     assert [item["range_key"] for item in payload["ranges"]] == [
+        "last_3_days",
         "last_7_days",
+        "last_14_days",
         "last_30_days",
+        "last_60_days",
+        "last_90_days",
+        "last_6_months",
+        "last_12_months",
+        "year_to_date",
         "this_month",
         "last_month",
     ]
-    assert payload["ranges"][0]["requested_start_date"] == "2026-07-02"
+    assert payload["ranges"][0]["requested_start_date"] == "2026-07-06"
     assert payload["ranges"][0]["requested_end_date"] == "2026-07-08"
-    assert payload["ranges"][3]["requested_start_date"] == "2026-06-01"
-    assert payload["ranges"][3]["requested_end_date"] == "2026-06-30"
+    assert payload["ranges"][10]["requested_start_date"] == "2026-06-01"
+    assert payload["ranges"][10]["requested_end_date"] == "2026-06-30"
     assert payload["ranges"][0]["metrics"]["users"] == 101
     assert payload["ranges"][0]["metrics"]["engagement_rate"] == 0.642857
     assert payload["ranges"][0]["metrics"]["engaged_sessions"] == 79
     assert "averageEngagementTime" not in GA4_EXACT_RANGE_SUMMARY_METRICS
     assert "property" not in str(payload).lower()
-    assert len(client.calls) == 4
+    assert len(client.calls) == 11
 
 
 def test_provider_retries_required_metrics_when_optional_metric_query_fails():
@@ -60,21 +67,46 @@ def test_provider_retries_required_metrics_when_optional_metric_query_fails():
     payload = build_ga4_exact_range_summary_from_provider(
         client=client,
         profile="aluma-seo-geo",
-        report_period_start=date(2026, 1, 1),
+        report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
         generated_at="2026-07-09T12:00:00Z",
     )
 
     validate_ga4_exact_range_summary_contract(payload)
-    assert len(client.calls) == 8
+    assert len(client.calls) == 22
     assert all(call[1] == GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS for call in client.calls[1::2])
     assert "new_users" not in payload["ranges"][0]["metrics"]
     assert payload["ranges"][0]["metrics"]["users"] == 101
     assert payload["ranges"][0]["data_state"] == "available"
 
 
+def test_provider_adds_custom_range_and_reuses_matching_existing_entry():
+    first_client = FakeExactRangeClient()
+    first = build_ga4_exact_range_summary_from_provider(
+        client=first_client,
+        profile="aluma-seo-geo",
+        report_period_start=date(2025, 1, 1),
+        report_period_end=date(2026, 7, 8),
+        custom_ranges=[{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}],
+    )
+    second_client = FakeExactRangeClient()
+    second = build_ga4_exact_range_summary_from_provider(
+        client=second_client,
+        profile="aluma-seo-geo",
+        report_period_start=date(2025, 1, 1),
+        report_period_end=date(2026, 7, 8),
+        custom_ranges=[{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}],
+        existing_payload=first,
+    )
+
+    assert len(first_client.calls) == 12
+    assert second_client.calls == []
+    assert second["generation_metadata"] == {"provider_calls": 0, "reused_ranges": 12, "requested_ranges": 12}
+    assert all(len(item["query_fingerprint"]) == 64 for item in second["ranges"])
+
+
 def test_provider_rejects_period_that_cannot_contain_required_ranges():
-    with pytest.raises(ValueError, match="last_30_days must stay inside the report period"):
+    with pytest.raises(ValueError, match="last_14_days must stay inside the report period"):
         build_ga4_exact_range_summary_from_provider(
             client=FakeExactRangeClient(),
             profile="aluma-seo-geo",

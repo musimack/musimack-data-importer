@@ -18,6 +18,7 @@ from src.profile_aliases import ProfileAliasError, resolve_profile_slug
 
 DEFAULT_REPORT_START = date(2026, 1, 1)
 DEFAULT_REPORT_END = date(2026, 7, 8)
+AUTHORIZED_PROFILE = "aluma-seo-geo"
 
 
 def main() -> int:
@@ -28,6 +29,13 @@ def main() -> int:
     parser.add_argument("--report-start-date", default=DEFAULT_REPORT_START.isoformat())
     parser.add_argument("--report-end-date", default=DEFAULT_REPORT_END.isoformat())
     parser.add_argument("--timezone", default="America/Los_Angeles")
+    parser.add_argument(
+        "--custom-range",
+        action="append",
+        default=[],
+        metavar="KEY,START,END",
+        help="Add up to eight bounded custom ranges; KEY must start with custom.",
+    )
     parser.add_argument(
         "--real-output",
         action="store_true",
@@ -40,8 +48,12 @@ def main() -> int:
         if args.real_output and args.out:
             raise ConfigError("--real-output and --out cannot be combined")
         canonical_profile = resolve_profile_slug(args.profile)
+        if canonical_profile != AUTHORIZED_PROFILE:
+            raise ConfigError("this controlled milestone is authorized only for aluma-seo-geo")
         report_start = _parse_date(args.report_start_date, "--report-start-date")
         report_end = _parse_date(args.report_end_date, "--report-end-date")
+        out_path = _resolve_output_path(canonical_profile, args.out, args.real_output)
+        existing_payload = _read_object(out_path)
         config = load_ga4_config(args.profile)
         payload = build_ga4_exact_range_summary_from_provider(
             client=Ga4DataClient(config),
@@ -49,8 +61,9 @@ def main() -> int:
             report_period_start=report_start,
             report_period_end=report_end,
             timezone=args.timezone,
+            custom_ranges=_parse_custom_ranges(args.custom_range),
+            existing_payload=existing_payload,
         )
-        out_path = _resolve_output_path(canonical_profile, args.out, args.real_output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except (ConfigError, Ga4ClientError, ProfileAliasError, OSError, ValueError) as exc:
@@ -61,6 +74,8 @@ def main() -> int:
     empty = sum(1 for item in payload["ranges"] if item.get("data_state") == "empty")
     print(f"Saved sanitized GA4 exact-range summary to {out_path}.")
     print(f"Ranges: {len(payload['ranges'])}; available: {available}; empty: {empty}.")
+    metadata = payload.get("generation_metadata", {})
+    print(f"GA4 Data API calls: {metadata.get('provider_calls', 0)}; reused ranges: {metadata.get('reused_ranges', 0)}.")
     print("Output contains sanitized metric summaries only; credentials, tokens, raw provider payloads, and property ids were not written.")
     return 0
 
@@ -78,6 +93,27 @@ def _resolve_output_path(profile: str, out: str | None, real_output: bool) -> Pa
     if real_output:
         return Path("exports") / "local-real" / "dashboard-lab" / profile / "ga4_metric_display_exact_ranges.v1.json"
     return Path("exports") / f"{profile}_ga4_metric_display_exact_ranges.v1.json"
+
+
+def _parse_custom_ranges(values: list[str]) -> list[dict[str, str]]:
+    if len(values) > 8:
+        raise ConfigError("at most eight custom ranges may be requested")
+    parsed = []
+    for value in values:
+        parts = [part.strip() for part in value.split(",")]
+        if len(parts) != 3 or not parts[0].startswith("custom"):
+            raise ConfigError("--custom-range must use KEY,START,END and KEY must start with custom")
+        _parse_date(parts[1], "custom start")
+        _parse_date(parts[2], "custom end")
+        parsed.append({"range_key": parts[0], "start_date": parts[1], "end_date": parts[2]})
+    return parsed
+
+
+def _read_object(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    value = json.loads(path.read_text(encoding="utf-8"))
+    return value if isinstance(value, dict) else None
 
 
 if __name__ == "__main__":

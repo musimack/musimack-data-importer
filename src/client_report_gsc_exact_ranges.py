@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-
 GSC_EXACT_RANGE_CALCULATION_VERSION = "gsc_exact_ranges.synthetic.v1"
 GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION = "gsc_exact_ranges.provider.v1"
 GSC_EXACT_RANGE_CALCULATION_VERSIONS = {
@@ -14,8 +13,15 @@ GSC_EXACT_RANGE_CALCULATION_VERSIONS = {
     GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
 }
 PROTOTYPE_RANGES = (
+    ("last_3_days", "2026-07-06", "2026-07-08"),
     ("last_7_days", "2026-07-02", "2026-07-08"),
+    ("last_14_days", "2026-06-25", "2026-07-08"),
     ("last_30_days", "2026-06-09", "2026-07-08"),
+    ("last_60_days", "2026-05-10", "2026-07-08"),
+    ("last_90_days", "2026-04-10", "2026-07-08"),
+    ("last_6_months", "2026-01-09", "2026-07-08"),
+    ("last_12_months", "2025-07-09", "2026-07-08"),
+    ("year_to_date", "2026-01-01", "2026-07-08"),
     ("this_month", "2026-07-01", "2026-07-08"),
     ("last_month", "2026-06-01", "2026-06-30"),
 )
@@ -53,7 +59,7 @@ GSC_EXACT_RANGE_SOURCE_FILES = {k: f"{k}.json" for k in GSC_EXACT_RANGE_CONTRACT
 
 def build_fake_gsc_exact_range_dataset(
     schema_version: str, *, client_slug: str = "synthetic-client",
-    report_start: str = "2026-01-01", report_end: str = "2026-07-08",
+    report_start: str = "2025-01-01", report_end: str = "2026-07-08",
 ) -> dict[str, Any]:
     contract = _contract(schema_version)
     ranges = []

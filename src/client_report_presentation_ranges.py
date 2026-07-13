@@ -36,9 +36,11 @@ CANONICAL_RANGE_KEYS = (
     "last_7_days",
     "last_14_days",
     "last_30_days",
+    "last_60_days",
     "last_90_days",
     "last_6_months",
     "last_12_months",
+    "year_to_date",
     "this_month",
     "last_month",
 )
@@ -160,6 +162,8 @@ def resolve_standard_ranges(reference_date: date) -> list[ResolvedRange]:
 
 
 def resolve_range_key(range_key: str, reference_date: date) -> ResolvedRange:
+    if range_key == "year_to_date":
+        return ResolvedRange(range_key, reference_date.replace(month=1, day=1), reference_date)
     if range_key == "this_month":
         return ResolvedRange(range_key, reference_date.replace(day=1), reference_date)
     if range_key == "last_month":
@@ -171,6 +175,7 @@ def resolve_range_key(range_key: str, reference_date: date) -> ResolvedRange:
         "last_7_days": 7,
         "last_14_days": 14,
         "last_30_days": 30,
+        "last_60_days": 60,
         "last_90_days": 90,
     }
     if range_key in trailing_days:
@@ -314,9 +319,9 @@ def _bucket_for_section(
         if display_data is None:
             return {
                 **base,
-                "coverage_state": "empty",
-                "data_state": "empty",
-                "unsupported_reason": "No existing trend observations are available for this range.",
+                "coverage_state": "unsupported",
+                "data_state": "unavailable",
+                "unsupported_reason": "At least two existing daily trend observations are required; no values were inferred.",
                 "display_data": None,
             }
         point_count = min(len(trend["points"]) for trend in display_data["trends"])

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, date, datetime
 from typing import Any, Callable, Protocol
 
@@ -11,12 +12,12 @@ from src.client_report_ga4_ranked_exact_ranges import (
     contract_for_ranked_exact_section,
     validate_ga4_ranked_exact_range_contract,
 )
-from src.client_report_presentation_ranges import resolve_range_key
+from src.client_report_presentation_ranges import CANONICAL_RANGE_KEYS, resolve_custom_range, resolve_range_key
 from src.config import DateRange
 from src.ga4_client import Ga4ClientError
 
 
-EXACT_RANGE_KEYS = ("last_7_days", "last_30_days", "this_month", "last_month")
+EXACT_RANGE_KEYS = CANONICAL_RANGE_KEYS
 QUERY_SHAPE_VERSION = "ga4_data_api_ranked_exact_range.v1"
 
 
@@ -79,6 +80,8 @@ def build_all_ga4_ranked_exact_ranges_from_provider(
     report_period_end: date,
     timezone: str = "America/Los_Angeles",
     generated_at: str | None = None,
+    custom_ranges: list[dict[str, str]] | None = None,
+    existing_payloads: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     return {
         contract.schema_version: build_ga4_ranked_exact_range_from_provider(
@@ -89,6 +92,8 @@ def build_all_ga4_ranked_exact_ranges_from_provider(
             report_period_end=report_period_end,
             timezone=timezone,
             generated_at=generated_at,
+            custom_ranges=custom_ranges,
+            existing_payload=(existing_payloads or {}).get(contract.schema_version),
         )
         for contract in RANKED_EXACT_RANGE_CONTRACTS.values()
     }
@@ -103,6 +108,8 @@ def build_ga4_ranked_exact_range_from_provider(
     report_period_end: date,
     timezone: str = "America/Los_Angeles",
     generated_at: str | None = None,
+    custom_ranges: list[dict[str, str]] | None = None,
+    existing_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if report_period_start > report_period_end:
         raise ValueError("report_period_start must be on or before report_period_end")
@@ -112,13 +119,27 @@ def build_ga4_ranked_exact_range_from_provider(
     method_name, provider_dimension, provider_metrics, runner = QUERY_BY_SECTION[section_key]
     generated = generated_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     ranges = []
+    provider_calls = 0
+    reused_ranges = 0
+    existing = _reusable_entries(existing_payload, contract, profile, report_period_start, report_period_end)
     query_notes = [
         "Queried GA4 Data API directly for each ranked exact range; rows are not derived from report-period rankings."
     ]
-    for range_key in EXACT_RANGE_KEYS:
-        resolved = resolve_range_key(range_key, report_period_end)
+    resolved_ranges = [resolve_range_key(key, report_period_end) for key in EXACT_RANGE_KEYS]
+    resolved_ranges.extend(resolve_custom_range(item) for item in custom_ranges or [])
+    for resolved in resolved_ranges:
+        range_key = resolved.range_key
         if resolved.start_date < report_period_start or resolved.end_date > report_period_end:
             raise ValueError(f"{range_key} must stay inside the report period")
+        identity = (range_key, resolved.start_date.isoformat(), resolved.end_date.isoformat())
+        if identity in existing:
+            reused = dict(existing[identity])
+            reused["query_fingerprint"] = _query_fingerprint(
+                contract, range_key, DateRange(resolved.start_date, resolved.end_date)
+            )
+            ranges.append(reused)
+            reused_ranges += 1
+            continue
         ranges.append(
             _range_entry(
                 client=client,
@@ -129,6 +150,7 @@ def build_ga4_ranked_exact_range_from_provider(
                 runner=runner,
             )
         )
+        provider_calls += 1
 
     payload = {
         "schema_version": contract.schema_version,
@@ -169,6 +191,11 @@ def build_ga4_ranked_exact_range_from_provider(
         "sort_definition": {"metric_key": contract.sort_metric, "direction": "desc"},
         "row_limit": contract.row_limit,
         "ranges": ranges,
+        "generation_metadata": {
+            "provider_calls": provider_calls,
+            "reused_ranges": reused_ranges,
+            "requested_ranges": len(resolved_ranges),
+        },
         "quality_notes": query_notes,
     }
     validate_ga4_ranked_exact_range_contract(payload)
@@ -212,10 +239,37 @@ def _range_entry(
         "rows": rows,
         "calculation_version": GA4_RANKED_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
         "source_identity": f"{profile}:{contract.section_key}:{range_key}:{date_range.start.isoformat()}:{date_range.end.isoformat()}:ga4_data_api_ranked_exact_range",
+        "query_fingerprint": _query_fingerprint(contract, range_key, date_range),
         "quality_notes": [
             "Queried GA4 Data API for the exact ranked section and date range; no report-period fallback was used."
         ],
     }
+
+
+def _reusable_entries(
+    payload: dict[str, Any] | None,
+    contract: RankedExactRangeContract,
+    profile: str,
+    report_start: date,
+    report_end: date,
+) -> dict[tuple[str, str, str], dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return {}
+    validate_ga4_ranked_exact_range_contract(payload)
+    if payload.get("schema_version") != contract.schema_version or payload.get("client_slug") != profile or payload.get("report_period") != {
+        "start_date": report_start.isoformat(),
+        "end_date": report_end.isoformat(),
+    }:
+        raise ValueError("existing GA4 ranked exact-range data does not match the requested contract/profile/report period")
+    return {
+        (entry["range_key"], entry["requested_start_date"], entry["requested_end_date"]): entry
+        for entry in payload["ranges"]
+    }
+
+
+def _query_fingerprint(contract: RankedExactRangeContract, range_key: str, date_range: DateRange) -> str:
+    material = f"{QUERY_SHAPE_VERSION}:{contract.section_key}:{range_key}:{date_range.start.isoformat()}:{date_range.end.isoformat()}"
+    return hashlib.sha256(material.encode()).hexdigest()
 
 
 def _rows_from_response(response: dict[str, Any], contract: RankedExactRangeContract) -> list[dict[str, Any]]:

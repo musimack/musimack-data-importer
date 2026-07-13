@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
@@ -13,7 +14,11 @@ from src.client_report_ga4_exact_ranges import (
     metric_definitions_payload,
     validate_ga4_exact_range_summary_contract,
 )
-from src.client_report_presentation_ranges import resolve_range_key
+from src.client_report_presentation_ranges import (
+    CANONICAL_RANGE_KEYS,
+    resolve_custom_range,
+    resolve_range_key,
+)
 from src.config import DateRange
 from src.ga4_client import (
     GA4_EXACT_RANGE_SUMMARY_METRICS,
@@ -22,7 +27,7 @@ from src.ga4_client import (
 )
 
 
-EXACT_RANGE_KEYS = ("last_7_days", "last_30_days", "this_month", "last_month")
+EXACT_RANGE_KEYS = CANONICAL_RANGE_KEYS
 QUERY_SHAPE_ID = "ga4_data_api_exact_range_summary.dimensionless.v1"
 
 
@@ -44,19 +49,36 @@ def build_ga4_exact_range_summary_from_provider(
     report_period_end: date,
     timezone: str = "America/Los_Angeles",
     generated_at: str | None = None,
+    custom_ranges: list[dict[str, str]] | None = None,
+    existing_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if report_period_start > report_period_end:
         raise ValueError("report_period_start must be on or before report_period_end")
     generated = generated_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     ranges = []
     query_notes: list[str] = []
-    for range_key in EXACT_RANGE_KEYS:
-        resolved = resolve_range_key(range_key, report_period_end)
+    provider_calls = 0
+    reused_ranges = 0
+    existing = _reusable_entries(existing_payload, profile, report_period_start, report_period_end)
+    resolved_ranges = [resolve_range_key(key, report_period_end) for key in EXACT_RANGE_KEYS]
+    resolved_ranges.extend(resolve_custom_range(item) for item in custom_ranges or [])
+    for resolved in resolved_ranges:
+        range_key = resolved.range_key
         if resolved.start_date < report_period_start or resolved.end_date > report_period_end:
             raise ValueError(f"{range_key} must stay inside the report period")
-        entry, notes = _range_entry(client=client, profile=profile, range_key=range_key, date_range=DateRange(resolved.start_date, resolved.end_date))
+        identity = (range_key, resolved.start_date.isoformat(), resolved.end_date.isoformat())
+        if identity in existing:
+            reused = dict(existing[identity])
+            reused["query_fingerprint"] = _query_fingerprint(
+                range_key, DateRange(resolved.start_date, resolved.end_date)
+            )
+            ranges.append(reused)
+            reused_ranges += 1
+            continue
+        entry, notes, calls = _range_entry(client=client, profile=profile, range_key=range_key, date_range=DateRange(resolved.start_date, resolved.end_date))
         ranges.append(entry)
         query_notes.extend(notes)
+        provider_calls += calls
 
     payload = {
         "schema_version": GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION,
@@ -86,6 +108,11 @@ def build_ga4_exact_range_summary_from_provider(
         },
         "metric_definitions": metric_definitions_payload(),
         "ranges": ranges,
+        "generation_metadata": {
+            "provider_calls": provider_calls,
+            "reused_ranges": reused_ranges,
+            "requested_ranges": len(resolved_ranges),
+        },
     }
     if query_notes:
         payload["quality_notes"] = sorted(set(query_notes))
@@ -99,17 +126,20 @@ def _range_entry(
     profile: str,
     range_key: str,
     date_range: DateRange,
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[str], int]:
     notes = [
         "Queried GA4 Data API as a range-level summary row; values are not clipped or summed from report-period totals."
     ]
     response = None
+    provider_calls = 0
     metric_names = GA4_EXACT_RANGE_SUMMARY_METRICS
     try:
+        provider_calls += 1
         response = client.run_exact_range_summary(date_range, metric_names=metric_names)
     except Ga4ClientError as primary_exc:
         try:
             metric_names = GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS
+            provider_calls += 1
             response = client.run_exact_range_summary(date_range, metric_names=metric_names)
             notes.append(f"Optional GA4 metrics omitted after safe retry: {_safe_failure_note(primary_exc)}")
         except Ga4ClientError as fallback_exc:
@@ -142,10 +172,37 @@ def _range_entry(
             "metrics": metrics,
             "calculation_version": GA4_EXACT_RANGE_SUMMARY_PROVIDER_CALCULATION_VERSION,
             "source_identity": f"{profile}:{range_key}:{date_range.start.isoformat()}:{date_range.end.isoformat()}:ga4_data_api_exact_range_summary",
+            "query_fingerprint": _query_fingerprint(range_key, date_range),
             "quality_notes": notes,
         },
         notes,
+        provider_calls,
     )
+
+
+def _reusable_entries(
+    payload: dict[str, Any] | None,
+    profile: str,
+    report_start: date,
+    report_end: date,
+) -> dict[tuple[str, str, str], dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return {}
+    validate_ga4_exact_range_summary_contract(payload)
+    if payload.get("client_slug") != profile or payload.get("report_period") != {
+        "start_date": report_start.isoformat(),
+        "end_date": report_end.isoformat(),
+    }:
+        raise ValueError("existing GA4 exact-range summary does not match the requested profile/report period")
+    return {
+        (entry["range_key"], entry["requested_start_date"], entry["requested_end_date"]): entry
+        for entry in payload["ranges"]
+    }
+
+
+def _query_fingerprint(range_key: str, date_range: DateRange) -> str:
+    material = f"{QUERY_SHAPE_ID}:{range_key}:{date_range.start.isoformat()}:{date_range.end.isoformat()}"
+    return hashlib.sha256(material.encode()).hexdigest()
 
 
 def _metrics_from_run_report_response(response: dict[str, Any], *, metric_names: tuple[str, ...]) -> dict[str, int | float]:

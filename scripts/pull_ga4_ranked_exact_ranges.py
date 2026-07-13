@@ -32,6 +32,13 @@ def main() -> int:
     parser.add_argument("--report-end-date", default=DEFAULT_REPORT_END.isoformat())
     parser.add_argument("--timezone", default="America/Los_Angeles")
     parser.add_argument(
+        "--custom-range",
+        action="append",
+        default=[],
+        metavar="KEY,START,END",
+        help="Add up to eight bounded custom ranges; KEY must start with custom.",
+    )
+    parser.add_argument(
         "--real-output",
         action="store_true",
         help="Write ranked exact-range files under ignored exports/local-real/dashboard-lab/{profile}/.",
@@ -47,6 +54,8 @@ def main() -> int:
             raise ConfigError("--real-output and --out-dir cannot be combined")
         report_start = _parse_date(args.report_start_date, "--report-start-date")
         report_end = _parse_date(args.report_end_date, "--report-end-date")
+        output_dir = _resolve_output_dir(canonical_profile, args.out_dir, args.real_output)
+        existing_payloads = _read_existing_payloads(output_dir)
         config = load_ga4_config(args.profile)
         payloads = build_all_ga4_ranked_exact_ranges_from_provider(
             client=Ga4DataClient(config),
@@ -54,8 +63,9 @@ def main() -> int:
             report_period_start=report_start,
             report_period_end=report_end,
             timezone=args.timezone,
+            custom_ranges=_parse_custom_ranges(args.custom_range),
+            existing_payloads=existing_payloads,
         )
-        output_dir = _resolve_output_dir(canonical_profile, args.out_dir, args.real_output)
         output_dir.mkdir(parents=True, exist_ok=True)
         for schema_version, payload in payloads.items():
             (output_dir / f"{schema_version}.json").write_text(
@@ -79,8 +89,11 @@ def main() -> int:
         if item.get("data_state") == "empty"
     )
     print(f"Saved sanitized GA4 ranked exact-range datasets to {output_dir}.")
-    print(f"Contracts: {len(payloads)}; ranges: {len(payloads) * 4}; available: {available}; empty: {empty}.")
-    print("GA4 Data API call count: 16 expected ranked calls; no GSC, BigQuery, or portal provider calls were made by this script.")
+    calls = sum(int(payload.get("generation_metadata", {}).get("provider_calls", 0)) for payload in payloads.values())
+    reused = sum(int(payload.get("generation_metadata", {}).get("reused_ranges", 0)) for payload in payloads.values())
+    ranges = sum(len(payload["ranges"]) for payload in payloads.values())
+    print(f"Contracts: {len(payloads)}; ranges: {ranges}; available: {available}; empty: {empty}.")
+    print(f"GA4 Data API calls: {calls}; reused ranges: {reused}; no GSC, BigQuery, or portal provider calls were made by this script.")
     print("Output contains sanitized ranked rows only; credentials, tokens, raw provider payloads, and property ids were not written.")
     return 0
 
@@ -98,6 +111,29 @@ def _resolve_output_dir(profile: str, out_dir: str | None, real_output: bool) ->
     if real_output:
         return Path("exports") / "local-real" / "dashboard-lab" / profile
     return Path("exports") / f"{profile}_ga4_ranked_exact_ranges"
+
+
+def _parse_custom_ranges(values: list[str]) -> list[dict[str, str]]:
+    if len(values) > 8:
+        raise ConfigError("at most eight custom ranges may be requested")
+    parsed = []
+    for value in values:
+        parts = [part.strip() for part in value.split(",")]
+        if len(parts) != 3 or not parts[0].startswith("custom"):
+            raise ConfigError("--custom-range must use KEY,START,END and KEY must start with custom")
+        _parse_date(parts[1], "custom start")
+        _parse_date(parts[2], "custom end")
+        parsed.append({"range_key": parts[0], "start_date": parts[1], "end_date": parts[2]})
+    return parsed
+
+
+def _read_existing_payloads(output_dir: Path) -> dict[str, dict]:
+    payloads = {}
+    for path in output_dir.glob("ga4_*_exact_ranges.v1.json") if output_dir.exists() else []:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(value, dict) and isinstance(value.get("schema_version"), str):
+            payloads[value["schema_version"]] = value
+    return payloads
 
 
 if __name__ == "__main__":

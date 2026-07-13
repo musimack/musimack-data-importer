@@ -149,7 +149,7 @@ Controlled GA4 ranked exact-range support may include these sanitized source con
 - `ga4_top_landing_pages_exact_ranges.v1.json`
 - `ga4_most_viewed_pages_exact_ranges.v1.json`
 
-For the R1 controlled real provider checkpoint, the ranked provider path is limited to the Aluma profile and the four exact range keys `last_7_days`, `last_30_days`, `this_month`, and `last_month`. The command performs 16 GA4 ranked Data API requests for one report period: four ranked datasets times four exact ranges. Do not expand the profile list, range list, provider list, or portal runtime behavior without a separate approved milestone.
+The earlier R1 checkpoint used four exact keys. R3-H1 supersedes that range limitation for the same Aluma-only controlled path: eleven canonical standard keys plus at most eight explicit Custom identities are allowed only when the operator invokes the gated scripts. Existing exact identities are loaded and reused before querying. The portal never invokes this path. See `docs/r3_h1_exact_range_expansion.md` for the bounded call inventory, freshness behavior, and generated-data boundary. Do not expand the profile/provider list, add pagination/backfill, or change portal runtime behavior without a separately approved milestone.
 
 Range generation uses the report period end as the deterministic anchor. Standard preset identifiers are `last_3_days`, `last_7_days`, `last_14_days`, `last_30_days`, `last_90_days`, `last_6_months`, `last_12_months`, `this_month`, and `last_month`. Custom ranges are generated only when explicit bounded sanitized range input is supplied.
 

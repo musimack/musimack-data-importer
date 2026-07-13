@@ -84,7 +84,7 @@ def test_handoff_writer_generates_production_presentation_ranges(tmp_path):
     assert ranges["schema_version"] == "client_report_presentation_ranges.v2"
     assert ranges["reference_date"] == "2026-07-08"
     assert ranges["anchor_rule"] == "report_period_end"
-    assert len(ranges["range_manifest"]) == 9
+    assert len(ranges["range_manifest"]) == 11
     assert len(ranges["section_capabilities"]) == 10
     trend_last_30 = next(
         bucket
@@ -250,7 +250,7 @@ def test_handoff_writer_emits_ranked_exact_range_buckets_for_four_sections(tmp_p
 def test_handoff_writer_emits_distinct_gsc_exact_range_buckets(tmp_path):
     source = tmp_path / "source"
     source.mkdir()
-    period = {"start": "2026-01-01", "end": "2026-07-08"}
+    period = {"start": "2025-01-01", "end": "2026-07-08"}
     ga4_summary = _ga4_summary_with_scoped_rows()
     ga4_snapshot = _ga4_snapshot_with_scoped_rows()
     gsc_summary = _gsc_summary()
@@ -271,8 +271,12 @@ def test_handoff_writer_emits_distinct_gsc_exact_range_buckets(tmp_path):
     assert all((tmp_path / "handoff" / f"{schema}.json").exists() for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values())
     package = json.loads((tmp_path / "handoff" / "client_report_presentation_ranges.v2.json").read_text())
     ready = [bucket for bucket in package["section_buckets"] if bucket["section_key"] in GSC_EXACT_RANGE_SOURCE_BY_SECTION and bucket["data_state"] == "available"]
-    assert len(ready) == 12
-    assert {bucket["range_key"] for bucket in ready} == {"last_7_days", "last_30_days", "this_month", "last_month"}
+    assert len(ready) == 33
+    assert {bucket["range_key"] for bucket in ready} == {
+        "last_3_days", "last_7_days", "last_14_days", "last_30_days",
+        "last_60_days", "last_90_days", "last_6_months", "last_12_months",
+        "year_to_date", "this_month", "last_month",
+    }
     assert next(b for b in ready if b["section_key"] == "gsc_summary")["display_data"]["metrics"][2]["value"].endswith("%")
     assert "query" in next(b for b in ready if b["section_key"] == "gsc_top_queries")["display_data"]["queries"][0]
     assert "page" in next(b for b in ready if b["section_key"] == "gsc_top_pages")["display_data"]["pages"][0]

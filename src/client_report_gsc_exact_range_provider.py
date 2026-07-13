@@ -8,9 +8,9 @@ from typing import Any, Protocol
 from src.client_report_gsc_exact_ranges import (
     GSC_EXACT_RANGE_CONTRACTS,
     GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
-    PROTOTYPE_RANGES,
     validate_gsc_exact_range_contract,
 )
+from src.client_report_presentation_ranges import CANONICAL_RANGE_KEYS, resolve_custom_range, resolve_range_key
 
 
 class GscExactRangeClient(Protocol):
@@ -27,6 +27,8 @@ def build_all_gsc_exact_ranges_from_provider(
     report_end: str,
     available_through_date: str,
     timezone: str = "America/Los_Angeles",
+    custom_ranges: list[dict[str, str]] | None = None,
+    existing_payloads: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     return {
         schema: build_gsc_exact_range_from_provider(
@@ -37,6 +39,8 @@ def build_all_gsc_exact_ranges_from_provider(
             report_end=report_end,
             available_through_date=available_through_date,
             timezone=timezone,
+            custom_ranges=custom_ranges,
+            existing_payload=(existing_payloads or {}).get(schema),
         )
         for schema in GSC_EXACT_RANGE_CONTRACTS
     }
@@ -51,13 +55,30 @@ def build_gsc_exact_range_from_provider(
     report_end: str,
     available_through_date: str,
     timezone: str,
+    custom_ranges: list[dict[str, str]] | None = None,
+    existing_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract = GSC_EXACT_RANGE_CONTRACTS[schema_version]
     available_through = date.fromisoformat(available_through_date)
     ranges = []
     provider_calls = 0
-    for range_key, start_raw, end_raw in PROTOTYPE_RANGES:
-        start, requested_end = date.fromisoformat(start_raw), date.fromisoformat(end_raw)
+    reused_ranges = 0
+    existing = _reusable_entries(existing_payload, schema_version, client_slug, report_start, report_end)
+    resolved_ranges = [resolve_range_key(key, date.fromisoformat(report_end)) for key in CANONICAL_RANGE_KEYS]
+    resolved_ranges.extend(resolve_custom_range(item) for item in custom_ranges or [])
+    for resolved in resolved_ranges:
+        range_key = resolved.range_key
+        start, requested_end = resolved.start_date, resolved.end_date
+        start_raw, end_raw = start.isoformat(), requested_end.isoformat()
+        if start < date.fromisoformat(report_start) or requested_end > date.fromisoformat(report_end):
+            raise ValueError(f"{range_key} must stay inside the report period")
+        identity = (range_key, start_raw, end_raw)
+        if identity in existing:
+            reused = dict(existing[identity])
+            reused["query_fingerprint"] = _query_fingerprint(schema_version, range_key, start_raw, end_raw)
+            ranges.append(reused)
+            reused_ranges += 1
+            continue
         entry: dict[str, Any] = {
             "range_key": range_key,
             "requested_start_date": start_raw,
@@ -67,6 +88,7 @@ def build_gsc_exact_range_from_provider(
             "available_through_date": available_through_date,
             "expected_lag_days": 3,
             "source_identity": _range_identity(client_slug, contract.section_key, range_key, start_raw, end_raw),
+            "query_fingerprint": _query_fingerprint(schema_version, range_key, start_raw, end_raw),
         }
         if available_through < start:
             entry.update(
@@ -132,7 +154,12 @@ def build_gsc_exact_range_from_provider(
         "sort": None if contract.sort_metric is None else {"metric": "clicks", "direction": "descending", "tie_breaker": contract.dimension, "tie_direction": "ascending"},
         "row_limit": contract.row_limit,
         "ranges": ranges,
-        "generation_metadata": {"mode": "provider_exact_range", "provider_calls": provider_calls},
+        "generation_metadata": {
+            "mode": "provider_exact_range",
+            "provider_calls": provider_calls,
+            "reused_ranges": reused_ranges,
+            "requested_ranges": len(resolved_ranges),
+        },
         "sanitized_source_metadata": {"contains_real_data": True, "raw_provider_payload_included": False},
     }
     validate_gsc_exact_range_contract(payload)
@@ -178,3 +205,28 @@ def _zero_metrics() -> dict[str, Any]:
 
 def _range_identity(client_slug: str, section: str, key: str, start: str, end: str) -> str:
     return hashlib.sha256(f"{client_slug}:{section}:{key}:{start}:{end}:provider.v1".encode()).hexdigest()
+
+
+def _query_fingerprint(schema: str, key: str, start: str, end: str) -> str:
+    return hashlib.sha256(f"{schema}:web:{key}:{start}:{end}:provider.v1".encode()).hexdigest()
+
+
+def _reusable_entries(
+    payload: dict[str, Any] | None,
+    schema: str,
+    client_slug: str,
+    report_start: str,
+    report_end: str,
+) -> dict[tuple[str, str, str], dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return {}
+    validate_gsc_exact_range_contract(payload)
+    if payload.get("schema_version") != schema or payload.get("source_identity", {}).get("client_slug") != client_slug or payload.get("report_period") != {
+        "start_date": report_start,
+        "end_date": report_end,
+    }:
+        raise ValueError("existing GSC exact-range data does not match the requested contract/profile/report period")
+    return {
+        (entry["range_key"], entry["requested_start_date"], entry["requested_end_date"]): entry
+        for entry in payload["ranges"]
+    }

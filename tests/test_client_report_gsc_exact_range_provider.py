@@ -21,21 +21,21 @@ def _row(label, clicks):
     return {"keys": [label], "clicks": clicks, "impressions": clicks * 10, "ctr": .1, "position": 3.2}
 
 
-def test_provider_builds_three_contracts_and_twelve_complete_ranges():
+def test_provider_builds_three_contracts_and_thirty_three_complete_ranges():
     client = FakeClient()
-    datasets = build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2026-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
+    datasets = build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
     assert len(datasets) == 3
-    assert len(client.calls) == 12
-    assert all(len(payload["ranges"]) == 4 for payload in datasets.values())
+    assert len(client.calls) == 33
+    assert all(len(payload["ranges"]) == 11 for payload in datasets.values())
     assert all(item["data_state"] == "available" for payload in datasets.values() for item in payload["ranges"])
     assert all(payload["calculation_version"] == "gsc_exact_ranges.provider.v1" for payload in datasets.values())
-    assert all(payload["generation_metadata"]["provider_calls"] == 4 for payload in datasets.values())
+    assert all(payload["generation_metadata"]["provider_calls"] == 11 for payload in datasets.values())
     assert "synthetic" not in str(datasets).lower()
 
 
 def test_provider_uses_dimensionless_query_and_distinct_ranked_scopes():
     client = FakeClient()
-    datasets = build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2026-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
+    datasets = build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
     summary = datasets["gsc_summary_exact_ranges.v1"]["ranges"][0]
     assert summary["summary_source"] == "provider_total_row_equivalent"
     assert summary["summary_metrics"] == {"clicks": 20, "impressions": 200, "ctr": .1, "average_position": 4.5}
@@ -44,12 +44,28 @@ def test_provider_uses_dimensionless_query_and_distinct_ranked_scopes():
     assert all("query" not in row for row in datasets["gsc_top_pages_exact_ranges.v1"]["ranges"][0]["page_rows"])
 
 
+def test_provider_reuses_standard_and_custom_ranges_without_new_calls():
+    custom = [{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}]
+    first = build_all_gsc_exact_ranges_from_provider(
+        FakeClient(), client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08",
+        available_through_date="2026-07-08", custom_ranges=custom,
+    )
+    client = FakeClient()
+    second = build_all_gsc_exact_ranges_from_provider(
+        client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08",
+        available_through_date="2026-07-08", custom_ranges=custom, existing_payloads=first,
+    )
+    assert client.calls == []
+    assert all(payload["generation_metadata"] == {"mode": "provider_exact_range", "provider_calls": 0, "reused_ranges": 12, "requested_ranges": 12} for payload in second.values())
+    assert all(len(item["query_fingerprint"]) == 64 for payload in second.values() for item in payload["ranges"])
+
+
 def test_freshness_partial_is_truthful_and_uses_effective_end():
     client = FakeClient()
-    datasets = build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2026-01-01", report_end="2026-07-08", available_through_date="2026-07-06")
+    datasets = build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08", available_through_date="2026-07-06")
     assert all(payload["ranges"][0]["data_state"] == "partial" for payload in datasets.values())
     assert all(payload["ranges"][0]["actual_coverage_end_date"] == "2026-07-06" for payload in datasets.values())
-    assert client.calls[0] == ("summary", "2026-07-02", "2026-07-06")
+    assert client.calls[0] == ("summary", "2026-07-06", "2026-07-06")
 
 
 @pytest.mark.parametrize("method", ["summary", "query", "page"])
@@ -59,11 +75,11 @@ def test_provider_errors_propagate_and_are_not_empty(method):
     client = Broken()
     setattr(client, f"query_exact_range_{'queries' if method == 'query' else 'pages' if method == 'page' else 'summary'}", client._fail)
     with pytest.raises(RuntimeError, match="provider failure"):
-        build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2026-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
+        build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
 
 
 def test_malformed_provider_rows_fail_closed():
     client = FakeClient()
     client.query_exact_range_summary = lambda start, end: {"rows": [{"clicks": "bad"}]}
     with pytest.raises(ValueError, match="malformed"):
-        build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2026-01-01", report_end="2026-07-08", available_through_date="2026-07-08")
+        build_all_gsc_exact_ranges_from_provider(client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08", available_through_date="2026-07-08")

@@ -48,6 +48,7 @@ def write_client_report_publisher_handoff(
     ga4_summary_path: Path | None = None,
     ga4_snapshot_path: Path | None = None,
     gsc_summary_path: Path | None = None,
+    custom_ranges: list[dict[str, str]] | None = None,
 ) -> HandoffWriteResult:
     source = source_dir or DEFAULT_SOURCE_ROOT / profile
     output = output_dir or DEFAULT_OUTPUT_ROOT / profile
@@ -201,6 +202,7 @@ def write_client_report_publisher_handoff(
         client_slug=profile,
         period=period,
         datasets=generated_datasets,
+        custom_ranges=custom_ranges,
     )
     generated.append(
         (

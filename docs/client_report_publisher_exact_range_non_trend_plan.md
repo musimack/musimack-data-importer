@@ -33,7 +33,7 @@ Completed R1 implementation checkpoints:
 - Controlled real Aluma GA4 ranked exact-range provider implementation for those four ranked contracts.
 - Handoff writer and validator period checks now reject exact-range source files whose embedded `report_period` does not match the target handoff manifest period.
 
-Smallest next coding milestone: decide whether to expand the controlled provider path beyond Aluma and/or beyond the four currently approved range keys. GSC exact-range generation remains a separate design milestone because the current high-cardinality request shape is not sufficient evidence for complete exact-range ranked correctness.
+R3-H1 update (2026-07-13): the controlled path remains Aluma-only but now supports all eleven canonical standard exact keys plus at most eight explicit Custom identities. GSC exact summary/query/page generation is implemented through distinct provider shapes with freshness metadata. See `docs/r3_h1_exact_range_expansion.md`. Expansion beyond Aluma, pagination/backfill, or portal provider calls remains unauthorized.
 
 ## Current provider query inventory
 
