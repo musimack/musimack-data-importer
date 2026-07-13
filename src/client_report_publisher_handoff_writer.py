@@ -270,6 +270,7 @@ def _build_ga4_metric_display(
             _metric_card("sessions", "Visits", metrics.get("sessions"), "count"),
             _metric_card("views", "Page Views", metrics.get("views"), "count"),
             _metric_card("engagement_rate", "Engagement Rate", metrics.get("engagement_rate"), "percent"),
+            _metric_card("engaged_sessions", "Engaged Sessions", metrics.get("engaged_sessions"), "count"),
             _metric_card(
                 "average_session_duration_seconds",
                 "Average Session Duration",

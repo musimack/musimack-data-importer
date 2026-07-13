@@ -45,6 +45,14 @@ def test_handoff_writer_generates_valid_supported_contracts(tmp_path):
 
     validation = validate_handoff_directory(tmp_path / "handoff")
     assert validation.valid is True
+    metric_display = json.loads((tmp_path / "handoff" / "ga4_metric_display.v1.json").read_text())
+    engaged_sessions = next(
+        card for card in metric_display["metric_cards"] if card["key"] == "engaged_sessions"
+    )
+    assert engaged_sessions["label"] == "Engaged Sessions"
+    assert engaged_sessions["value"] == 60
+    assert engaged_sessions["formatted_value"] == "60"
+    assert engaged_sessions["unit"] == "count"
 
 
 def test_handoff_writer_generates_production_presentation_ranges(tmp_path):
@@ -548,6 +556,7 @@ def _ga4_summary() -> dict:
             "sessions": 120,
             "views": 240,
             "engagement_rate": 0.5,
+            "engaged_sessions": 60,
             "average_session_duration_seconds": 60,
             "event_count": 20,
             "key_events": 4,
@@ -594,6 +603,7 @@ def _ga4_snapshot() -> dict:
             {"name": "sessions", "value": 120},
             {"name": "views", "value": 240},
             {"name": "engagement_rate", "value": 0.5},
+            {"name": "engaged_sessions", "value": 60},
             {"name": "average_session_duration_seconds", "value": 60},
             {"name": "key_events", "value": 4},
             {"name": "conversions", "value": 3},
