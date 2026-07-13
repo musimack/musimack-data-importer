@@ -22,7 +22,6 @@ GA4_EXACT_RANGE_SUMMARY_METRICS = (
     "engagedSessions",
     "engagementRate",
     "averageSessionDuration",
-    "averageEngagementTime",
     "eventCount",
     "keyEvents",
     "conversions",

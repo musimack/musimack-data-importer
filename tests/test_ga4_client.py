@@ -50,7 +50,7 @@ def test_exact_range_summary_request_is_dimensionless_summary_row():
     assert {"name": "activeUsers"} in request["metrics"]
     assert {"name": "newUsers"} in request["metrics"]
     assert {"name": "engagedSessions"} in request["metrics"]
-    assert {"name": "averageEngagementTime"} in request["metrics"]
+    assert {"name": "averageEngagementTime"} not in request["metrics"]
     assert {"name": "keyEvents"} in request["metrics"]
     assert request["dateRanges"] == [{"startDate": "2026-07-02", "endDate": "2026-07-08"}]
     assert request["limit"] == 1

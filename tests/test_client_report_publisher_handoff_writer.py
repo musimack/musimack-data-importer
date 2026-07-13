@@ -14,7 +14,7 @@ from src.client_report_gsc_exact_ranges import (
 )
 from src.client_report_publisher_handoff_validator import validate_handoff_directory
 from src.client_report_publisher_handoff_writer import write_client_report_publisher_handoff
-from src.client_report_presentation_ranges import resolve_range_key
+from src.client_report_presentation_ranges import build_client_report_presentation_ranges, resolve_range_key
 
 
 def test_handoff_writer_generates_valid_supported_contracts(tmp_path):
@@ -266,6 +266,41 @@ def test_handoff_writer_emits_distinct_gsc_exact_range_buckets(tmp_path):
     assert "page" in next(b for b in ready if b["section_key"] == "gsc_top_pages")["display_data"]["pages"][0]
     assert validate_handoff_directory(tmp_path / "handoff").valid is True
     assert len(result.files) >= 9
+
+
+def test_presentation_ranges_preserve_partial_gsc_actual_coverage():
+    datasets = {}
+    for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values():
+        payload = build_fake_gsc_exact_range_dataset(schema, client_slug="sample-client")
+        entry = next(item for item in payload["ranges"] if item["range_key"] == "this_month")
+        entry.update({
+            "available_through_date": "2026-07-06",
+            "actual_coverage_start_date": "2026-07-01",
+            "actual_coverage_end_date": "2026-07-06",
+            "data_state": "partial",
+            "coverage_state": "partial",
+            "freshness_state": "partial",
+        })
+        datasets[schema] = payload
+
+    package = build_client_report_presentation_ranges(
+        client_slug="sample-client",
+        period={"start": "2026-01-01", "end": "2026-07-08"},
+        datasets=datasets,
+        generated_at="2026-07-09T12:00:00Z",
+    )
+
+    partial = [
+        bucket for bucket in package["section_buckets"]
+        if bucket["section_key"].startswith("gsc_") and bucket["range_key"] == "this_month"
+    ]
+    assert len(partial) == 3
+    assert all(bucket["data_state"] == "partial" for bucket in partial)
+    assert all(bucket["precomputed_status"] == "not_ready" for bucket in partial)
+    assert all(bucket["actual_coverage_start_date"] == "2026-07-01" for bucket in partial)
+    assert all(bucket["actual_coverage_end_date"] == "2026-07-06" for bucket in partial)
+    assert all(bucket["available_through_date"] == "2026-07-06" for bucket in partial)
+    assert all(bucket["display_data"] is None for bucket in partial)
 
 
 def test_presentation_range_resolution_uses_report_end_anchor():

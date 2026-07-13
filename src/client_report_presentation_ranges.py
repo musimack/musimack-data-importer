@@ -236,6 +236,16 @@ def validate_presentation_range_package(package: dict[str, Any]) -> None:
             raise ValueError("available bucket requires display_data")
         if data_state in {"unavailable", "unsupported"} and display_data is not None:
             raise ValueError("unavailable bucket must not carry display_data")
+        if data_state == "partial":
+            if display_data is not None:
+                raise ValueError("partial bucket must not carry presentation display_data")
+            actual_start = _parse_date(bucket.get("actual_coverage_start_date"), "bucket.actual_coverage_start_date")
+            actual_end = _parse_date(bucket.get("actual_coverage_end_date"), "bucket.actual_coverage_end_date")
+            available_through = _parse_date(bucket.get("available_through_date"), "bucket.available_through_date")
+            if not (start <= actual_start <= actual_end < end) or available_through < actual_end:
+                raise ValueError("partial bucket actual coverage is invalid")
+            if bucket.get("precomputed_status") != "not_ready":
+                raise ValueError("partial bucket cannot be presentation-ready")
         if coverage == "complete" and data_state not in {"available", "empty"}:
             raise ValueError("complete coverage contradicts bucket data_state")
         if start < period_start or end > period_end:
@@ -334,6 +344,18 @@ def _bucket_for_section(
             "row_count": count,
             **({"exact_source": exact_source} if isinstance(exact_source, dict) else {}),
             "display_data": exact_bucket,
+        }
+    partial_coverage = _partial_gsc_range_from_source(section_key, resolved, datasets)
+    if partial_coverage is not None:
+        return {
+            **base,
+            **partial_coverage,
+            "coverage_state": "partial",
+            "data_state": "partial",
+            "precomputed_status": "not_ready",
+            "aggregation_status": "provider_partial_exact_range_withheld",
+            "unsupported_reason": "Provider data covers only part of the requested range; partial metrics are not presented as a complete result.",
+            "display_data": None,
         }
     return {
         **base,
@@ -478,6 +500,41 @@ def _exact_range_bucket_from_source(
             ):
                 return bucket["display_data"]
     return None
+
+
+def _partial_gsc_range_from_source(
+    section_key: str,
+    resolved: ResolvedRange,
+    datasets: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    schema = GSC_EXACT_RANGE_SOURCE_BY_SECTION.get(section_key)
+    payload = datasets.get(schema) if schema else None
+    if not isinstance(payload, dict):
+        return None
+    validate_gsc_exact_range_contract(payload)
+    entry = gsc_exact_range_entry_for(
+        payload,
+        range_key=resolved.range_key,
+        start_date=resolved.start_date.isoformat(),
+        end_date=resolved.end_date.isoformat(),
+    )
+    if not isinstance(entry, dict) or entry.get("data_state") != "partial":
+        return None
+    return {
+        "actual_coverage_start_date": entry.get("actual_coverage_start_date"),
+        "actual_coverage_end_date": entry.get("actual_coverage_end_date"),
+        "available_through_date": entry.get("available_through_date"),
+        "freshness_state": entry.get("freshness_state"),
+        "observation_count": entry.get("actual_date_count", 0),
+        "exact_source": {
+            "source_contract": schema,
+            "dataset_version": payload.get("dataset_version"),
+            "range_key": entry.get("range_key"),
+            "requested_start_date": entry.get("requested_start_date"),
+            "requested_end_date": entry.get("requested_end_date"),
+            "source_identity": entry.get("source_identity"),
+        },
+    }
 
 
 def _display_count(display_data: dict[str, Any]) -> int:

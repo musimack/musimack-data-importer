@@ -7,7 +7,7 @@ import pytest
 from src.client_report_ga4_exact_range_provider import build_ga4_exact_range_summary_from_provider
 from src.client_report_ga4_exact_ranges import validate_ga4_exact_range_summary_contract
 from src.config import DateRange
-from src.ga4_client import GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS, Ga4ClientError
+from src.ga4_client import GA4_EXACT_RANGE_SUMMARY_METRICS, GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS, Ga4ClientError
 
 
 class FakeExactRangeClient:
@@ -48,6 +48,8 @@ def test_provider_builds_valid_exact_range_contract_with_four_required_ranges():
     assert payload["ranges"][3]["requested_end_date"] == "2026-06-30"
     assert payload["ranges"][0]["metrics"]["users"] == 101
     assert payload["ranges"][0]["metrics"]["engagement_rate"] == 0.642857
+    assert payload["ranges"][0]["metrics"]["engaged_sessions"] == 79
+    assert "averageEngagementTime" not in GA4_EXACT_RANGE_SUMMARY_METRICS
     assert "property" not in str(payload).lower()
     assert len(client.calls) == 4
 
