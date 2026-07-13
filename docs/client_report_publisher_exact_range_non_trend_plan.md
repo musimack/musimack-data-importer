@@ -177,17 +177,17 @@ Required metadata per exact-range dataset:
 - Available bucket identity must match section key, range key, requested dates, source contract, dataset version, and display schema.
 - Empty exact-range source data may produce `data_state: empty`.
 - Missing exact-range source data remains `data_state: unavailable`.
-- Partial exact-range source data must not be promoted to available.
+- Partial exact-range source data remains `data_state: partial`; when it carries validated display data and coverage metadata it is Presentation-ready without being promoted to complete or available.
 
 ## Availability and failure rules
 
 - `available`: provider/local exact source covers the requested dates completely and passes sanitizer/contract validation.
 - `empty`: provider says the exact range has no rows/activity and the query completed successfully; this is not a provider failure.
-- `partial`: provider response is incomplete, thresholded, freshness-limited, or pagination is incomplete but sanitized partial rows are useful for admin review; do not expose as ready client range unless explicitly approved.
+- `partial`: provider response is incomplete, thresholded, freshness-limited, or pagination is incomplete. David approved truthful display of validated freshness-limited GSC Summary, Query, and Page data with requested dates, actual coverage, and available-through metadata. Partial remains distinct from complete.
 - `unavailable`: no exact source exists, range outside approved source coverage, property not configured, access not available, date before property history, or custom range not pre-generated.
 - `provider_error`: fail the specific exact-range source dataset; do not masquerade as zero.
 - `access_denied` / `property_not_configured`: unavailable for that provider/profile and recorded as sanitized quality notes.
-- `data_not_fresh`: unavailable or partial depending on whether the section can truthfully display a shorter provider-confirmed range; R1 should prefer unavailable for exact requested buckets.
+- `data_not_fresh`: unavailable or partial depending on whether the section can truthfully display a shorter provider-confirmed range. Validated GSC exact-range data is displayable partial; missing or unsafe source data remains unavailable.
 - `thresholded_ga4`: partial unless the API response proves display-safe completeness.
 - `gsc_anonymized_or_omitted`: partial for ranked rows if omissions affect top-N meaning; summary may be available only from a correct summary query.
 - `pagination_incomplete`: partial or error; never available.
@@ -319,4 +319,4 @@ No current GA4/GSC query path observed in this inventory prints token contents o
 
 R1 now includes synthetic-only `gsc_summary_exact_ranges.v1`, `gsc_top_queries_exact_ranges.v1`, and `gsc_top_pages_exact_ranges.v1` contracts. They keep total-level summary metrics separate from query- and page-scoped ranked rows, preserve exact-range CTR and average-position semantics, and represent complete, partial, empty, and unavailable coverage with explicit freshness fields. The approved prototype presets are Last 7 Days, Last 30 Days, This Month, and Last Month. This contract milestone adds no GSC calls or provider-query changes; controlled real GSC generation remains separate work.
 
-The controlled real provider implementation now populates those contracts for `aluma-seo-geo` through the canonical GSC client boundary. It uses 12 bounded read-only calls: four dimensionless summary, four query-only, and four page-only requests. Freshness comes from the last observation in the existing provider-generated daily series; partial ranges preserve nominal requests and actual coverage but remain unavailable in Presentation Mode. See `docs/client_report_gsc_exact_range_provider.md`.
+The controlled real provider implementation now populates those contracts for `aluma-seo-geo` through the canonical GSC client boundary. It uses 12 bounded read-only calls: four dimensionless summary, four query-only, and four page-only requests. Freshness comes from the last observation in the existing provider-generated daily series. Presentation Ranges v2 preserves validated partial metrics/rows and requested, actual-coverage, and available-through dates in `partial` / `ready` buckets. Complete, empty, and unavailable sources retain their distinct states. See `docs/client_report_gsc_exact_range_provider.md`.

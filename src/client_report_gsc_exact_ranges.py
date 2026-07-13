@@ -141,7 +141,7 @@ def exact_range_entry_for(payload: dict[str, Any], *, range_key: str, start_date
 
 
 def display_data_for_section(entry: dict[str, Any], section_key: str) -> dict[str, Any] | None:
-    if entry.get("data_state") != "available": return None
+    if entry.get("data_state") not in {"available", "partial"}: return None
     if section_key == "gsc_summary":
         metrics = entry.get("summary_metrics")
         if not isinstance(metrics, dict): return None

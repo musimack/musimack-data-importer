@@ -513,7 +513,7 @@ def _validate_presentation_range_contract(
                 errors.append(f"{label}.section_buckets[{index}].exact_source is required for GA4 ranked exact ranges")
             elif exact_source.get("source_contract") != ranked_source_contract:
                 errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid for ranked section")
-        elif bucket.get("data_state") in {"available", "partial"} and section_key in GSC_EXACT_RANGE_SOURCE_BY_SECTION:
+        elif bucket.get("data_state") in {"available", "partial", "empty"} and section_key in GSC_EXACT_RANGE_SOURCE_BY_SECTION:
             expected = GSC_EXACT_RANGE_SOURCE_BY_SECTION[section_key]
             if not isinstance(exact_source, dict) or exact_source.get("source_contract") != expected:
                 errors.append(f"{label}.section_buckets[{index}].exact_source.source_contract is invalid for GSC section")
@@ -595,7 +595,7 @@ def _validate_cross_contract_references(
                 expected_source_contract = GSC_EXACT_RANGE_SOURCE_BY_SECTION.get(section_key)
         if expected_source_contract is None:
             continue
-        if bucket.get("data_state") != "available":
+        if bucket.get("data_state") not in {"available", "partial", "empty"}:
             continue
         source = bucket.get("exact_source")
         if not isinstance(source, dict):

@@ -237,15 +237,15 @@ def validate_presentation_range_package(package: dict[str, Any]) -> None:
         if data_state in {"unavailable", "unsupported"} and display_data is not None:
             raise ValueError("unavailable bucket must not carry display_data")
         if data_state == "partial":
-            if display_data is not None:
-                raise ValueError("partial bucket must not carry presentation display_data")
+            if not isinstance(display_data, dict):
+                raise ValueError("partial bucket requires presentation display_data")
             actual_start = _parse_date(bucket.get("actual_coverage_start_date"), "bucket.actual_coverage_start_date")
             actual_end = _parse_date(bucket.get("actual_coverage_end_date"), "bucket.actual_coverage_end_date")
             available_through = _parse_date(bucket.get("available_through_date"), "bucket.available_through_date")
             if not (start <= actual_start <= actual_end < end) or available_through < actual_end:
                 raise ValueError("partial bucket actual coverage is invalid")
-            if bucket.get("precomputed_status") != "not_ready":
-                raise ValueError("partial bucket cannot be presentation-ready")
+            if bucket.get("precomputed_status") != "ready":
+                raise ValueError("partial bucket must be presentation-ready")
         if coverage == "complete" and data_state not in {"available", "empty"}:
             raise ValueError("complete coverage contradicts bucket data_state")
         if start < period_start or end > period_end:
@@ -330,6 +330,57 @@ def _bucket_for_section(
             "observation_count": point_count,
             "display_data": display_data,
         }
+    gsc_range = _gsc_range_from_source(section_key, resolved, datasets)
+    if gsc_range is not None:
+        source_state = gsc_range.pop("source_state")
+        if source_state == "available":
+            display_data = gsc_range.pop("display_data")
+            count = _display_count(display_data)
+            return {
+                **base,
+                **gsc_range,
+                "coverage_state": "complete",
+                "data_state": "available",
+                "precomputed_status": "ready",
+                "aggregation_status": "importer_sanitized_precomputed",
+                "display_schema_version": "generated_section_display.v1",
+                "row_count": count,
+                "display_data": display_data,
+            }
+        if source_state == "partial":
+            display_data = gsc_range.pop("display_data")
+            count = _display_count(display_data)
+            return {
+                **base,
+                **gsc_range,
+                "coverage_state": "partial",
+                "data_state": "partial",
+                "precomputed_status": "ready",
+                "aggregation_status": "importer_sanitized_precomputed_partial",
+                "display_schema_version": "generated_section_display.v1",
+                "row_count": count,
+                "display_data": display_data,
+            }
+        if source_state == "empty":
+            return {
+                **base,
+                **gsc_range,
+                "coverage_state": "empty",
+                "data_state": "empty",
+                "precomputed_status": "ready",
+                "aggregation_status": "importer_sanitized_precomputed_empty",
+                "display_data": None,
+            }
+        return {
+            **base,
+            **gsc_range,
+            "coverage_state": "unavailable",
+            "data_state": "unavailable",
+            "precomputed_status": "not_ready",
+            "aggregation_status": "provider_exact_range_unavailable",
+            "unsupported_reason": "The exact-range provider result is unavailable.",
+            "display_data": None,
+        }
     exact_bucket = _exact_range_bucket_from_source(section_key, resolved, datasets)
     if exact_bucket is not None:
         exact_source = exact_bucket.pop("_exact_source", None)
@@ -344,18 +395,6 @@ def _bucket_for_section(
             "row_count": count,
             **({"exact_source": exact_source} if isinstance(exact_source, dict) else {}),
             "display_data": exact_bucket,
-        }
-    partial_coverage = _partial_gsc_range_from_source(section_key, resolved, datasets)
-    if partial_coverage is not None:
-        return {
-            **base,
-            **partial_coverage,
-            "coverage_state": "partial",
-            "data_state": "partial",
-            "precomputed_status": "not_ready",
-            "aggregation_status": "provider_partial_exact_range_withheld",
-            "unsupported_reason": "Provider data covers only part of the requested range; partial metrics are not presented as a complete result.",
-            "display_data": None,
         }
     return {
         **base,
@@ -502,7 +541,7 @@ def _exact_range_bucket_from_source(
     return None
 
 
-def _partial_gsc_range_from_source(
+def _gsc_range_from_source(
     section_key: str,
     resolved: ResolvedRange,
     datasets: dict[str, dict[str, Any]],
@@ -518,12 +557,22 @@ def _partial_gsc_range_from_source(
         start_date=resolved.start_date.isoformat(),
         end_date=resolved.end_date.isoformat(),
     )
-    if not isinstance(entry, dict) or entry.get("data_state") != "partial":
+    if not isinstance(entry, dict):
         return None
-    return {
+    source_state = entry.get("data_state")
+    if source_state not in {"available", "partial", "empty", "unavailable"}:
+        return None
+    available_through = entry.get("available_through_date")
+    presentation_available_through = (
+        min(_parse_date(available_through, "available_through_date"), resolved.end_date).isoformat()
+        if isinstance(available_through, str)
+        else None
+    )
+    result = {
+        "source_state": source_state,
         "actual_coverage_start_date": entry.get("actual_coverage_start_date"),
         "actual_coverage_end_date": entry.get("actual_coverage_end_date"),
-        "available_through_date": entry.get("available_through_date"),
+        "available_through_date": presentation_available_through,
         "freshness_state": entry.get("freshness_state"),
         "observation_count": entry.get("actual_date_count", 0),
         "exact_source": {
@@ -535,6 +584,12 @@ def _partial_gsc_range_from_source(
             "source_identity": entry.get("source_identity"),
         },
     }
+    if source_state in {"available", "partial"}:
+        display_data = display_data_for_gsc_section(entry, section_key)
+        if not isinstance(display_data, dict):
+            raise ValueError("available GSC exact-range source requires displayable data")
+        result["display_data"] = display_data
+    return result
 
 
 def _display_count(display_data: dict[str, Any]) -> int:

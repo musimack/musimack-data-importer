@@ -81,6 +81,32 @@ def test_partial_empty_and_unavailable_are_distinct():
     validate_gsc_exact_range_contract(unavailable)
 
 
+@pytest.mark.parametrize(
+    "schema,section_key,content_key",
+    [
+        ("gsc_summary_exact_ranges.v1", "gsc_summary", "metrics"),
+        ("gsc_top_queries_exact_ranges.v1", "gsc_top_queries", "queries"),
+        ("gsc_top_pages_exact_ranges.v1", "gsc_top_pages", "pages"),
+    ],
+)
+def test_partial_exact_ranges_keep_displayable_provider_data(schema, section_key, content_key):
+    payload = build_fake_gsc_exact_range_dataset(schema)
+    entry = payload["ranges"][0]
+    entry.update(
+        data_state="partial",
+        coverage_state="partial",
+        freshness_state="partial",
+        available_through_date="2026-07-06",
+        actual_coverage_end_date="2026-07-06",
+    )
+
+    validate_gsc_exact_range_contract(payload)
+    display = display_data_for_section(entry, section_key)
+
+    assert isinstance(display, dict)
+    assert display[content_key]
+
+
 @pytest.mark.parametrize("schema", ["gsc_top_queries_exact_ranges.v1", "gsc_top_pages_exact_ranges.v1"])
 def test_ranked_duplicate_unsorted_and_limit_fail(schema):
     contract = GSC_EXACT_RANGE_CONTRACTS[schema]

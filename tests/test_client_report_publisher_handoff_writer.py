@@ -261,7 +261,11 @@ def test_handoff_writer_emits_distinct_gsc_exact_range_buckets(tmp_path):
     _write_json(source / "ga4-snapshot.json", ga4_snapshot)
     _write_json(source / "gsc-summary.json", gsc_summary)
     for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values():
-        _write_json(source / f"{schema}.json", build_fake_gsc_exact_range_dataset(schema, client_slug="sample-client"))
+        payload = build_fake_gsc_exact_range_dataset(schema, client_slug="sample-client")
+        next(item for item in payload["ranges"] if item["range_key"] == "last_month")[
+            "available_through_date"
+        ] = "2026-07-06"
+        _write_json(source / f"{schema}.json", payload)
 
     result = write_client_report_publisher_handoff(profile="sample-client", client_name="Sample Client", source_dir=source, output_dir=tmp_path / "handoff")
     assert all((tmp_path / "handoff" / f"{schema}.json").exists() for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values())
@@ -272,6 +276,10 @@ def test_handoff_writer_emits_distinct_gsc_exact_range_buckets(tmp_path):
     assert next(b for b in ready if b["section_key"] == "gsc_summary")["display_data"]["metrics"][2]["value"].endswith("%")
     assert "query" in next(b for b in ready if b["section_key"] == "gsc_top_queries")["display_data"]["queries"][0]
     assert "page" in next(b for b in ready if b["section_key"] == "gsc_top_pages")["display_data"]["pages"][0]
+    last_month = [bucket for bucket in ready if bucket["range_key"] == "last_month"]
+    assert all(bucket["actual_coverage_start_date"] == "2026-06-01" for bucket in last_month)
+    assert all(bucket["actual_coverage_end_date"] == "2026-06-30" for bucket in last_month)
+    assert all(bucket["available_through_date"] == "2026-06-30" for bucket in last_month)
     assert validate_handoff_directory(tmp_path / "handoff").valid is True
     assert len(result.files) >= 9
 
@@ -304,11 +312,87 @@ def test_presentation_ranges_preserve_partial_gsc_actual_coverage():
     ]
     assert len(partial) == 3
     assert all(bucket["data_state"] == "partial" for bucket in partial)
-    assert all(bucket["precomputed_status"] == "not_ready" for bucket in partial)
+    assert all(bucket["precomputed_status"] == "ready" for bucket in partial)
+    assert all(bucket["coverage_state"] == "partial" for bucket in partial)
+    assert all(bucket["aggregation_status"] == "importer_sanitized_precomputed_partial" for bucket in partial)
     assert all(bucket["actual_coverage_start_date"] == "2026-07-01" for bucket in partial)
     assert all(bucket["actual_coverage_end_date"] == "2026-07-06" for bucket in partial)
     assert all(bucket["available_through_date"] == "2026-07-06" for bucket in partial)
-    assert all(bucket["display_data"] is None for bucket in partial)
+    summary = next(bucket for bucket in partial if bucket["section_key"] == "gsc_summary")
+    queries = next(bucket for bucket in partial if bucket["section_key"] == "gsc_top_queries")
+    pages = next(bucket for bucket in partial if bucket["section_key"] == "gsc_top_pages")
+    assert len(summary["display_data"]["metrics"]) == 4
+    assert len(queries["display_data"]["queries"]) == 3
+    assert len(pages["display_data"]["pages"]) == 3
+    assert summary["row_count"] == 4
+    assert queries["row_count"] == 3
+    assert pages["row_count"] == 3
+    assert all(bucket["exact_source"]["source_contract"] == GSC_EXACT_RANGE_SOURCE_BY_SECTION[bucket["section_key"]] for bucket in partial)
+
+
+def test_presentation_ranges_keep_gsc_empty_and_unavailable_distinct():
+    datasets = {
+        schema: build_fake_gsc_exact_range_dataset(schema, client_slug="sample-client")
+        for schema in GSC_EXACT_RANGE_SOURCE_BY_SECTION.values()
+    }
+    empty_entry = next(
+        item
+        for item in datasets["gsc_top_queries_exact_ranges.v1"]["ranges"]
+        if item["range_key"] == "this_month"
+    )
+    empty_entry.update(
+        data_state="empty",
+        coverage_state="empty",
+        freshness_state="complete",
+        quality_state="empty",
+        query_rows=[],
+    )
+    unavailable_entry = next(
+        item
+        for item in datasets["gsc_top_pages_exact_ranges.v1"]["ranges"]
+        if item["range_key"] == "this_month"
+    )
+    unavailable_entry.update(
+        data_state="unavailable",
+        coverage_state="unavailable",
+        freshness_state="unavailable",
+        quality_state="unavailable",
+        available_through_date=None,
+        actual_coverage_start_date=None,
+        actual_coverage_end_date=None,
+        page_rows=[],
+    )
+
+    package = build_client_report_presentation_ranges(
+        client_slug="sample-client",
+        period={"start": "2026-01-01", "end": "2026-07-08"},
+        datasets=datasets,
+        generated_at="2026-07-09T12:00:00Z",
+    )
+
+    empty = next(
+        bucket
+        for bucket in package["section_buckets"]
+        if bucket["section_key"] == "gsc_top_queries" and bucket["range_key"] == "this_month"
+    )
+    unavailable = next(
+        bucket
+        for bucket in package["section_buckets"]
+        if bucket["section_key"] == "gsc_top_pages" and bucket["range_key"] == "this_month"
+    )
+    assert (empty["data_state"], empty["coverage_state"], empty["precomputed_status"]) == (
+        "empty",
+        "empty",
+        "ready",
+    )
+    assert empty["exact_source"]["source_contract"] == "gsc_top_queries_exact_ranges.v1"
+    assert empty["display_data"] is None
+    assert (unavailable["data_state"], unavailable["coverage_state"], unavailable["precomputed_status"]) == (
+        "unavailable",
+        "unavailable",
+        "not_ready",
+    )
+    assert unavailable["display_data"] is None
 
 
 def test_presentation_range_resolution_uses_report_end_anchor():
