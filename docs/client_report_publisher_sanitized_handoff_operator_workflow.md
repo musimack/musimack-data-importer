@@ -359,6 +359,16 @@ A fake-only handoff may include `gsc_summary_exact_ranges.v1.json`, `gsc_top_que
 
 For the controlled Aluma workflow, run the redacted profile preflight, preserve existing approved GA4 files, and use `scripts/pull_gsc_exact_ranges.py --profile aluma --report-start-date <date> --report-end-date <date> --real-output`. The command derives freshness from the ignored real GSC daily series, makes only the three approved query shapes, and writes the three exact-range files into ignored local-real output. Rebuild and validate the handoff normally. Do not commit generated data or use a second profile.
 
-## R3-H4 arbitrary Custom hold
+## R3-H4 arbitrary Custom operator worker
 
-The GA4 summary/ranked and GSC exact-range commands can accept bounded explicit Custom identities and reuse exact existing matches, but they are not a portal job worker. The handoff writer currently accepts at most eight explicit Custom identities per package write. Do not run R3-H4 arbitrary Custom generation from portal input, expose these commands in report UI, or treat ignored output as durable job state until David approves the portal's report-scoped request/result migration and governed operator-mediated worker contract documented in `client-dashboard/docs/r3_h4_on_demand_custom_range_architecture.md`. No R3-H4 provider call is authorized merely by a queued UI interaction before that approval.
+David approved the report-scoped request/result migration and local operator-mediated worker. After an authenticated admin creates a queued request in the portal, run this command from the importer repository:
+
+```powershell
+python scripts/process_portal_custom_exact_range_request.py --request-id <request-uuid> --database-url <portal-database-url>
+```
+
+The worker loads local importer configuration, reads and validates exactly one queued request, checks the retained draft report bounds, claims the request through the standalone portal CLI, and runs fixed argument-array provider commands for the `aluma` local alias (canonical portal identity `aluma-seo-geo`). It then writes and validates the sanitized package and asks the standalone portal CLI to import the result transactionally. The portal HTTP process never invokes this script.
+
+Safe output reports only request state, provider call counts, exact-match reuse counts, validation, and import disposition. Do not copy the database URL, local config, commands containing secrets, raw provider responses, resolved provider identifiers, or ignored generated files into portal UI, documentation evidence, or commits. Only Aluma is authorized. Do not use a second profile or BigQuery.
+
+An identical completed identity must return the portal cache without another provider run; an identical active identity must reuse the active request. A failed run records a sanitized failure, and a retry is a new auditable attempt. The local worker does not provide scheduling, stale-job recovery, automatic retry, deployment, or production monitoring.
