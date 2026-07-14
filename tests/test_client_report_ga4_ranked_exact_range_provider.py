@@ -103,20 +103,19 @@ def test_provider_uses_correct_exact_dates_and_section_specific_rows():
     assert payload["query_identity"]["provider_dimension"] == "sessionSourceMedium"
 
 
-def test_ranked_provider_reuses_standard_and_custom_ranges():
-    custom = [{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}]
+def test_ranked_provider_reuses_all_standard_ranges():
     first = build_ga4_ranked_exact_range_from_provider(
         client=FakeRankedClient(), profile="aluma-seo-geo", section_key="ga4_top_sources",
-        report_period_start=date(2025, 1, 1), report_period_end=date(2026, 7, 8), custom_ranges=custom,
+        report_period_start=date(2025, 1, 1), report_period_end=date(2026, 7, 8),
     )
     client = FakeRankedClient()
     second = build_ga4_ranked_exact_range_from_provider(
         client=client, profile="aluma-seo-geo", section_key="ga4_top_sources",
-        report_period_start=date(2025, 1, 1), report_period_end=date(2026, 7, 8), custom_ranges=custom,
+        report_period_start=date(2025, 1, 1), report_period_end=date(2026, 7, 8),
         existing_payload=first,
     )
     assert client.calls == []
-    assert second["generation_metadata"] == {"provider_calls": 0, "reused_ranges": 12, "requested_ranges": 12}
+    assert second["generation_metadata"] == {"provider_calls": 0, "reused_ranges": 11, "requested_ranges": 11}
     assert all(len(item["query_fingerprint"]) == 64 for item in second["ranges"])
 
 

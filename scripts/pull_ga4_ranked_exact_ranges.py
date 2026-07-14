@@ -32,13 +32,6 @@ def main() -> int:
     parser.add_argument("--report-end-date", default=DEFAULT_REPORT_END.isoformat())
     parser.add_argument("--timezone", default="America/Los_Angeles")
     parser.add_argument(
-        "--custom-range",
-        action="append",
-        default=[],
-        metavar="KEY,START,END",
-        help="Add up to eight bounded custom ranges; KEY must start with custom.",
-    )
-    parser.add_argument(
         "--real-output",
         action="store_true",
         help="Write ranked exact-range files under ignored exports/local-real/dashboard-lab/{profile}/.",
@@ -63,7 +56,6 @@ def main() -> int:
             report_period_start=report_start,
             report_period_end=report_end,
             timezone=args.timezone,
-            custom_ranges=_parse_custom_ranges(args.custom_range),
             existing_payloads=existing_payloads,
         )
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -111,20 +103,6 @@ def _resolve_output_dir(profile: str, out_dir: str | None, real_output: bool) ->
     if real_output:
         return Path("exports") / "local-real" / "dashboard-lab" / profile
     return Path("exports") / f"{profile}_ga4_ranked_exact_ranges"
-
-
-def _parse_custom_ranges(values: list[str]) -> list[dict[str, str]]:
-    if len(values) > 8:
-        raise ConfigError("at most eight custom ranges may be requested")
-    parsed = []
-    for value in values:
-        parts = [part.strip() for part in value.split(",")]
-        if len(parts) != 3 or not parts[0].startswith("custom"):
-            raise ConfigError("--custom-range must use KEY,START,END and KEY must start with custom")
-        _parse_date(parts[1], "custom start")
-        _parse_date(parts[2], "custom end")
-        parsed.append({"range_key": parts[0], "start_date": parts[1], "end_date": parts[2]})
-    return parsed
 
 
 def _read_existing_payloads(output_dir: Path) -> dict[str, dict]:

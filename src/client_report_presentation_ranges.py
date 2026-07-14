@@ -63,7 +63,6 @@ def build_client_report_presentation_ranges(
     period: dict[str, str],
     datasets: dict[str, dict[str, Any]],
     timezone: str = DEFAULT_PRESENTATION_TIMEZONE,
-    custom_ranges: list[dict[str, str]] | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     """Build a sanitized production range package without provider calls.
@@ -83,10 +82,6 @@ def build_client_report_presentation_ranges(
         _range_manifest_entry(resolved, period_start, period_end, required=True)
         for resolved in resolve_standard_ranges(reference_date)
     ]
-    for custom in custom_ranges or []:
-        resolved = resolve_custom_range(custom)
-        range_manifest.append(_range_manifest_entry(resolved, period_start, period_end, required=False))
-
     section_buckets: list[dict[str, Any]] = []
     capabilities = []
     for section_key in CANONICAL_SECTION_KEYS:
@@ -188,17 +183,6 @@ def resolve_range_key(range_key: str, reference_date: date) -> ResolvedRange:
     raise ValueError(f"unsupported range key: {range_key}")
 
 
-def resolve_custom_range(value: dict[str, str]) -> ResolvedRange:
-    start = _parse_date(value.get("start_date"), "custom.start_date")
-    end = _parse_date(value.get("end_date"), "custom.end_date")
-    if start > end:
-        raise ValueError("custom range start_date must be on or before end_date")
-    label = value.get("range_key") or f"custom:{start.isoformat()}:{end.isoformat()}"
-    if not str(label).startswith("custom"):
-        raise ValueError("custom range key must start with custom")
-    return ResolvedRange(str(label), start, end)
-
-
 def validate_presentation_range_package(package: dict[str, Any]) -> None:
     if package.get("schema_version") != PRESENTATION_RANGES_SCHEMA_VERSION:
         raise ValueError("presentation range package schema_version is unsupported")
@@ -220,8 +204,8 @@ def validate_presentation_range_package(package: dict[str, Any]) -> None:
         if section_key not in CANONICAL_SECTION_KEYS:
             raise ValueError("section bucket has unknown section_key")
         range_key = bucket.get("range_key")
-        if not isinstance(range_key, str) or not range_key:
-            raise ValueError("section bucket range_key is required")
+        if range_key not in CANONICAL_RANGE_KEYS:
+            raise ValueError("section bucket range_key is unsupported")
         start = _parse_date(bucket.get("requested_start_date"), "bucket.requested_start_date")
         end = _parse_date(bucket.get("requested_end_date"), "bucket.requested_end_date")
         if start > end:
@@ -273,7 +257,7 @@ def _range_manifest_entry(
         coverage = "complete"
     return {
         "range_key": resolved.range_key,
-        "preset_key": "custom_range" if resolved.range_key.startswith("custom") else resolved.range_key,
+        "preset_key": resolved.range_key,
         "requested_start_date": resolved.start_date.isoformat(),
         "requested_end_date": resolved.end_date.isoformat(),
         "effective_start_date": max(resolved.start_date, period_start).isoformat(),
@@ -293,7 +277,7 @@ def _bucket_for_section(
     base = {
         "section_key": section_key,
         "range_key": resolved.range_key,
-        "preset_key": "custom_range" if resolved.range_key.startswith("custom") else resolved.range_key,
+        "preset_key": resolved.range_key,
         "requested_start_date": resolved.start_date.isoformat(),
         "requested_end_date": resolved.end_date.isoformat(),
         "effective_start_date": max(resolved.start_date, period_start).isoformat(),

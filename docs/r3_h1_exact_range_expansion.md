@@ -1,8 +1,10 @@
 # R3-H1 Exact-Range Expansion
 
-Status: Controlled Aluma generation complete; generated real data remains ignored
+Status: **Historical; Custom portion superseded and removed before R3 acceptance**
 
 Prepared: 2026-07-13
+
+> Audit history only. David later removed Custom Range from the supported application. The eleven standard exact presets remain active; the Custom CLI, provider inputs, contract identities, and portal worker described below were removed. This document is not an active arbitrary-range instruction.
 
 ## Scope and boundaries
 

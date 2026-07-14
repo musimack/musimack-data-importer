@@ -1,5 +1,7 @@
 # Client Report Publisher Historical Data Pull Closeout - 2026-07-08
 
+> Historical source-foundation record. References to a "custom report period" describe an operator-selected report period, not the retired Custom Range selector or arbitrary-range generation feature.
+
 Documentation-only closeout for the completed seven-client historical GA4/GSC normalized-output pull.
 
 ## Purpose

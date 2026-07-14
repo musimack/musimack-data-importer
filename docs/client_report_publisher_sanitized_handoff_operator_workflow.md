@@ -65,9 +65,9 @@ Exact-range source files are generated before the handoff writer runs. The contr
 
 Preferred cadence is weekly Monday through Sunday.
 
-Historical, YTD, and custom ranges remain supported, but each handoff folder must represent exactly one period. Do not mix weekly and YTD data in one output folder. Weekly folders should be separate from historical folders.
+Historical and YTD report periods remain supported, but each handoff folder must represent exactly one period. Do not mix weekly and YTD data in one output folder. Weekly folders should be separate from historical folders.
 
-Broad historical pulls are source foundations, not report handoffs. The seven-client `2025-01-01` through `2026-07-08` GA4/GSC backfill is documented in [Client Report Publisher Historical Data Pull Closeout - 2026-07-08](client_report_publisher_historical_data_pull_closeout_20260708.md); use those normalized outputs for later custom report-period handoffs. Do not generate a broad historical handoff unless David explicitly requests that custom range.
+Broad historical pulls are source foundations, not report handoffs. The seven-client `2025-01-01` through `2026-07-08` GA4/GSC backfill is documented in [Client Report Publisher Historical Data Pull Closeout - 2026-07-08](client_report_publisher_historical_data_pull_closeout_20260708.md); use those normalized outputs only for separately authorized report-period handoffs.
 
 Recommended local-real shape:
 
@@ -149,9 +149,9 @@ Controlled GA4 ranked exact-range support may include these sanitized source con
 - `ga4_top_landing_pages_exact_ranges.v1.json`
 - `ga4_most_viewed_pages_exact_ranges.v1.json`
 
-The earlier R1 checkpoint used four exact keys. R3-H1 supersedes that range limitation for the same Aluma-only controlled path: eleven canonical standard keys plus at most eight explicit Custom identities are allowed only when the operator invokes the gated scripts. Existing exact identities are loaded and reused before querying. The portal never invokes this path. See `docs/r3_h1_exact_range_expansion.md` for the bounded call inventory, freshness behavior, and generated-data boundary. Do not expand the profile/provider list, add pagination/backfill, or change portal runtime behavior without a separately approved milestone.
+The earlier R1 checkpoint used four exact keys. The active path supports eleven canonical standard keys for the same Aluma-only controlled workflow. Existing exact identities are loaded and reused before querying. Arbitrary date inputs are not accepted. The portal never invokes this path. See `docs/r3_h1_exact_range_expansion.md` for historical call evidence. Do not expand the profile/provider list, add pagination/backfill, or change portal runtime behavior without a separately approved milestone.
 
-Range generation uses the report period end as the deterministic anchor. Standard preset identifiers are `last_3_days`, `last_7_days`, `last_14_days`, `last_30_days`, `last_90_days`, `last_6_months`, `last_12_months`, `this_month`, and `last_month`. Custom ranges are generated only when explicit bounded sanitized range input is supplied.
+Range generation uses the report period end as the deterministic anchor. Standard preset identifiers are `last_3_days`, `last_7_days`, `last_14_days`, `last_30_days`, `last_60_days`, `last_90_days`, `last_6_months`, `last_12_months`, `year_to_date`, `this_month`, and `last_month`.
 
 The package can truthfully produce ready `ga4_website_traffic_trends` buckets by slicing existing daily observations. For Top Metrics, User Engagement, Top Traffic Channels, Top Sources, Top Landing Pages, Most Viewed Pages, GSC Summary, Top Search Queries, and Top Search Pages, non-report-period buckets require exact-range sanitized provider results or approved exact-range source display data. The writer marks those ranges unavailable instead of deriving them from full-period rows.
 
@@ -359,16 +359,6 @@ A fake-only handoff may include `gsc_summary_exact_ranges.v1.json`, `gsc_top_que
 
 For the controlled Aluma workflow, run the redacted profile preflight, preserve existing approved GA4 files, and use `scripts/pull_gsc_exact_ranges.py --profile aluma --report-start-date <date> --report-end-date <date> --real-output`. The command derives freshness from the ignored real GSC daily series, makes only the three approved query shapes, and writes the three exact-range files into ignored local-real output. Rebuild and validate the handoff normally. Do not commit generated data or use a second profile.
 
-## R3-H4 arbitrary Custom operator worker
+## Removed arbitrary-range workflow
 
-David approved the report-scoped request/result migration and local operator-mediated worker. After an authenticated admin creates a queued request in the portal, run this command from the importer repository:
-
-```powershell
-python scripts/process_portal_custom_exact_range_request.py --request-id <request-uuid> --database-url <portal-database-url>
-```
-
-The worker loads local importer configuration, reads and validates exactly one queued request, checks the retained draft report bounds, claims the request through the standalone portal CLI, and runs fixed argument-array provider commands for the `aluma` local alias (canonical portal identity `aluma-seo-geo`). It then writes and validates the sanitized package and asks the standalone portal CLI to import the result transactionally. The portal HTTP process never invokes this script.
-
-Safe output reports only request state, provider call counts, exact-match reuse counts, validation, and import disposition. Do not copy the database URL, local config, commands containing secrets, raw provider responses, resolved provider identifiers, or ignored generated files into portal UI, documentation evidence, or commits. Only Aluma is authorized. Do not use a second profile or BigQuery.
-
-An identical completed identity must return the portal cache without another provider run; an identical active identity must reuse the active request. A failed run records a sanitized failure, and a retry is a new auditable attempt. The local worker does not provide scheduling, stale-job recovery, automatic retry, deployment, or production monitoring.
+David removed Custom Range before R3 Human Acceptance. The portal request/result worker, arbitrary-range CLI options, and Custom contract generation no longer exist. Operators must generate only the eleven standard exact preset identities. Historical R3-H4 documentation remains an audit record and is not an active command reference.

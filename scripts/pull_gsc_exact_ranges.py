@@ -26,13 +26,6 @@ def main() -> int:
     parser.add_argument("--report-start-date", required=True)
     parser.add_argument("--report-end-date", required=True)
     parser.add_argument("--available-through-date")
-    parser.add_argument(
-        "--custom-range",
-        action="append",
-        default=[],
-        metavar="KEY,START,END",
-        help="Add up to eight bounded custom ranges; KEY must start with custom.",
-    )
     parser.add_argument("--out-dir")
     parser.add_argument("--real-output", action="store_true")
     args = parser.parse_args()
@@ -68,7 +61,6 @@ def main() -> int:
             report_start=args.report_start_date,
             report_end=args.report_end_date,
             available_through_date=available_through,
-            custom_ranges=_parse_custom_ranges(args.custom_range),
             existing_payloads=existing_payloads,
         )
         output.mkdir(parents=True, exist_ok=True)
@@ -106,25 +98,6 @@ def _reject_repo_path(value: str, label: str) -> None:
     except ValueError:
         return
     raise ConfigError(f"{label} path must stay outside the repository")
-
-
-def _parse_custom_ranges(values: list[str]) -> list[dict[str, str]]:
-    if len(values) > 8:
-        raise ConfigError("at most eight custom ranges may be requested")
-    parsed = []
-    for value in values:
-        parts = [part.strip() for part in value.split(",")]
-        if len(parts) != 3 or not parts[0].startswith("custom"):
-            raise ConfigError("--custom-range must use KEY,START,END and KEY must start with custom")
-        try:
-            start = date.fromisoformat(parts[1])
-            end = date.fromisoformat(parts[2])
-        except ValueError as exc:
-            raise ConfigError("custom range dates must use YYYY-MM-DD") from exc
-        if start > end:
-            raise ConfigError("custom range start must be on or before end")
-        parsed.append({"range_key": parts[0], "start_date": parts[1], "end_date": parts[2]})
-    return parsed
 
 
 def _read_existing_payloads(output: Path) -> dict[str, dict]:

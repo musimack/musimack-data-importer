@@ -10,7 +10,7 @@ from src.client_report_gsc_exact_ranges import (
     GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
     validate_gsc_exact_range_contract,
 )
-from src.client_report_presentation_ranges import CANONICAL_RANGE_KEYS, resolve_custom_range, resolve_range_key
+from src.client_report_presentation_ranges import CANONICAL_RANGE_KEYS, resolve_range_key
 
 
 class GscExactRangeClient(Protocol):
@@ -27,7 +27,6 @@ def build_all_gsc_exact_ranges_from_provider(
     report_end: str,
     available_through_date: str,
     timezone: str = "America/Los_Angeles",
-    custom_ranges: list[dict[str, str]] | None = None,
     existing_payloads: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     return {
@@ -39,7 +38,6 @@ def build_all_gsc_exact_ranges_from_provider(
             report_end=report_end,
             available_through_date=available_through_date,
             timezone=timezone,
-            custom_ranges=custom_ranges,
             existing_payload=(existing_payloads or {}).get(schema),
         )
         for schema in GSC_EXACT_RANGE_CONTRACTS
@@ -55,7 +53,6 @@ def build_gsc_exact_range_from_provider(
     report_end: str,
     available_through_date: str,
     timezone: str,
-    custom_ranges: list[dict[str, str]] | None = None,
     existing_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract = GSC_EXACT_RANGE_CONTRACTS[schema_version]
@@ -65,7 +62,6 @@ def build_gsc_exact_range_from_provider(
     reused_ranges = 0
     existing = _reusable_entries(existing_payload, schema_version, client_slug, report_start, report_end)
     resolved_ranges = [resolve_range_key(key, date.fromisoformat(report_end)) for key in CANONICAL_RANGE_KEYS]
-    resolved_ranges.extend(resolve_custom_range(item) for item in custom_ranges or [])
     for resolved in resolved_ranges:
         range_key = resolved.range_key
         start, requested_end = resolved.start_date, resolved.end_date

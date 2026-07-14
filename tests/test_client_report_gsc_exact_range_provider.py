@@ -44,19 +44,18 @@ def test_provider_uses_dimensionless_query_and_distinct_ranked_scopes():
     assert all("query" not in row for row in datasets["gsc_top_pages_exact_ranges.v1"]["ranges"][0]["page_rows"])
 
 
-def test_provider_reuses_standard_and_custom_ranges_without_new_calls():
-    custom = [{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}]
+def test_provider_reuses_all_standard_ranges_without_new_calls():
     first = build_all_gsc_exact_ranges_from_provider(
         FakeClient(), client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08",
-        available_through_date="2026-07-08", custom_ranges=custom,
+        available_through_date="2026-07-08",
     )
     client = FakeClient()
     second = build_all_gsc_exact_ranges_from_provider(
         client, client_slug="aluma-seo-geo", report_start="2025-01-01", report_end="2026-07-08",
-        available_through_date="2026-07-08", custom_ranges=custom, existing_payloads=first,
+        available_through_date="2026-07-08", existing_payloads=first,
     )
     assert client.calls == []
-    assert all(payload["generation_metadata"] == {"mode": "provider_exact_range", "provider_calls": 0, "reused_ranges": 12, "requested_ranges": 12} for payload in second.values())
+    assert all(payload["generation_metadata"] == {"mode": "provider_exact_range", "provider_calls": 0, "reused_ranges": 11, "requested_ranges": 11} for payload in second.values())
     assert all(len(item["query_fingerprint"]) == 64 for payload in second.values() for item in payload["ranges"])
 
 

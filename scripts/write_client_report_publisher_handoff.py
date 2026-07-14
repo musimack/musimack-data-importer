@@ -22,13 +22,6 @@ def main() -> int:
     parser.add_argument("--ga4-summary", help="Optional ga4-summary.json path.")
     parser.add_argument("--ga4-snapshot", help="Optional ga4-snapshot.json path.")
     parser.add_argument("--gsc-summary", help="Optional gsc-summary.json path.")
-    parser.add_argument(
-        "--custom-range",
-        action="append",
-        default=[],
-        metavar="KEY,START,END",
-        help="Include up to eight precomputed custom range identities in the presentation package.",
-    )
     args = parser.parse_args()
 
     try:
@@ -40,7 +33,6 @@ def main() -> int:
             ga4_summary_path=Path(args.ga4_summary) if args.ga4_summary else None,
             ga4_snapshot_path=Path(args.ga4_snapshot) if args.ga4_snapshot else None,
             gsc_summary_path=Path(args.gsc_summary) if args.gsc_summary else None,
-            custom_ranges=_parse_custom_ranges(args.custom_range),
         )
     except (OSError, ValueError) as exc:
         print(f"Client Report Publisher handoff write failed safely: {exc}", file=sys.stderr)
@@ -53,18 +45,6 @@ def main() -> int:
         print(f"WARN: {warning}", file=sys.stderr)
     print("Handoff output was generated from sanitized local-real summaries only.")
     return 0
-
-
-def _parse_custom_ranges(values: list[str]) -> list[dict[str, str]]:
-    if len(values) > 8:
-        raise ValueError("at most eight custom ranges may be included")
-    parsed = []
-    for value in values:
-        parts = [part.strip() for part in value.split(",")]
-        if len(parts) != 3 or not parts[0].startswith("custom"):
-            raise ValueError("--custom-range must use KEY,START,END and KEY must start with custom")
-        parsed.append({"range_key": parts[0], "start_date": parts[1], "end_date": parts[2]})
-    return parsed
 
 
 if __name__ == "__main__":

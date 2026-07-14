@@ -14,11 +14,7 @@ from src.client_report_ga4_exact_ranges import (
     metric_definitions_payload,
     validate_ga4_exact_range_summary_contract,
 )
-from src.client_report_presentation_ranges import (
-    CANONICAL_RANGE_KEYS,
-    resolve_custom_range,
-    resolve_range_key,
-)
+from src.client_report_presentation_ranges import CANONICAL_RANGE_KEYS, resolve_range_key
 from src.config import DateRange
 from src.ga4_client import (
     GA4_EXACT_RANGE_SUMMARY_METRICS,
@@ -49,7 +45,6 @@ def build_ga4_exact_range_summary_from_provider(
     report_period_end: date,
     timezone: str = "America/Los_Angeles",
     generated_at: str | None = None,
-    custom_ranges: list[dict[str, str]] | None = None,
     existing_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if report_period_start > report_period_end:
@@ -61,7 +56,6 @@ def build_ga4_exact_range_summary_from_provider(
     reused_ranges = 0
     existing = _reusable_entries(existing_payload, profile, report_period_start, report_period_end)
     resolved_ranges = [resolve_range_key(key, report_period_end) for key in EXACT_RANGE_KEYS]
-    resolved_ranges.extend(resolve_custom_range(item) for item in custom_ranges or [])
     for resolved in resolved_ranges:
         range_key = resolved.range_key
         if resolved.start_date < report_period_start or resolved.end_date > report_period_end:

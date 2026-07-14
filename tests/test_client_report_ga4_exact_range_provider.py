@@ -80,14 +80,13 @@ def test_provider_retries_required_metrics_when_optional_metric_query_fails():
     assert payload["ranges"][0]["data_state"] == "available"
 
 
-def test_provider_adds_custom_range_and_reuses_matching_existing_entry():
+def test_provider_reuses_all_standard_range_entries():
     first_client = FakeExactRangeClient()
     first = build_ga4_exact_range_summary_from_provider(
         client=first_client,
         profile="aluma-seo-geo",
         report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
-        custom_ranges=[{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}],
     )
     second_client = FakeExactRangeClient()
     second = build_ga4_exact_range_summary_from_provider(
@@ -95,13 +94,12 @@ def test_provider_adds_custom_range_and_reuses_matching_existing_entry():
         profile="aluma-seo-geo",
         report_period_start=date(2025, 1, 1),
         report_period_end=date(2026, 7, 8),
-        custom_ranges=[{"range_key": "custom_mid_period", "start_date": "2025-05-01", "end_date": "2025-05-15"}],
         existing_payload=first,
     )
 
-    assert len(first_client.calls) == 12
+    assert len(first_client.calls) == 11
     assert second_client.calls == []
-    assert second["generation_metadata"] == {"provider_calls": 0, "reused_ranges": 12, "requested_ranges": 12}
+    assert second["generation_metadata"] == {"provider_calls": 0, "reused_ranges": 11, "requested_ranges": 11}
     assert all(len(item["query_fingerprint"]) == 64 for item in second["ranges"])
 
 

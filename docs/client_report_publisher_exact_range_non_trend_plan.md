@@ -1,5 +1,7 @@
 # Client Report Publisher exact-range non-trend dataset plan
 
+> Historical planning record. Custom Range was later removed by David before R3 Human Acceptance. Any Custom discussion below is superseded and is not active product direction; standard preset exact-range behavior remains.
+
 Status: R1 planning, technical design, and implementation checkpoint. This document is evidence from tracked importer/portal code plus operator-approved local Aluma GA4 verification. It does not authorize portal runtime provider calls, unattended provider generation, GSC exact-range generation, publication, exports, schema changes, or portal runtime changes.
 
 ## Executive summary
