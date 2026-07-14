@@ -55,8 +55,9 @@ Pending placeholder names:
 
 1. Create or update the ignored local config file for one profile.
 2. Prefer the alias filename, such as `local-profile-configs/aluma.local.json`.
-3. Put private operational mapping and off-repo file references only in that ignored file.
-4. Run the preflight.
-5. Confirm token/client secret path values are outside the repo and files exist.
-6. Stop if any path points inside the repo.
-7. Run provider pulls only after explicit operator approval for the client and period.
+3. Invoke profile-specific commands with the matching established alias when the ignored file is alias-named. For Aluma, use `--profile aluma`; it resolves internally to canonical `aluma-seo-geo`. Passing the canonical slug directly does not discover `aluma.local.json` and can misleadingly look like missing provider configuration even when the authorized fields and off-repository files are present.
+4. Put private operational mapping and off-repo file references only in that ignored file.
+5. Run the preflight.
+6. Confirm token/client secret path values are outside the repo and files exist.
+7. Stop if any path points inside the repo.
+8. Run provider pulls only after explicit operator approval for the client and period.
