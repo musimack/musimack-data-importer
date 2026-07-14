@@ -87,6 +87,10 @@ class Ga4DataClient:
     ) -> dict[str, Any]:
         return self._run_report(build_exact_range_summary_request(date_range, metric_names=metric_names))
 
+    def run_exact_range_traffic_series(self, date_range: DateRange) -> dict[str, Any]:
+        """Return only the exact daily traffic query used by governed comparison trends."""
+        return self._run_report(build_traffic_overview_request(date_range))
+
     def run_exact_range_channel_performance(self, date_range: DateRange) -> dict[str, Any]:
         return self._run_report(build_channel_breakdown_request(date_range))
 

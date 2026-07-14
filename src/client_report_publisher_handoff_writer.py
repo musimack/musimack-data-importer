@@ -22,6 +22,10 @@ from src.client_report_gsc_exact_ranges import (
     validate_gsc_exact_range_contract,
 )
 from src.client_report_presentation_ranges import build_client_report_presentation_ranges
+from src.client_report_presentation_comparisons import (
+    COMPARISON_SCHEMA_VERSION,
+    validate_presentation_comparison_package,
+)
 from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
 
 
@@ -79,6 +83,24 @@ def write_client_report_publisher_handoff(
             "ga4_metric_display.v1",
         )
     )
+    comparison_path = source / f"{COMPARISON_SCHEMA_VERSION}.json"
+    if comparison_path.exists():
+        comparisons = _load_json_object(comparison_path)
+        validate_presentation_comparison_package(comparisons)
+        if comparisons.get("client_slug") != profile or comparisons.get("report_period") != {
+            "start_date": period["start"],
+            "end_date": period["end"],
+        }:
+            raise ValueError("presentation comparison contract does not match the requested profile/report period")
+        generated.append(
+            (
+                output / f"{COMPARISON_SCHEMA_VERSION}.json",
+                comparisons,
+                "presentation",
+                "comparison_dataset",
+                COMPARISON_SCHEMA_VERSION,
+            )
+        )
 
     page_rows = list(ga4_summary.get("top_pages") or [])
     if page_rows:

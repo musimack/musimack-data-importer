@@ -28,6 +28,10 @@ from src.client_report_presentation_ranges import (
     PRESENTATION_RANGES_SCHEMA_VERSION,
     validate_presentation_range_package,
 )
+from src.client_report_presentation_comparisons import (
+    COMPARISON_SCHEMA_VERSION,
+    validate_presentation_comparison_package,
+)
 from src.client_report_publisher_contracts import (
     CANONICAL_DATASET_CONTRACTS,
     CANONICAL_SECTION_SOURCE_MATRIX,
@@ -41,6 +45,7 @@ RECOGNIZED_CONTRACTS = {
     *RANKED_EXACT_RANGE_CONTRACTS,
     *GSC_EXACT_RANGE_CONTRACTS,
     PRESENTATION_RANGES_SCHEMA_VERSION,
+    COMPARISON_SCHEMA_VERSION,
     "local_falcon_display.v1",
 }
 
@@ -255,6 +260,14 @@ def validate_handoff_directory(
                 manifest.get("period_end"),
                 errors,
             )
+        if schema_version == COMPARISON_SCHEMA_VERSION:
+            try:
+                validate_presentation_comparison_package(payload)
+            except ValueError as exc:
+                errors.append(f"{safe_rel_path}: {exc}")
+            report_period = payload.get("report_period") or {}
+            if report_period.get("start_date") != manifest.get("period_start") or report_period.get("end_date") != manifest.get("period_end"):
+                errors.append(f"{safe_rel_path}.report_period does not match manifest")
 
         for key in ("provider", "report_type"):
             if not isinstance(payload.get(key), str) or not payload.get(key):
