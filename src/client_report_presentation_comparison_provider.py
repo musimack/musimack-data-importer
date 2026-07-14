@@ -24,7 +24,6 @@ from src.config import DateRange
 SUMMARY_METRICS = {
     "ga4_top_metrics": (
         ("users", "Website Visitors", "count"),
-        ("new_users", "New Visitors", "count"),
         ("sessions", "Visits", "count"),
         ("views", "Views", "count"),
         ("engagement_rate", "Engagement Rate", "rate"),
@@ -32,9 +31,15 @@ SUMMARY_METRICS = {
     "ga4_user_engagement": (
         ("engagement_rate", "Engagement Rate", "rate"),
         ("engaged_sessions", "Engaged Sessions", "count"),
-        ("event_count", "Events", "count"),
     ),
 }
+R4_SUMMARY_PROVIDER_METRICS = (
+    "activeUsers",
+    "sessions",
+    "screenPageViews",
+    "engagementRate",
+    "engagedSessions",
+)
 GSC_METRICS = (
     ("clicks", "Clicks", "count"),
     ("impressions", "Impressions", "count"),
@@ -71,9 +76,21 @@ def build_real_presentation_comparisons(
         current_range = DateRange(current.start_date, current.end_date)
         prior_range = DateRange(prior.start_date, prior.end_date)
 
-        current_summary, _, calls = ga4_summary_entry(client=ga4_client, profile=profile, range_key=preset, date_range=current_range)
+        current_summary, _, calls = ga4_summary_entry(
+            client=ga4_client,
+            profile=profile,
+            range_key=preset,
+            date_range=current_range,
+            metric_names=R4_SUMMARY_PROVIDER_METRICS,
+        )
         provider_calls["ga4"] += calls
-        prior_summary, _, calls = ga4_summary_entry(client=ga4_client, profile=profile, range_key=f"{preset}_comparison", date_range=prior_range)
+        prior_summary, _, calls = ga4_summary_entry(
+            client=ga4_client,
+            profile=profile,
+            range_key=f"{preset}_comparison",
+            date_range=prior_range,
+            metric_names=R4_SUMMARY_PROVIDER_METRICS,
+        )
         provider_calls["ga4"] += calls
         current_state = _ga4_state(current_summary, current)
         prior_state = _ga4_state(prior_summary, prior)

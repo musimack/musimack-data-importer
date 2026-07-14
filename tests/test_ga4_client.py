@@ -4,6 +4,7 @@ from src.config import DateRange
 from src.ga4_client import (
     GA4_EXACT_RANGE_SUMMARY_METRICS,
     GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS,
+    build_exact_range_traffic_series_request,
     build_exact_range_summary_request,
     build_channel_breakdown_request,
     build_landing_pages_request,
@@ -40,6 +41,16 @@ def test_traffic_overview_request_is_minimal_date_trend():
         {"name": "averageSessionDuration"},
         {"name": "eventCount"},
     ]
+
+
+def test_r4_exact_range_traffic_series_requests_only_rendered_metrics():
+    request = build_exact_range_traffic_series_request(
+        DateRange(date(2026, 4, 1), date(2026, 4, 30))
+    )
+
+    assert request["dimensions"] == [{"name": "date"}]
+    assert request["metrics"] == [{"name": "activeUsers"}, {"name": "sessions"}]
+    assert request["dateRanges"] == [{"startDate": "2026-04-01", "endDate": "2026-04-30"}]
 
 
 def test_exact_range_summary_request_is_dimensionless_summary_row():

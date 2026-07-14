@@ -89,7 +89,7 @@ class Ga4DataClient:
 
     def run_exact_range_traffic_series(self, date_range: DateRange) -> dict[str, Any]:
         """Return only the exact daily traffic query used by governed comparison trends."""
-        return self._run_report(build_traffic_overview_request(date_range))
+        return self._run_report(build_exact_range_traffic_series_request(date_range))
 
     def run_exact_range_channel_performance(self, date_range: DateRange) -> dict[str, Any]:
         return self._run_report(build_channel_breakdown_request(date_range))
@@ -255,6 +255,17 @@ def build_traffic_overview_request(date_range: DateRange) -> dict[str, Any]:
             {"name": "averageSessionDuration"},
             {"name": "eventCount"},
         ],
+        "limit": 10000,
+        "keepEmptyRows": False,
+    }
+
+
+def build_exact_range_traffic_series_request(date_range: DateRange) -> dict[str, Any]:
+    """Build the bounded R4 daily-series request without unrelated summary metrics."""
+    return {
+        "dateRanges": [date_range.as_ga4()],
+        "dimensions": [{"name": "date"}],
+        "metrics": [{"name": "activeUsers"}, {"name": "sessions"}],
         "limit": 10000,
         "keepEmptyRows": False,
     }

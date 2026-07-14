@@ -165,8 +165,9 @@ def test_unequal_partial_coverage_withholds_deltas() -> None:
 
 
 def test_fake_provider_builds_all_ten_sections_for_all_twelve_presets() -> None:
+    ga4 = _FakeGa4()
     package = build_real_presentation_comparisons(
-        ga4_client=_FakeGa4(), gsc_client=_FakeGsc(), profile="aluma-seo-geo",
+        ga4_client=ga4, gsc_client=_FakeGsc(), profile="aluma-seo-geo",
         report_id=IDENTITY["report_id"], client_id=IDENTITY["client_id"], project_id=IDENTITY["project_id"],
         report_start=REPORT_START, report_end=REPORT_END, gsc_available_through=date(2026, 7, 5),
         generated_at="2026-07-13T00:00:00Z",
@@ -180,10 +181,18 @@ def test_fake_provider_builds_all_ten_sections_for_all_twelve_presets() -> None:
     assert this_month_gsc["current"]["coverage_state"] == "partial"
     assert this_month_gsc["comparison"]["coverage_state"] == "complete"
     assert this_month_gsc["delta_eligible"] is False
+    assert ga4.summary_metric_names
+    assert set(ga4.summary_metric_names) == {
+        ("activeUsers", "sessions", "screenPageViews", "engagementRate", "engagedSessions")
+    }
 
 
 class _FakeGa4:
+    def __init__(self):
+        self.summary_metric_names = []
+
     def run_exact_range_summary(self, date_range, *, metric_names):
+        self.summary_metric_names.append(metric_names)
         return {"metricHeaders": [{"name": key} for key in metric_names], "rows": [{"metricValues": [{"value": "10" if key != "engagementRate" else "0.5"} for key in metric_names]}]}
 
     def run_exact_range_traffic_series(self, date_range):

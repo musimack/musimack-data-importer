@@ -120,13 +120,13 @@ def _range_entry(
     profile: str,
     range_key: str,
     date_range: DateRange,
+    metric_names: tuple[str, ...] = GA4_EXACT_RANGE_SUMMARY_METRICS,
 ) -> tuple[dict[str, Any], list[str], int]:
     notes = [
         "Queried GA4 Data API as a range-level summary row; values are not clipped or summed from report-period totals."
     ]
     response = None
     provider_calls = 0
-    metric_names = GA4_EXACT_RANGE_SUMMARY_METRICS
     try:
         provider_calls += 1
         response = client.run_exact_range_summary(date_range, metric_names=metric_names)
