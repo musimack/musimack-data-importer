@@ -1,5 +1,7 @@
 # Client Report Publisher YoY Handoff Contract Plan
 
+> R4 discovery note (2026-07-13): this remains a planning-only importer document. It does not authorize provider pulls or define an approved comparison contract. Portal discovery found unresolved previous-period versus prior-year basis, twelve-preset mapping, control, rate/zero/GSC-partial/ranked/trend semantics, and contract version. No comparison data should be generated until David approves the decisions recorded in `client-dashboard/docs/r4_comparison_architecture_discovery.md` and a later prompt authorizes a bounded `aluma-seo-geo` run.
+
 ## Purpose
 
 This plan defines the importer-side approach for sanitized year-over-year (YoY) comparable-period handoff contracts for Client Report Publisher GA4 and GSC exports.
@@ -531,4 +533,3 @@ Explicitly deferred:
 - automated scheduled reporting
 - AI commentary
 - public links
-
