@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -796,4 +797,22 @@ def _require_exact_source_period(payload: dict[str, Any], period: dict[str, str]
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    """Publish one handoff file atomically.
+
+    The complete payload is serialized first, written to a temporary file in
+    the same destination directory, and only then moved into place with
+    ``os.replace``. A failure while serializing or writing therefore leaves any
+    previously published file byte-identical, so a partially written or
+    half-replaced handoff can never become portal-visible. This follows the
+    existing repository convention used by the Local Falcon and profile
+    writers.
+    """
+    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.tmp")
+    try:
+        temp_path.write_text(text, encoding="utf-8")
+        os.replace(temp_path, path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
