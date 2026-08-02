@@ -245,3 +245,56 @@ The gap disclosed in section 7 is now demonstrably fixed. This run wrote `export
 ### State
 
 **Group 1 remains incomplete: 2 of 3 verified.** Lucy Escobar and Western Wood Structures are verified. **AVS is not verified and cannot be until its Search Console property or account question is resolved.**
+## 14. Append: AVS Diagnosed and Verified, BeWell Verified, Group 1 Complete (2026-08-02)
+
+**All prior text above is preserved unchanged and corrected here by append.**
+
+**David authorized the `sites.list` diagnostic for AVS and provider verification for BeWell.**
+
+### The AVS diagnostic settled it in one request
+
+`sites.list` returned the sites the AVS Google Search Console token can actually see. **The account holds 34 sites, and `https://www.avselevator.com/` is among them with `siteOwner` permission.**
+
+**Hypothesis 3 was correct: the property is registered under the `www` subdomain.** Hypothesis 2 is eliminated; the account was never wrong. Both earlier attempts failed because the hostname did not match:
+
+| Attempt | GSC value | Result |
+|---|---|---|
+| First | `https://avselevator.com/` | HTTP 404 |
+| Second | `sc-domain:avselevator.com` | HTTP 404 |
+| **Third** | **`https://www.avselevator.com/`** | **Verified** |
+
+**One correction to a product-owner supplied value is recorded explicitly.** David supplied `https://avselevator.com/`. **The provider itself is the authority on which property exists**, and it reports `https://www.avselevator.com/`. The local configuration now records the verified form. **No other supplied identifier was changed.**
+
+The same diagnostic independently confirmed **`https://crokinchiro.com/` with `siteOwner`**, exactly as supplied for BeWell.
+
+### Final results, all four verified
+
+| Profile | GA4 property | GSC property | Requests | Status |
+|---|---|---|---|---|
+| `avs` | `285955540` | `https://www.avselevator.com/` | 2 | **Verified** |
+| `lucy-escobar` | `508902753` | `https://lucyescobar.com/` | 2 | **Verified** |
+| `western-wood-structures` | `309883914` | `https://westernwoodstructures.com/` | 2 | **Verified** |
+| `bewell` | `498224951` | `https://crokinchiro.com/` | 2 | **Verified** |
+
+Every run recorded `final_state: verified`, `provider_verified: true`, exactly two requests, and operations exactly `ga4.properties.getMetadata` and `gsc.sites.get`.
+
+### Request accounting
+
+| Item | Count |
+|---|---|
+| Initial run: AVS failed, Lucy and Western Wood verified | 6 |
+| AVS second attempt, `sc-domain` | 2 |
+| **`sites.list` diagnostic**, authorized | **1** |
+| AVS third attempt, `www`, verified | 2 |
+| BeWell verified | 2 |
+| **Total** | **13 of the raised ceiling of 20** |
+
+**Known direct cost $0.00. Zero retries, zero pagination, zero fallback operations, zero reporting-data calls.**
+
+### On the diagnostic operation
+
+`list_sites` was added to the GSC client **solely for this authorized diagnosis**. It returns site URLs and permission levels and **no search-analytics data**. It is **deliberately not part of the approved verification plan** and is **never called by `provider_verify`**, so the two-operation approved envelope is unchanged.
+
+### State
+
+**R8-C5 Group 1 provider configuration verification is COMPLETE for all three governed Group 1 profiles, plus BeWell.** **Backfill execution has not begun**, and a separate governed work package must define the comparison and presentation-range request plan.

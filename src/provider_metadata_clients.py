@@ -94,6 +94,29 @@ class GscSiteMetadataClient:
         self._token_file = token_file
         self._timeout_seconds = timeout_seconds
 
+    def list_sites(self) -> dict[str, Any]:
+        """Diagnostic only: which sites can this account actually see?
+
+        Authorized by David Wallace on 2026-08-02 solely to diagnose the AVS
+        404, after both a URL-prefix and a domain-property lookup failed. It
+        returns site URLs and permission levels and **no search-analytics
+        data**. One request, no pagination.
+
+        This is deliberately not part of the approved verification plan and is
+        never called by ``provider_verify``.
+        """
+        credentials = load_gsc_oauth_credentials(self._client_secrets_file, self._token_file)
+        if not credentials.valid:
+            credentials.refresh(Request())
+        response = requests.get(
+            "https://searchconsole.googleapis.com/webmasters/v3/sites",
+            headers={"Authorization": f"Bearer {credentials.token}"},
+            timeout=self._timeout_seconds,
+        )
+        if response.status_code >= 400:
+            raise GscClientError(sanitized_gsc_error(response))
+        return response.json()
+
     def get_site(self, site_url: str) -> dict[str, Any]:
         credentials = load_gsc_oauth_credentials(self._client_secrets_file, self._token_file)
         if not credentials.valid:

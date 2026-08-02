@@ -38,9 +38,10 @@ LOCAL_CONFIGS = ROOT / "local-profile-configs"
 
 # Product-owner supplied by David Wallace on 2026-08-02. Authoritative.
 GROUP_1_IDENTIFIERS = {
-    # AVS is a Search Console *domain* property, confirmed by David Wallace on
-    # 2026-08-02 after a URL-prefix lookup returned HTTP 404.
-    "avs": ("285955540", "sc-domain:avselevator.com"),
+    # AVS is registered under the www subdomain. Established by an authorized
+    # sites.list diagnostic on 2026-08-02, after both https://avselevator.com/
+    # and sc-domain:avselevator.com returned HTTP 404. Verified successfully.
+    "avs": ("285955540", "https://www.avselevator.com/"),
     "lucy-escobar": ("508902753", "https://lucyescobar.com/"),
     "western-wood-structures": ("309883914", "https://westernwoodstructures.com/"),
 }
