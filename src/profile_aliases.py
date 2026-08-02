@@ -18,6 +18,7 @@ PROFILE_ALIASES: dict[str, str] = {
     "pinnacle": "pinnacle-contractors",
     "lucy": "lucy-escobar",
     "avs": "avs",
+    "bewell": "bewell",
 }
 
 

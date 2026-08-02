@@ -145,3 +145,58 @@ Full offline suite **822 passed, 0 failed, 0 skipped**. No lint, formatting, or 
 1. **The AVS Search Console property form or account.** Section 5 lists three candidate explanations; choosing between them is David's
 2. **Whether to re-run Lucy Escobar and Western Wood Structures now**, which would consume up to 4 of the 4 remaining permitted requests, or to resolve AVS first and re-run the group in order
 3. **BeWell registry recovery**, section 8
+## 12. Append: Corrected AVS Property, Remaining Group 1 Executed, BeWell Recovered (2026-08-02)
+
+**All prior text above is preserved unchanged and corrected here by append.**
+
+### David's three decisions
+
+1. **AVS is a Search Console domain property**, `sc-domain:avselevator.com`, not URL-prefix. This explains the HTTP 404 recorded in section 5.
+2. **Run Lucy Escobar and Western Wood Structures now.**
+3. **BeWell Chiropractic**: GA4 property `498224951`, GSC property `https://crokinchiro.com/`.
+
+### The request-ceiling constraint, and how it was honored
+
+**Two of the approved six group requests were already spent** by the AVS attempt. A 404 is an issued request and counts.
+
+Re-running AVS on the corrected value **plus** both remaining profiles would have required six more, for **eight total against a ceiling of six**. That is a hard stop condition. **David's "yes" authorized Lucy Escobar and Western Wood Structures, which is exactly four requests and lands precisely on the ceiling**, so those two were executed and **AVS was corrected offline but deliberately not re-run**.
+
+| Profile | Requests | Result |
+|---|---|---|
+| `avs` | 2, earlier | **Failed**, URL-prefix lookup. Config now corrected, **not re-run** |
+| `lucy-escobar` | 2 | **Verified** |
+| `western-wood-structures` | 2 | **Verified** |
+| **Total** | **6 of 6** | **Ceiling reached. No further provider call is permitted.** |
+
+### Execution results
+
+| Profile | GA4 operation | GA4 identity | GSC operation | GSC identity | Status |
+|---|---|---|---|---|---|
+| `lucy-escobar` | `properties.getMetadata` | matched `508902753` | `sites.get` | matched `https://lucyescobar.com/` | **verified** |
+| `western-wood-structures` | `properties.getMetadata` | matched `309883914` | `sites.get` | matched `https://westernwoodstructures.com/` | **verified** |
+
+Both wrote evidence with `final_state: verified`, `provider_verified: true`, `provider_requests_executed: 2`, operations exactly `ga4.properties.getMetadata` and `gsc.sites.get`, and `expected_known_direct_cost: 0.0`. **Zero retries, zero pagination, zero fallback operations, zero reporting-data calls.**
+
+### AVS correction, applied but unverified
+
+`local-profile-configs/avs.local.json` now records **`sc-domain:avselevator.com`**, and AVS remains `structurally_ready` with a two-call plan. **AVS provider access is NOT verified.** Confirming it requires **2 additional requests beyond the approved ceiling**, which is David's decision.
+
+### BeWell registry gap closed
+
+The gap recorded in section 8 is closed. Added to `config/dashboard_lab_profiles.json` as `bewell`: display name **BeWell Chiropractic**, domain **`crokinchiro.com`**, `data_sources` of `ga4` and `gsc`, and enabled GA4 and GSC importer-provider capabilities. A `bewell` alias was added, matching the existing token-directory name, and an ignored local configuration was written using the same recovered convention.
+
+**The domain is taken from David's supplied GSC property, not inferred from the client name**, which differs from the domain. **BeWell reports `structurally_ready` offline. No BeWell provider call was made, and none is authorized.**
+
+### Aggregate
+
+| Item | Result |
+|---|---|
+| Group 1 profiles verified | **2 of 3** |
+| Total provider requests | **6 of 6** |
+| Total known direct cost | **$0.00 of $3** |
+| Retries, pagination, fallbacks, reporting calls | **0** |
+| Group 1 completion | **False.** AVS is unverified |
+
+### Validation
+
+Full offline suite **823 passed, 0 failed, 0 skipped**. Secret scan of all three evidence files: **clean**, with no token, refresh token, client secret, credential path, authorization header, or session data. Evidence and local configurations remain **ignored and uncommitted**.

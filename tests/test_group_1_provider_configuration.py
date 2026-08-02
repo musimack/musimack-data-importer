@@ -38,7 +38,9 @@ LOCAL_CONFIGS = ROOT / "local-profile-configs"
 
 # Product-owner supplied by David Wallace on 2026-08-02. Authoritative.
 GROUP_1_IDENTIFIERS = {
-    "avs": ("285955540", "https://avselevator.com/"),
+    # AVS is a Search Console *domain* property, confirmed by David Wallace on
+    # 2026-08-02 after a URL-prefix lookup returned HTTP 404.
+    "avs": ("285955540", "sc-domain:avselevator.com"),
     "lucy-escobar": ("508902753", "https://lucyescobar.com/"),
     "western-wood-structures": ("309883914", "https://westernwoodstructures.com/"),
 }
@@ -179,18 +181,25 @@ def test_seven_of_the_eight_named_profiles_exist_in_the_governed_registry() -> N
     assert not missing, missing
 
 
-def test_bewell_is_named_by_david_but_absent_from_the_governed_registry() -> None:
-    """A recorded discrepancy, not a silent omission.
+def test_bewell_registry_gap_is_now_closed() -> None:
+    """The gap recorded earlier is closed.
 
-    David named BeWell among the eight clients sharing one retrieval mechanism,
-    and the operator token directory carries BeWell tokens, but no BeWell
-    profile exists in the governed registry. BeWell is outside Group 1 so it
-    blocks nothing here, and it needs David's direction before any BeWell work.
+    BeWell was named among the eight clients and had tokens present but no
+    governed profile. David supplied its identifiers on 2026-08-02, so the
+    profile now exists. **No BeWell provider call has been made.**
     """
     registry = json.loads((ROOT / "config" / "dashboard_lab_profiles.json").read_text(encoding="utf-8"))
+    bewell = next(item for item in registry["profiles"] if item["slug"] == "bewell")
+    assert bewell["display_name"] == "BeWell Chiropractic"
+    assert bewell["domain"] == "crokinchiro.com"
+    assert bewell["data_sources"] == ["ga4", "gsc"]
+
+
+def test_all_eight_named_profiles_now_exist_in_the_governed_registry() -> None:
+    registry = json.loads((ROOT / "config" / "dashboard_lab_profiles.json").read_text(encoding="utf-8"))
     slugs = {item["slug"] for item in registry["profiles"]}
-    assert "bewell" not in slugs
-    assert "bewell" in SHARED_MECHANISM_PROFILES
+    missing = [slug for slug in SHARED_MECHANISM_PROFILES if slug not in slugs]
+    assert not missing, missing
 
 
 def test_the_same_governed_architecture_serves_every_profile() -> None:
