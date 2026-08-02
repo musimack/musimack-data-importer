@@ -16,11 +16,15 @@ from src.client_report_ga4_ranked_exact_range_provider import (
 from src.config import ConfigError, load_ga4_config
 from src.ga4_client import Ga4ClientError, Ga4DataClient
 from src.profile_aliases import ProfileAliasError, resolve_profile_slug
+from src.profile_authorization import (
+    ProfileAuthorizationError,
+    add_authorized_profile_argument,
+    authorize_profile,
+)
 
 
 DEFAULT_REPORT_START = date(2026, 1, 1)
 DEFAULT_REPORT_END = date(2026, 7, 8)
-AUTHORIZED_PROFILE = "aluma-seo-geo"
 
 
 def main() -> int:
@@ -28,6 +32,7 @@ def main() -> int:
         description="Pull real GA4 ranked exact-range data for Client Report Publisher range QA."
     )
     parser.add_argument("--profile", required=True, help="Authorized dashboard-lab profile slug or alias.")
+    add_authorized_profile_argument(parser)
     parser.add_argument("--report-start-date", default=DEFAULT_REPORT_START.isoformat())
     parser.add_argument("--report-end-date", default=DEFAULT_REPORT_END.isoformat())
     parser.add_argument("--timezone", default="America/Los_Angeles")
@@ -40,9 +45,10 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        canonical_profile = resolve_profile_slug(args.profile)
-        if canonical_profile != AUTHORIZED_PROFILE:
-            raise ConfigError("this controlled milestone is authorized only for aluma-seo-geo")
+        # Authorization first, before credential lookup or provider-client
+        # construction. A refused run never reads a secret.
+        authorization = authorize_profile(args.profile, args.authorized_profiles)
+        canonical_profile = authorization.requested_profile
         if args.real_output and args.out_dir:
             raise ConfigError("--real-output and --out-dir cannot be combined")
         report_start = _parse_date(args.report_start_date, "--report-start-date")
@@ -64,7 +70,7 @@ def main() -> int:
                 json.dumps(payload, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
-    except (ConfigError, Ga4ClientError, ProfileAliasError, OSError, ValueError) as exc:
+    except (ConfigError, ProfileAuthorizationError, Ga4ClientError, ProfileAliasError, OSError, ValueError) as exc:
         print(f"GA4 ranked exact-range export failed safely: {exc}", file=sys.stderr)
         return 1
 

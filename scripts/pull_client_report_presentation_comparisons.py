@@ -16,16 +16,19 @@ from src.config import ConfigError, load_ga4_config
 from src.ga4_client import Ga4ClientError, Ga4DataClient
 from src.local_config import load_local_operator_config
 from src.profile_aliases import ProfileAliasError, resolve_profile_slug
+from src.profile_authorization import (
+    ProfileAuthorizationError,
+    add_authorized_profile_argument,
+    authorize_profile,
+)
 from src.profile_local_config import load_profile_local_config
 from src.providers.gsc.client import DEFAULT_GSC_TOKEN_FILE, GscClientError, GscFetchConfig, GscOAuthError, GscSearchConsoleClient
-
-
-AUTHORIZED_PROFILE = "aluma-seo-geo"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Pull bounded provider-backed R4 presentation comparisons for the retained local report.")
     parser.add_argument("--profile", required=True)
+    add_authorized_profile_argument(parser)
     parser.add_argument("--report-id", required=True)
     parser.add_argument("--client-id", required=True)
     parser.add_argument("--project-id", required=True)
@@ -35,9 +38,10 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     try:
-        profile = resolve_profile_slug(args.profile)
-        if profile != AUTHORIZED_PROFILE:
-            raise ConfigError("controlled R4 comparison retrieval is authorized only for aluma-seo-geo")
+        # Authorization first, before any output check, credential lookup, or
+        # provider-client construction. A refused run never reads a secret.
+        authorization = authorize_profile(args.profile, args.authorized_profiles)
+        profile = authorization.requested_profile
         output = Path(args.out).resolve(strict=False)
         if not _is_ignored_real_output(output):
             raise ConfigError("R4 real comparison output must stay under ignored exports/local-real")
@@ -64,15 +68,17 @@ def main() -> int:
             report_start=date.fromisoformat(args.report_start_date),
             report_end=date.fromisoformat(args.report_end_date),
             gsc_available_through=date.fromisoformat(args.gsc_available_through_date),
+            authorization=authorization,
         )
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(package, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    except (ConfigError, ProfileAliasError, Ga4ClientError, GscClientError, GscOAuthError, OSError, ValueError) as exc:
+    except (ConfigError, ProfileAuthorizationError, ProfileAliasError, Ga4ClientError, GscClientError, GscOAuthError, OSError, ValueError) as exc:
         print(f"R4 comparison retrieval failed safely: {exc}", file=sys.stderr)
         return 1
     entries = package["comparisons"]
     eligible = sum(1 for entry in entries if entry["delta_eligible"])
     print(f"Saved sanitized R4 comparisons for {profile} to ignored local real output.")
+    print(f"Authorization contract: {authorization.contract}; authorized profiles: {', '.join(authorization.authorized_profiles)}.")
     print(f"Comparison entries: {len(entries)}; delta-eligible: {eligible}; withheld: {len(entries) - eligible}.")
     print(f"GA4 calls: {package['source_identity']['ga4_provider_calls']}; GSC calls: {package['source_identity']['gsc_provider_calls']}.")
     print("No credentials, provider identifiers, raw payloads, or secret paths were written or printed.")

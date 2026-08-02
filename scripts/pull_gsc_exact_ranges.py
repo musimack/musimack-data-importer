@@ -15,6 +15,11 @@ from src.client_report_gsc_exact_range_provider import build_all_gsc_exact_range
 from src.config import ConfigError
 from src.local_config import load_local_operator_config
 from src.profile_aliases import ProfileAliasError, resolve_profile_slug
+from src.profile_authorization import (
+    ProfileAuthorizationError,
+    add_authorized_profile_argument,
+    authorize_profile,
+)
 from src.profile_local_config import load_profile_local_config
 from src.providers.gsc.client import DEFAULT_GSC_TOKEN_FILE, GscClientError, GscFetchConfig, GscOAuthError, GscSearchConsoleClient
 from src.providers.gsc.summary import real_output_dir
@@ -23,6 +28,7 @@ from src.providers.gsc.summary import real_output_dir
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate sanitized provider-backed GSC exact-range contracts.")
     parser.add_argument("--profile", required=True)
+    add_authorized_profile_argument(parser)
     parser.add_argument("--report-start-date", required=True)
     parser.add_argument("--report-end-date", required=True)
     parser.add_argument("--available-through-date")
@@ -30,9 +36,10 @@ def main() -> int:
     parser.add_argument("--real-output", action="store_true")
     args = parser.parse_args()
     try:
-        profile = resolve_profile_slug(args.profile)
-        if profile != "aluma-seo-geo":
-            raise ConfigError("controlled GSC exact-range generation is limited to aluma-seo-geo")
+        # Authorization first, before credential lookup or provider-client
+        # construction. A refused run never reads a secret.
+        authorization = authorize_profile(args.profile, args.authorized_profiles)
+        profile = authorization.requested_profile
         output = Path(args.out_dir) if args.out_dir else real_output_dir(profile)
         if not args.out_dir and not args.real_output:
             raise ConfigError("--out-dir or --real-output is required")
@@ -66,7 +73,7 @@ def main() -> int:
         output.mkdir(parents=True, exist_ok=True)
         for schema, payload in datasets.items():
             (output / f"{schema}.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    except (ConfigError, ProfileAliasError, GscClientError, GscOAuthError, OSError, ValueError) as exc:
+    except (ConfigError, ProfileAuthorizationError, ProfileAliasError, GscClientError, GscOAuthError, OSError, ValueError) as exc:
         print(f"GSC exact-range generation failed safely: {exc}", file=sys.stderr)
         return 1
     calls = sum(int(item["generation_metadata"]["provider_calls"]) for item in datasets.values())

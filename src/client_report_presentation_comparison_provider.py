@@ -19,6 +19,7 @@ from src.client_report_presentation_comparisons import (
     resolve_comparison_ranges,
 )
 from src.config import DateRange
+from src.profile_authorization import ProfileAuthorization
 
 
 SUMMARY_METRICS = {
@@ -64,10 +65,21 @@ def build_real_presentation_comparisons(
     report_start: date,
     report_end: date,
     gsc_available_through: date,
+    authorization: ProfileAuthorization,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    if profile != "aluma-seo-geo":
-        raise ValueError("controlled R4 comparison retrieval is authorized only for aluma-seo-geo")
+    # Dual-layer protection. The CLI authorizes before constructing any provider
+    # client, and this layer refuses to build a package unless it is handed the
+    # authorization that actually covers this profile. Requiring the object
+    # rather than re-checking a constant means the provider cannot be reached
+    # through a path that skipped authorization.
+    if not isinstance(authorization, ProfileAuthorization):
+        raise ValueError("presentation comparison retrieval requires an explicit run authorization")
+    if authorization.requested_profile != profile or profile not in authorization.authorized_profiles:
+        raise ValueError(
+            f"profile {profile} is not covered by the run authorization for "
+            f"{authorization.requested_profile}"
+        )
     identity = {"report_id": report_id, "client_id": client_id, "project_id": project_id}
     comparisons: list[dict[str, Any]] = []
     provider_calls = {"ga4": 0, "gsc": 0}

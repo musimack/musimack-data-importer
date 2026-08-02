@@ -18,6 +18,7 @@ from src.client_report_presentation_comparisons import (
     validate_presentation_comparison_package,
 )
 from src.client_report_presentation_comparison_provider import build_real_presentation_comparisons
+from src.profile_authorization import authorize_profile
 
 
 REPORT_START = date(2025, 1, 1)
@@ -171,6 +172,7 @@ def test_fake_provider_builds_all_ten_sections_for_all_twelve_presets() -> None:
         report_id=IDENTITY["report_id"], client_id=IDENTITY["client_id"], project_id=IDENTITY["project_id"],
         report_start=REPORT_START, report_end=REPORT_END, gsc_available_through=date(2026, 7, 5),
         generated_at="2026-07-13T00:00:00Z",
+        authorization=authorize_profile("aluma-seo-geo", ["aluma-seo-geo"]),
     )
     assert len(package["comparisons"]) == 120
     assert {entry["section_key"] for entry in package["comparisons"]} == {
