@@ -71,8 +71,8 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
     assert western.data_sources == ["ga4", "gsc"]
     assert _capability(western, "local_falcon").status == "planned"
     assert avs.display_name == "AVS"
-    assert avs.domain == "avs.example.invalid"
-    assert avs.data_sources == []
+    assert avs.domain == "avselevator.com"  # David Wallace classified AVS and supplied the domain on 2026-08-02
+    assert avs.data_sources == ["ga4", "gsc"]
     assert musimack.domain == "musimackmarketing.com"
     assert musimack.data_sources == ["ga4", "gsc", "local_falcon"]
     assert wc.display_name == "WC Land Renewal"
@@ -108,7 +108,7 @@ def test_dashboard_lab_profile_registry_loads_safe_profiles():
         "lucyescobar.com",
         "pinnaclecontractorsllc.com",
         "westernwoodstructures.com",
-        "avs.example.invalid",
+        "avselevator.com",
         "musimackmarketing.com",
         "wclandrenewal.com",
         "steadfastdecks.com",

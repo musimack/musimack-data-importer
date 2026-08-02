@@ -614,7 +614,7 @@ def plan_group_1(profiles: list[str]) -> dict[str, object]:
     missing = [item for item in GROUP_1_PROFILES if item not in supplied]
 
     entries: list[dict[str, object]] = []
-    executable_now = 0
+    ready_requests = 0
     potential_max = 0
     for slug in GROUP_1_PROFILES:
         applicability = resolve_provider_applicability(slug)
@@ -628,6 +628,9 @@ def plan_group_1(profiles: list[str]) -> dict[str, object]:
                 "ga4_applicable": applicability.get("ga4_applicable"),
                 "gsc_applicable": applicability.get("gsc_applicable"),
                 "planned_requests_when_configured": planned,
+                "structurally_ready": _structurally_ready(slug, applicability),
+                # Structural readiness is not execution authorization. This stays
+                # false until David authorizes the credentialed run.
                 "can_enter_provider_verification": False,
                 "reason": applicability.get("reason"),
             }
@@ -663,9 +666,10 @@ def plan_group_1(profiles: list[str]) -> dict[str, object]:
             + ["no profile is structurally ready, so no profile can enter provider verification"]
         ),
         "profiles": entries,
-        # Nothing is executable today. Reporting six here would imply a runnable
-        # plan that does not exist.
-        "executable_requests_now": executable_now,
+        # Requests covered by structurally ready profiles. This is readiness,
+        # not authorization: nothing executes until David authorizes the run.
+        "structurally_ready_requests": ready_requests,
+        "executable_requests_now": 0,
         "potential_maximum_requests": potential_max,
         "cost_ceiling_per_profile": APPROVED_COST_PER_PROFILE,
         "group_request_ceiling": APPROVED_GROUP_REQUESTS,
@@ -676,6 +680,31 @@ def plan_group_1(profiles: list[str]) -> dict[str, object]:
         "stop_on_first_failure": True,
         "provider_execution_authorized": False,
     }
+
+
+def _structurally_ready(slug: str, applicability: Mapping[str, Any]) -> bool:
+    """Whether one profile's local configuration is structurally complete.
+
+    Reads only the loader's safe dictionary. Never opens a credential and never
+    resolves a secret environment value.
+    """
+    if applicability.get("status") != APPLICABILITY_DECLARED:
+        return False
+    try:
+        from src.profile_local_config import load_profile_local_config
+
+        providers = load_profile_local_config(slug).as_safe_dict().get("providers") or {}
+    except Exception:
+        return False
+    result = validate_profile_configuration(
+        slug,
+        dict(providers.get("ga4") or {}),
+        dict(providers.get("gsc") or {}),
+        repository_root=Path(__file__).resolve().parents[1],
+        ga4_applicable=bool(applicability.get("ga4_applicable")),
+        gsc_applicable=bool(applicability.get("gsc_applicable")),
+    )
+    return result.ready
 
 
 def assert_approved_plan(plan: ProviderCallPlan) -> None:

@@ -10,17 +10,70 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/aluma-seo-geo",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/aluma-seo-geo",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/aluma-seo-geo",
-      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "AI visibility is represented through Local Falcon local visibility output when available."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "enabled",
+          "kind": "dashboard_room",
+          "notes": "AI visibility is represented through Local Falcon local visibility output when available."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -33,18 +86,79 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/inn-at-spanish-head",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/inn-at-spanish-head",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/inn-at-spanish-head",
-      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Alpha planned capability; source-aware AI visibility output is not connected yet."},
-        {"key": "google_ads_search", "label": "Google Ads Search", "status": "planned", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-search-summary.json", "notes": "Hospitality paid search capability for booking-intent campaigns; real Google Ads Search import is not implemented yet. Do not fake output."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "planned",
+          "kind": "dashboard_room",
+          "notes": "Alpha planned capability; source-aware AI visibility output is not connected yet."
+        },
+        {
+          "key": "google_ads_search",
+          "label": "Google Ads Search",
+          "status": "planned",
+          "kind": "paid_provider",
+          "provider": "google_ads_search",
+          "expected_output_file": "google-ads-search-summary.json",
+          "notes": "Hospitality paid search capability for booking-intent campaigns; real Google Ads Search import is not implemented yet. Do not fake output."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -57,16 +171,62 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/lucy-escobar",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/lucy-escobar",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/lucy-escobar",
-      "data_sources": ["ga4", "gsc"],
+      "data_sources": [
+        "ga4",
+        "gsc"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "planned", "kind": "dashboard_room", "notes": "Optional later if local visibility is configured."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "planned",
+          "kind": "dashboard_room",
+          "notes": "Optional later if local visibility is configured."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -79,21 +239,94 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/pinnacle-contractors",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/pinnacle-contractors",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/pinnacle-contractors",
-      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "AI visibility is represented through Local Falcon local visibility output when available."},
-        {"key": "google_ads_search", "label": "Google Ads Search", "status": "planned", "kind": "paid_provider"},
-        {"key": "google_lsa", "label": "Google LSA", "status": "planned", "kind": "paid_provider"},
-        {"key": "callrail", "label": "CallRail", "status": "planned", "kind": "lead_provider"},
-        {"key": "leads", "label": "Leads", "status": "planned", "kind": "dashboard_room"},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "enabled",
+          "kind": "dashboard_room",
+          "notes": "AI visibility is represented through Local Falcon local visibility output when available."
+        },
+        {
+          "key": "google_ads_search",
+          "label": "Google Ads Search",
+          "status": "planned",
+          "kind": "paid_provider"
+        },
+        {
+          "key": "google_lsa",
+          "label": "Google LSA",
+          "status": "planned",
+          "kind": "paid_provider"
+        },
+        {
+          "key": "callrail",
+          "label": "CallRail",
+          "status": "planned",
+          "kind": "lead_provider"
+        },
+        {
+          "key": "leads",
+          "label": "Leads",
+          "status": "planned",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -106,35 +339,123 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/western-wood-structures",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/western-wood-structures",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/western-wood-structures",
-      "data_sources": ["ga4", "gsc"],
+      "data_sources": [
+        "ga4",
+        "gsc"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "planned", "kind": "dashboard_room", "notes": "Approval-gated; do not include Local Falcon handoff output until approved and validated."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "planned",
+          "kind": "dashboard_room",
+          "notes": "Approval-gated; do not include Local Falcon handoff output until approved and validated."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
       "slug": "avs",
       "display_name": "AVS",
-      "domain": "avs.example.invalid",
+      "domain": "avselevator.com",
       "vertical": "pending client classification",
-      "service_model": "Client Report Publisher readiness shell; canonical domain and provider config pending operator confirmation",
+      "service_model": "Client Report Publisher readiness profile; GA4 and Google Search Console classified by David Wallace on 2026-08-02",
       "dashboard_lab_route": "/lab/avs",
       "importer_output_folder": "exports/local-real/dashboard-lab/avs",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/avs",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/avs",
-      "data_sources": [],
+      "data_sources": [
+        "ga4",
+        "gsc"
+      ],
       "capabilities": [
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -147,17 +468,70 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/musimack-marketing",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/musimack-marketing",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/musimack-marketing",
-      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "enabled", "kind": "dashboard_room", "notes": "Agency/internal AI visibility planning; no paid rooms enabled by default."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "enabled",
+          "kind": "dashboard_room",
+          "notes": "Agency/internal AI visibility planning; no paid rooms enabled by default."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -170,20 +544,100 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/wc-land-renewal",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/wc-land-renewal",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/wc-land-renewal",
-      "data_sources": ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon",
+        "google_ads_search",
+        "callrail",
+        "form_fills"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
-        {"key": "google_ads_search", "label": "Google Ads Search", "status": "enabled", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-summary.json", "notes": "Local read-only paid search dashboard output only; no account mutations or portal integration."},
-        {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json", "notes": "Aggregate call tracking dashboard output only; no caller details, recordings, transcripts, or phone numbers."},
-        {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json", "notes": "Date-only form-fill dashboard output only; no names, emails, phone numbers, messages, IPs, or raw submissions."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "planned",
+          "kind": "dashboard_room",
+          "notes": "Planned once source-aware AI visibility output is configured."
+        },
+        {
+          "key": "google_ads_search",
+          "label": "Google Ads Search",
+          "status": "enabled",
+          "kind": "paid_provider",
+          "provider": "google_ads_search",
+          "expected_output_file": "google-ads-summary.json",
+          "notes": "Local read-only paid search dashboard output only; no account mutations or portal integration."
+        },
+        {
+          "key": "callrail",
+          "label": "CallRail",
+          "status": "enabled",
+          "kind": "lead_provider",
+          "provider": "callrail",
+          "expected_output_file": "callrail-summary.json",
+          "notes": "Aggregate call tracking dashboard output only; no caller details, recordings, transcripts, or phone numbers."
+        },
+        {
+          "key": "form_fills",
+          "label": "Form Fills",
+          "status": "enabled",
+          "kind": "lead_provider",
+          "provider": "form_fills",
+          "expected_output_file": "form-fills-summary.json",
+          "notes": "Date-only form-fill dashboard output only; no names, emails, phone numbers, messages, IPs, or raw submissions."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -196,20 +650,100 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/steadfast-decks-and-fences",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/steadfast-decks-and-fences",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/steadfast-decks-and-fences",
-      "data_sources": ["ga4", "gsc", "local_falcon", "google_ads_search", "callrail", "form_fills"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon",
+        "google_ads_search",
+        "callrail",
+        "form_fills"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
-        {"key": "google_ads_search", "label": "Google Ads Search", "status": "enabled", "kind": "paid_provider", "provider": "google_ads_search", "expected_output_file": "google-ads-summary.json", "notes": "Local read-only paid search dashboard output only; no account mutations or portal integration."},
-        {"key": "callrail", "label": "CallRail", "status": "enabled", "kind": "lead_provider", "provider": "callrail", "expected_output_file": "callrail-summary.json", "notes": "Aggregate call tracking dashboard output only; no caller details, recordings, transcripts, or phone numbers."},
-        {"key": "form_fills", "label": "Form Fills", "status": "enabled", "kind": "lead_provider", "provider": "form_fills", "expected_output_file": "form-fills-summary.json", "notes": "Date-only form-fill dashboard output only; no names, emails, phone numbers, messages, IPs, or raw submissions."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "planned",
+          "kind": "dashboard_room",
+          "notes": "Planned once source-aware AI visibility output is configured."
+        },
+        {
+          "key": "google_ads_search",
+          "label": "Google Ads Search",
+          "status": "enabled",
+          "kind": "paid_provider",
+          "provider": "google_ads_search",
+          "expected_output_file": "google-ads-summary.json",
+          "notes": "Local read-only paid search dashboard output only; no account mutations or portal integration."
+        },
+        {
+          "key": "callrail",
+          "label": "CallRail",
+          "status": "enabled",
+          "kind": "lead_provider",
+          "provider": "callrail",
+          "expected_output_file": "callrail-summary.json",
+          "notes": "Aggregate call tracking dashboard output only; no caller details, recordings, transcripts, or phone numbers."
+        },
+        {
+          "key": "form_fills",
+          "label": "Form Fills",
+          "status": "enabled",
+          "kind": "lead_provider",
+          "provider": "form_fills",
+          "expected_output_file": "form-fills-summary.json",
+          "notes": "Date-only form-fill dashboard output only; no names, emails, phone numbers, messages, IPs, or raw submissions."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     },
     {
@@ -222,17 +756,70 @@
       "importer_output_folder": "exports/local-real/dashboard-lab/portland-tattoo-co",
       "dashboard_lab_local_fixture_folder": "../musimack-dashboard-lab/public/local-fixtures/portland-tattoo-co",
       "dashboard_lab_synthetic_fixture_folder": "../musimack-dashboard-lab/public/fixtures/portland-tattoo-co",
-      "data_sources": ["ga4", "gsc", "local_falcon"],
+      "data_sources": [
+        "ga4",
+        "gsc",
+        "local_falcon"
+      ],
       "capabilities": [
-        {"key": "ga4", "label": "GA4", "status": "enabled", "kind": "importer_provider", "provider": "ga4"},
-        {"key": "gsc", "label": "GSC", "status": "enabled", "kind": "importer_provider", "provider": "gsc"},
-        {"key": "local_falcon", "label": "Local Falcon", "status": "enabled", "kind": "importer_provider", "provider": "local_falcon"},
-        {"key": "local_falcon_ai", "label": "Local Falcon AI Visibility", "status": "planned", "kind": "dashboard_room", "notes": "Planned once source-aware AI visibility output is configured."},
-        {"key": "content", "label": "Content", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "strategy", "label": "Strategy", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "reports", "label": "Reports", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "support", "label": "Support", "status": "enabled", "kind": "dashboard_room"},
-        {"key": "operator_profile", "label": "Operator Profile", "status": "enabled", "kind": "operator"}
+        {
+          "key": "ga4",
+          "label": "GA4",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "ga4"
+        },
+        {
+          "key": "gsc",
+          "label": "GSC",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "gsc"
+        },
+        {
+          "key": "local_falcon",
+          "label": "Local Falcon",
+          "status": "enabled",
+          "kind": "importer_provider",
+          "provider": "local_falcon"
+        },
+        {
+          "key": "local_falcon_ai",
+          "label": "Local Falcon AI Visibility",
+          "status": "planned",
+          "kind": "dashboard_room",
+          "notes": "Planned once source-aware AI visibility output is configured."
+        },
+        {
+          "key": "content",
+          "label": "Content",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "strategy",
+          "label": "Strategy",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "reports",
+          "label": "Reports",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "support",
+          "label": "Support",
+          "status": "enabled",
+          "kind": "dashboard_room"
+        },
+        {
+          "key": "operator_profile",
+          "label": "Operator Profile",
+          "status": "enabled",
+          "kind": "operator"
+        }
       ]
     }
   ]

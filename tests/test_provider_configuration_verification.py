@@ -527,25 +527,39 @@ def test_profiles_declaring_both_providers_plan_exactly_two_requests(profile: st
     assert evidence["planned_requests_gsc"] == 1
 
 
-def test_avs_plans_zero_requests_while_applicability_is_unresolved() -> None:
+def test_avs_now_plans_two_requests_after_classification() -> None:
+    """David classified AVS as using both providers on 2026-08-02."""
     evidence = offline_validate(
         authorization=authorize_profile("avs", GROUP_1),
         ga4_config=GA4_OK,
         gsc_config=GSC_OK,
         repository_root=ROOT,
     )
-    assert evidence["provider_applicability_status"] == "provider_applicability_unresolved"
-    assert evidence["max_requests_total"] == 0
-    assert evidence["execution_eligible"] is False
+    assert evidence["provider_applicability_status"] == "applicable_providers_declared"
+    assert evidence["max_requests_total"] == 2
+    # Structural readiness is still not provider verification.
     assert evidence["provider_verified"] is False
+    assert evidence["provider_execution_authorized"] is False
 
 
-def test_avs_cannot_enter_provider_mode() -> None:
+def test_an_unclassified_profile_cannot_enter_provider_mode() -> None:
+    """Unresolved applicability refuses before any credential is touched.
+
+    The authorization is built directly rather than through authorize_profile,
+    because that function requires a registered slug and the behavior under
+    test is precisely what happens for an unregistered one. The exploding
+    resolver proves credentials were never reached.
+    """
+    from src.profile_authorization import ProfileAuthorization
     from src.provider_configuration_verification import provider_verify
 
+    unregistered = ProfileAuthorization(
+        requested_profile="not-a-registered-profile",
+        authorized_profiles=("not-a-registered-profile",),
+    )
     with pytest.raises(ProviderVerificationError) as exc:
         provider_verify(
-            authorization=authorize_profile("avs", GROUP_1),
+            authorization=unregistered,
             ga4_config=dict(GA4_OK),
             gsc_config=dict(GSC_OK),
             repository_root=ROOT,

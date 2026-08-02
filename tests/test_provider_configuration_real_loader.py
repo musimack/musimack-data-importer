@@ -227,10 +227,22 @@ def test_sc_domain_property_is_accepted(tmp_path) -> None:
 
 
 def test_provider_applicability_absent_prevents_provider_planning() -> None:
-    applicability = resolve_provider_applicability("avs")
+    """An unregistered profile is unresolved and plans nothing.
+
+    AVS previously served as this fixture. David classified it on 2026-08-02,
+    so an unknown slug is used instead and the behavior is still asserted.
+    """
+    applicability = resolve_provider_applicability("not-a-registered-profile")
     assert applicability["status"] == "provider_applicability_unresolved"
     assert applicability["ga4_applicable"] is False
     assert applicability["gsc_applicable"] is False
+
+
+def test_avs_is_now_classified_as_using_both_providers() -> None:
+    applicability = resolve_provider_applicability("avs")
+    assert applicability["status"] == "applicable_providers_declared"
+    assert applicability["ga4_applicable"] is True
+    assert applicability["gsc_applicable"] is True
 
 
 def test_ga4_only_applicability_plans_one_request(tmp_path) -> None:
