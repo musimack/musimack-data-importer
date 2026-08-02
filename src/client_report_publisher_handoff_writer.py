@@ -27,6 +27,10 @@ from src.client_report_presentation_comparisons import (
     validate_presentation_comparison_package,
 )
 from src.client_report_publisher_contracts import CANONICAL_DATASET_CONTRACTS
+from src.client_report_section_normalization import (
+    SOURCE_PROVENANCE_FIELD,
+    normalize_section_payloads,
+)
 
 
 HANDOFF_MANIFEST_VERSION = "client_report_publisher_handoff_manifest.v1"
@@ -92,6 +96,20 @@ def write_client_report_publisher_handoff(
             "end_date": period["end"],
         }:
             raise ValueError("presentation comparison contract does not match the requested profile/report period")
+        # Emit canonical stored keys, preserve the original source key as
+        # provenance, and refuse the whole handoff on a canonical collision.
+        # This runs before anything is written, so a refusal cannot produce a
+        # partial handoff or replace an existing valid one.
+        entries, provenance = normalize_section_payloads(
+            list(comparisons.get("comparisons") or []),
+            report_id=str(comparisons.get("report_id") or ""),
+            client_id=str(comparisons.get("client_id") or ""),
+            project_id=str(comparisons.get("project_id") or ""),
+        )
+        comparisons = dict(comparisons)
+        comparisons["comparisons"] = entries
+        if provenance:
+            comparisons[SOURCE_PROVENANCE_FIELD] = provenance
         generated.append(
             (
                 output / f"{COMPARISON_SCHEMA_VERSION}.json",

@@ -75,3 +75,38 @@ AMBIGUOUS_SECTION_IDENTIFIERS = {
 
 def canonical_dataset_contract(schema_version: str) -> ReportingDatasetContract | None:
     return CANONICAL_DATASET_CONTRACTS.get(schema_version)
+
+
+def canonical_section_key(value: str) -> str | None:
+    """Resolve one stored section key to its canonical identity.
+
+    This is the single authoritative resolver for the importer. It mirrors the
+    portal's ``canonical_reporting_section_key`` exactly, using the same alias
+    map and the same ambiguous-key refusal, so both repositories agree on what
+    a section *is*.
+
+    Returns ``None`` for ambiguous keys, unknown keys, and helper sections that
+    carry no canonical identity. Those are not canonical sections and therefore
+    cannot collide with one.
+    """
+    normalized = str(value or "").strip()
+    if normalized in CANONICAL_SECTION_SOURCE_MATRIX:
+        return normalized
+    if normalized in SAFE_LEGACY_SECTION_ALIASES:
+        return SAFE_LEGACY_SECTION_ALIASES[normalized]
+    return None
+
+
+def detect_canonical_section_collisions(section_keys: list[str]) -> list[dict[str, object]]:
+    """Find canonical identities claimed by more than one stored key.
+
+    Deterministic in both identity order and claiming-key order, so the same
+    input always produces the same refusal message. Mirrors the portal's
+    accepted R8-C2 detector.
+    """
+    collisions: list[dict[str, object]] = []
+    for canonical in CANONICAL_SECTION_SOURCE_MATRIX:
+        claiming = sorted(key for key in section_keys if canonical_section_key(key) == canonical)
+        if len(claiming) > 1:
+            collisions.append({"canonical_section_key": canonical, "claiming_keys": claiming})
+    return collisions
