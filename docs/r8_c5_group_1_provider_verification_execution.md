@@ -200,3 +200,48 @@ The gap recorded in section 8 is closed. Added to `config/dashboard_lab_profiles
 ### Validation
 
 Full offline suite **823 passed, 0 failed, 0 skipped**. Secret scan of all three evidence files: **clean**, with no token, refresh token, client secret, credential path, authorization header, or session data. Evidence and local configurations remain **ignored and uncommitted**.
+## 13. Append: Ceiling Raised to 20, AVS Re-run, Domain-property Hypothesis Eliminated (2026-08-02)
+
+**All prior text above is preserved unchanged and corrected here by append.**
+
+**David raised the group request ceiling from 6 to 20**, which unblocked the AVS re-run that section 12 had to defer.
+
+### AVS re-run result
+
+AVS was re-run with the corrected `sc-domain:avselevator.com`. **It failed again with HTTP 404: `'sc-domain:avselevator.com' is not a verified Search Console site in this account.`**
+
+**This eliminates hypothesis 1 from section 5.** The AVS Search Console property is **not** a domain property under the authenticated account, just as it is not a URL-prefix property.
+
+| Attempt | GSC value | Result |
+|---|---|---|
+| First | `https://avselevator.com/` | **HTTP 404** |
+| Second | `sc-domain:avselevator.com` | **HTTP 404** |
+
+**GA4 succeeded on both attempts and matched property `285955540`.** The AVS token therefore authenticates correctly and has GA4 access. **The problem is specific to Search Console site access, not to credentials in general.**
+
+### Remaining explanations
+
+With the domain-property hypothesis eliminated, two remain from section 5:
+
+1. **The AVS Google Search Console property exists under a different Google account** than the one the AVS GSC token authorizes
+2. **The property is registered under a different URL form**, for example a different subdomain or hostname
+
+**Diagnosing further requires `sites.list`**, which would return the sites the authenticated account can actually see and would settle the question in one request. **`sites.list` is explicitly prohibited by the current authorization**, so it was not called. **Authorizing it is David's decision.**
+
+### Request accounting
+
+| Item | Count |
+|---|---|
+| Requests before this append | 6 |
+| AVS re-run | **2** |
+| **Total used** | **8 of the raised ceiling of 20** |
+| Known direct cost | **$0.00** |
+| Retries, pagination, fallbacks, reporting calls | **0** |
+
+### The failure-evidence correction is proven in production
+
+The gap disclosed in section 7 is now demonstrably fixed. This run wrote `exports/local-real/r8-c5-group1/avs-verification.json` automatically, recording `final_state: failed`, `provider_verified: false`, `group_complete: false`, `error_type: GscClientError`, `retries_performed: 0`, and `reporting_data_requested: false`, with the sanitized provider message. **No hand reconstruction was needed this time.**
+
+### State
+
+**Group 1 remains incomplete: 2 of 3 verified.** Lucy Escobar and Western Wood Structures are verified. **AVS is not verified and cannot be until its Search Console property or account question is resolved.**
