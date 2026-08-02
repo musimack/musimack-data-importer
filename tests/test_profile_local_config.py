@@ -318,7 +318,13 @@ def test_profile_local_config_checks_env_presence_and_file_existence(tmp_path):
     assert google_ads["credentials_configured"] is True
     assert callrail["input_path"] is True
     assert form_fills["input_csv"] is True
-    assert "secret-property-id" not in serialized
+    # The GA4 property ID is a non-secret provider resource identifier and is
+    # deliberately exposed as `_safe_property_id`, by David Wallace's boundary
+    # decision of 2026-08-02. It names a resource; it is not a credential. This
+    # assertion previously required its absence, which encoded the earlier and
+    # now superseded boundary. Its fixture name is historical, not a
+    # classification. Every genuine secret below must still be absent.
+    assert ga4["_safe_property_id"] == "secret-property-id"
     assert "secret-api-key" not in serialized
     assert "secret-customer-id" not in serialized
     assert "secret-developer-token" not in serialized

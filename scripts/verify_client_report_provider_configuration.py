@@ -34,6 +34,7 @@ from src.provider_configuration_verification import (
     PROVIDER_MODE,
     ProviderVerificationError,
     offline_validate,
+    plan_group_1,
     provider_verify,
 )
 from src.provider_verification_budget import ProviderBudgetError
@@ -43,6 +44,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        if args.group_plan:
+            plan = plan_group_1(list(args.authorized_profiles or []))
+            print(json.dumps(plan, indent=2, sort_keys=True))
+            return 0 if plan["group_complete"] else 1
+
         # Authorization first, before configuration loading, before any
         # credential reference is examined, and long before provider access.
         authorization = authorize_profile(args.profile, args.authorized_profiles)
@@ -98,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
             "site are reachable. Retrieves no reporting data."
         )
     )
-    parser.add_argument("--profile", required=True, help="Requested reporting profile slug or alias.")
+    parser.add_argument("--profile", default=None, help="Requested reporting profile slug or alias.")
     add_authorized_profile_argument(parser)
     parser.add_argument(
         "--mode",
@@ -127,6 +133,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional path for the run evidence JSON. Prints to stdout when omitted.",
     )
+    parser.add_argument(
+        "--group-plan",
+        action="store_true",
+        help=(
+            "Print the deterministic R8-C5 Group 1 aggregate plan and exit. Enforces the "
+            "approved group totals of 6 requests and $3, rejects a fourth profile, and "
+            "refuses to report Group 1 complete when a profile is missing."
+        ),
+    )
     return parser
 
 
@@ -144,22 +159,54 @@ def _load_non_secret_configuration(profile: str) -> tuple[dict, dict]:
 
 
 def _run_provider_verify(args, authorization, ga4_config, gsc_config) -> dict:
-    """Provider mode. Refused at the CLI under the current governance.
+    """Provider mode, wired against David's approved envelope.
 
-    ``provider_verify`` in ``src.provider_configuration_verification`` is fully
-    implemented and covered by mocked tests. This CLI deliberately refuses to
-    invoke it, which is a second safety layer on top of the required ceilings.
+    The ceilings are approved, so this now reaches ``provider_verify`` rather
+    than refusing at the CLI. Every guard still runs before a credential is
+    touched: authorization, structural validation, the exact approved plan,
+    and both exact ceilings.
 
-    Wiring this call through is an explicit follow-up that happens **only after**
-    David approves the profiles and both ceilings. It is named here rather than
-    left as silent dead code.
+    Credential resolution and provider construction are passed as callables and
+    are therefore reached only if every preceding guard has already passed. The
+    two builders below remain unimplemented in this package, because the
+    credentialed run is a separately authorized step.
+    """
+    return provider_verify(
+        authorization=authorization,
+        ga4_config=ga4_config,
+        gsc_config=gsc_config,
+        repository_root=ROOT,
+        max_requests=args.max_requests,
+        max_cost=args.max_cost,
+        resolve_credentials=_resolve_credentials,
+        build_ga4_client=_build_ga4_metadata_client,
+        build_gsc_client=_build_gsc_metadata_client,
+    )
+
+
+def _resolve_credentials():
+    """Reached only after authorization, structure, plan, and both ceilings pass.
+
+    Deliberately not implemented here. David approved the numerical ceilings,
+    but the credentialed run is a separate authorized step and all three Group 1
+    profiles are still structurally not ready.
     """
     raise ProviderVerificationError(
-        "provider-verify is implemented but is not authorized to execute. "
-        "It requires David's explicit approval of the exact profiles, the request "
-        "ceiling, and the cost ceiling recorded in "
-        "docs/r8_c5_group_1_bounded_dry_run_authorization.md. "
-        "No credential was read and no provider client was constructed."
+        "credential resolution is not implemented in this configuration-readiness package. "
+        "The approved ceilings authorize the limits of a later credentialed run, not the run "
+        "itself. No credential was read and no provider client was constructed."
+    )
+
+
+def _build_ga4_metadata_client(_credentials):
+    raise ProviderVerificationError(
+        "GA4 metadata client construction is not authorized in this package"
+    )
+
+
+def _build_gsc_metadata_client(_credentials):
+    raise ProviderVerificationError(
+        "GSC metadata client construction is not authorized in this package"
     )
 
 

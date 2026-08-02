@@ -272,6 +272,11 @@ def _ga4_state(config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]
         "property_id_env_present": property_present,
         "property_id_configured": property_present,
         "property_id_source": _source_label(property_env, config.get("property_id"), env),
+        # Non-secret provider resource identifier, exposed through as_safe_dict
+        # by David's boundary decision of 2026-08-02. A GA4 property ID names a
+        # resource; it is not a credential. It mirrors the existing
+        # `_safe_site_url` pattern, and `_resolved_property_id` stays stripped.
+        "_safe_property_id": property_value,
         "_resolved_property_id": property_value,
         "oauth_client_secrets_env": client_env,
         "oauth_client_secrets_env_present": client_present,

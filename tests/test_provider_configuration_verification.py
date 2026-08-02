@@ -22,6 +22,7 @@ from src.provider_configuration_verification import (
     ProviderVerificationError,
     build_call_plan,
     offline_validate,
+    plan_group_1,
     provider_verify,
     validate_profile_configuration,
 )
@@ -37,20 +38,45 @@ ROOT = Path(__file__).resolve().parents[1]
 
 GROUP_1 = ["avs", "lucy-escobar", "western-wood-structures"]
 
-GA4_OK = {"property_id": "123456789", "oauth_client_secrets_env": "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS"}
-GSC_OK = {"site_url": "https://example.invalid/", "oauth_client_secrets_env": "MUSIMACK_GSC_OAUTH_CLIENT_SECRETS"}
+# These mirror the real loader's safe-dictionary vocabulary. The original
+# defect was that tests handcrafted raw-value dictionaries the loader never
+# produces, so a contract mismatch went undetected. Real-loader coverage lives
+# in tests/test_provider_configuration_real_loader.py.
+GA4_OK = {
+    "_safe_property_id": "123456789",
+    "property_id_source": "local_config",
+    "oauth_client_secrets_env": "MUSIMACK_GA4_OAUTH_CLIENT_SECRETS",
+    "oauth_client_secrets_configured": True,
+    "oauth_client_secrets_repo_location": "outside repo",
+}
+GSC_OK = {
+    "_safe_site_url": "https://example.invalid/",
+    "site_url_source": "local_config",
+    "oauth_client_secrets_env": "MUSIMACK_GSC_OAUTH_CLIENT_SECRETS",
+    "oauth_client_secrets_configured": True,
+    "oauth_client_secrets_repo_location": "outside repo",
+}
 
 
 def _auth(profile: str = "avs", allowed: list[str] | None = None):
     return authorize_profile(profile, allowed or [profile])
 
 
-def _offline(profile="avs", ga4=None, gsc=None):
+BOTH_APPLICABLE = {
+    "status": "applicable_providers_declared",
+    "ga4_applicable": True,
+    "gsc_applicable": True,
+    "reason": "test fixture",
+}
+
+
+def _offline(profile="avs", ga4=None, gsc=None, applicability=None):
     return offline_validate(
         authorization=_auth(profile),
         ga4_config=dict(GA4_OK if ga4 is None else ga4),
         gsc_config=dict(GSC_OK if gsc is None else gsc),
         repository_root=ROOT,
+        applicability=applicability or BOTH_APPLICABLE,
     )
 
 
@@ -83,7 +109,7 @@ class _ExplodingCredentials:
 
 def _verify(**overrides):
     kwargs = {
-        "authorization": _auth(),
+        "authorization": _auth("lucy-escobar", ["lucy-escobar"]),
         "ga4_config": dict(GA4_OK),
         "gsc_config": dict(GSC_OK),
         "repository_root": ROOT,
@@ -135,43 +161,54 @@ def test_environment_authorization_sentinel_has_no_effect(monkeypatch) -> None:
 
 
 def test_missing_ga4_property_fails() -> None:
-    result = _offline(ga4={"oauth_client_secrets_env": "X"})
+    result = _offline(ga4={"oauth_client_secrets_env": "X", "oauth_client_secrets_configured": True,
+                          "oauth_client_secrets_repo_location": "outside repo"})
     assert result["structural_configuration_result"] == "not_ready"
     assert any("property_id" in f for f in result["structural_findings"])
 
 
 def test_missing_gsc_property_fails() -> None:
-    result = _offline(gsc={"oauth_client_secrets_env": "X"})
+    result = _offline(gsc={"oauth_client_secrets_env": "X", "oauth_client_secrets_configured": True,
+                          "oauth_client_secrets_repo_location": "outside repo"})
     assert any("site_url" in f for f in result["structural_findings"])
 
 
 def test_blank_property_identifiers_fail() -> None:
-    result = _offline(ga4={"property_id": "   ", "oauth_client_secrets_env": "X"})
+    result = _offline(ga4={"_safe_property_id": "   ", "oauth_client_secrets_env": "X",
+                          "oauth_client_secrets_configured": True,
+                          "oauth_client_secrets_repo_location": "outside repo"})
     assert result["structural_configuration_result"] == "not_ready"
 
 
 def test_invalid_property_shape_fails() -> None:
-    result = _offline(ga4={"property_id": "properties/123", "oauth_client_secrets_env": "X"})
+    result = _offline(ga4={"_safe_property_id": "properties/123", "oauth_client_secrets_env": "X",
+                          "oauth_client_secrets_configured": True,
+                          "oauth_client_secrets_repo_location": "outside repo"})
     assert any("numeric property identifier" in f for f in result["structural_findings"])
-    bad_site = _offline(gsc={"site_url": "example.invalid", "oauth_client_secrets_env": "X"})
+    bad_site = _offline(gsc={"_safe_site_url": "notaurl.invalid", "oauth_client_secrets_env": "X",
+                             "oauth_client_secrets_configured": True,
+                             "oauth_client_secrets_repo_location": "outside repo"})
     assert any("supported site identifier" in f for f in bad_site["structural_findings"])
 
 
 def test_credential_reference_inside_repository_fails() -> None:
-    inside = str(ROOT / "secrets" / "client_secret.json")
-    result = _offline(gsc={"site_url": "https://example.invalid/", "oauth_client_secrets_file": inside})
+    result = _offline(gsc={"_safe_site_url": "https://example.invalid/",
+                           "oauth_client_secrets_configured": True,
+                           "oauth_client_secrets_repo_location": "inside repo"})
     assert any("outside the repository" in f for f in result["structural_findings"])
 
 
 def test_missing_credential_reference_field_fails() -> None:
-    result = _offline(gsc={"site_url": "https://example.invalid/"})
-    assert any("credential reference field is missing" in f for f in result["structural_findings"])
+    result = _offline(gsc={"_safe_site_url": "https://example.invalid/"})
+    assert any("credential reference is not configured" in f for f in result["structural_findings"])
 
 
 def test_structurally_valid_external_reference_passes_without_opening_it(tmp_path) -> None:
     external = tmp_path / "client_secret.json"  # deliberately never created
     result = _offline(
-        gsc={"site_url": "https://example.invalid/", "oauth_client_secrets_file": str(external)}
+        gsc={"_safe_site_url": "https://example.invalid/",
+             "oauth_client_secrets_configured": True,
+             "oauth_client_secrets_repo_location": "outside repo"}
     )
     assert result["structural_configuration_result"] == "ready"
     assert not external.exists()
@@ -268,8 +305,22 @@ def test_ceiling_equal_to_plan_passes() -> None:
     assert _verify(max_requests=2)["final_state"] == "verified"
 
 
-def test_ceiling_above_plan_passes() -> None:
-    assert _verify(max_requests=10)["final_state"] == "verified"
+def test_ceiling_above_plan_fails_because_ceilings_are_plan_exact() -> None:
+    # A larger ceiling would let an operator widen the approved envelope.
+    with pytest.raises(ProviderBudgetError) as exc:
+        _verify(max_requests=10, resolve_credentials=_ExplodingCredentials())
+    assert "must equal the planned" in str(exc.value)
+
+
+def test_ceiling_below_plan_fails() -> None:
+    with pytest.raises(ProviderBudgetError):
+        _verify(max_requests=1, resolve_credentials=_ExplodingCredentials())
+
+
+def test_cost_ceiling_above_the_approved_per_client_amount_fails() -> None:
+    with pytest.raises(ProviderBudgetError) as exc:
+        _verify(max_cost=5.0, resolve_credentials=_ExplodingCredentials())
+    assert "must not exceed the approved" in str(exc.value)
 
 
 # Cost planning
@@ -460,8 +511,10 @@ def test_gsc_reporting_capable_client_is_refused() -> None:
 # Group 1
 
 
-@pytest.mark.parametrize("profile", GROUP_1)
-def test_each_group_1_profile_plans_exactly_two_requests(profile: str) -> None:
+@pytest.mark.parametrize("profile", ["lucy-escobar", "western-wood-structures"])
+def test_profiles_declaring_both_providers_plan_exactly_two_requests(profile: str) -> None:
+    # AVS is deliberately excluded: its applicability is unresolved, so it plans
+    # zero rather than being given two invented calls.
     evidence = offline_validate(
         authorization=authorize_profile(profile, GROUP_1),
         ga4_config=GA4_OK,
@@ -474,17 +527,53 @@ def test_each_group_1_profile_plans_exactly_two_requests(profile: str) -> None:
     assert evidence["planned_requests_gsc"] == 1
 
 
-def test_group_1_combined_maximum_is_exactly_six_requests() -> None:
-    total = 0
-    for profile in GROUP_1:
-        evidence = offline_validate(
-            authorization=authorize_profile(profile, GROUP_1),
-            ga4_config=GA4_OK,
-            gsc_config=GSC_OK,
+def test_avs_plans_zero_requests_while_applicability_is_unresolved() -> None:
+    evidence = offline_validate(
+        authorization=authorize_profile("avs", GROUP_1),
+        ga4_config=GA4_OK,
+        gsc_config=GSC_OK,
+        repository_root=ROOT,
+    )
+    assert evidence["provider_applicability_status"] == "provider_applicability_unresolved"
+    assert evidence["max_requests_total"] == 0
+    assert evidence["execution_eligible"] is False
+    assert evidence["provider_verified"] is False
+
+
+def test_avs_cannot_enter_provider_mode() -> None:
+    from src.provider_configuration_verification import provider_verify
+
+    with pytest.raises(ProviderVerificationError) as exc:
+        provider_verify(
+            authorization=authorize_profile("avs", GROUP_1),
+            ga4_config=dict(GA4_OK),
+            gsc_config=dict(GSC_OK),
             repository_root=ROOT,
+            max_requests=2,
+            max_cost=1.0,
+            resolve_credentials=_ExplodingCredentials(),
+            build_ga4_client=lambda _c: _FakeGa4(),
+            build_gsc_client=lambda _c: _FakeGsc(),
         )
-        total += int(evidence["max_requests_total"])
-    assert total == 6
+    assert "provider_applicability_unresolved" in str(exc.value)
+
+
+def test_group_1_potential_maximum_is_six_but_none_is_executable_now() -> None:
+    plan = plan_group_1(list(GROUP_1))
+    assert plan["potential_maximum_requests"] == 6
+    assert plan["executable_requests_now"] == 0
+    assert plan["group_complete"] is False
+
+
+def test_group_1_rejects_a_fourth_profile() -> None:
+    with pytest.raises(ProviderVerificationError):
+        plan_group_1(list(GROUP_1) + ["aluma-seo-geo"])
+
+
+def test_group_1_cannot_claim_completion_with_a_missing_profile() -> None:
+    plan = plan_group_1(["avs", "lucy-escobar"])
+    assert plan["group_complete"] is False
+    assert "western-wood-structures" in plan["missing_profiles"]
 
 
 def test_group_1_expected_known_direct_cost_is_zero() -> None:

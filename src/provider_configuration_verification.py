@@ -75,6 +75,24 @@ MAX_RETRIES_PER_OPERATION = 0
 
 GA4_PROPERTY_ID_RE = re.compile(r"^[0-9]+$")
 
+# Scaffold placeholders. A local configuration file may be created carrying
+# these so an operator sees exactly which values are still required, but a
+# placeholder must never satisfy structural validation. Rejecting them
+# explicitly is what stops a scaffold being mistaken for a configured profile.
+PLACEHOLDER_PREFIX = "REQUIRES_DAVID"
+
+# The approved Group 1 envelope, held here so code and governance cannot drift.
+# Approved by David Wallace on 2026-08-02.
+APPROVED_REQUESTS_PER_PROFILE = 2
+APPROVED_COST_PER_PROFILE = 1.0
+GROUP_1_PROFILES = ("avs", "lucy-escobar", "western-wood-structures")
+APPROVED_GROUP_REQUESTS = 6
+APPROVED_GROUP_COST = 3.0
+NUMERICAL_APPROVAL_SOURCE = (
+    "David Wallace, 2026-08-02, recorded in "
+    "docs/r8_c5_group_1_bounded_dry_run_authorization.md"
+)
+
 # Reporting-data method names that must never be reachable from this workflow.
 PROHIBITED_REPORTING_METHODS = (
     "run_traffic_overview",
@@ -167,62 +185,148 @@ def validate_profile_configuration(
     gsc_config: Mapping[str, Any],
     *,
     repository_root: Path,
+    ga4_applicable: bool = True,
+    gsc_applicable: bool = True,
 ) -> StructuralResult:
     """Structural validation of non-secret configuration.
 
-    Checks that required fields exist and that credential *references* are
-    present and safely located. **No credential is opened and no secret
-    environment value is resolved.** A reference is validated by shape and
-    location only.
+    Consumes the loader's **safe dictionary vocabulary**: the non-secret
+    resource identifiers ``_safe_property_id`` and ``_safe_site_url``, plus the
+    credential-reference state flags. It never reads a raw config value, never
+    opens a credential, and never resolves a secret environment value.
+
+    A provider that is not applicable to this profile is not validated and
+    contributes no findings, because demanding configuration for a provider the
+    client does not use would be a fabricated requirement.
     """
     findings: list[str] = []
 
-    property_id = str(ga4_config.get("property_id") or "").strip()
-    if not property_id:
-        findings.append("GA4 property_id is missing or blank")
-    elif not GA4_PROPERTY_ID_RE.match(property_id):
-        findings.append(f"GA4 property_id {property_id!r} is not a numeric property identifier")
+    property_id = _safe_identifier(ga4_config, "_safe_property_id")
+    site_url = _safe_identifier(gsc_config, "_safe_site_url")
 
-    site_url = str(gsc_config.get("site_url") or "").strip()
-    if not site_url:
-        findings.append("GSC site_url is missing or blank")
-    elif not (site_url.startswith("http://") or site_url.startswith("https://") or site_url.startswith("sc-domain:")):
-        findings.append(f"GSC site_url {site_url!r} is not a supported site identifier")
+    if ga4_applicable:
+        findings.extend(_identifier_findings(property_id, "GA4 property_id", GA4_PROPERTY_ID_RE, _ga4_shape_note))
+        findings.extend(_credential_findings(ga4_config, "GA4"))
+    if gsc_applicable:
+        findings.extend(_identifier_findings(site_url, "GSC site_url", None, _gsc_shape_note))
+        findings.extend(_credential_findings(gsc_config, "GSC"))
 
-    ga4_reference = _credential_reference(ga4_config, ("oauth_client_secrets_env", "service_account_file", "oauth_client_secrets_file"))
-    if not ga4_reference:
-        findings.append("GA4 credential reference field is missing")
-    else:
-        findings.extend(_reference_location_findings(ga4_reference, "GA4", repository_root))
-
-    gsc_reference = _credential_reference(gsc_config, ("oauth_client_secrets_env", "oauth_client_secrets_file"))
-    if not gsc_reference:
-        findings.append("GSC credential reference field is missing")
-    else:
-        findings.extend(_reference_location_findings(gsc_reference, "GSC", repository_root))
+    if not ga4_applicable and not gsc_applicable:
+        findings.append(
+            "no provider is applicable for this profile, so there is nothing to verify"
+        )
 
     return StructuralResult(
-        ga4_property_id=property_id,
-        gsc_site_url=site_url,
-        ga4_credential_reference=_reference_kind(ga4_reference),
-        gsc_credential_reference=_reference_kind(gsc_reference),
+        ga4_property_id=property_id if ga4_applicable else "",
+        gsc_site_url=site_url if gsc_applicable else "",
+        ga4_credential_reference=_reference_kind_from_state(ga4_config) if ga4_applicable else "not_applicable",
+        gsc_credential_reference=_reference_kind_from_state(gsc_config) if gsc_applicable else "not_applicable",
         findings=findings,
     )
 
 
-def build_call_plan(profile: str, structural: StructuralResult) -> ProviderCallPlan:
+def _safe_identifier(config: Mapping[str, Any], field: str) -> str:
+    """Read a non-secret provider resource identifier from the safe dictionary.
+
+    Returns an empty string for a missing value **and for a boolean**. The
+    loader also exposes presence flags such as ``property_id: True``; treating
+    one of those as an identifier is exactly the defect this guards against.
+    """
+    value = config.get(field)
+    if isinstance(value, bool) or not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
+def _is_placeholder(value: str) -> bool:
+    """Scaffold and template placeholders only.
+
+    Deliberately narrow. An earlier revision also rejected any
+    ``.example.invalid`` value, which wrongly refused legitimate synthetic test
+    identifiers. Unresolved provider applicability, which is the real reason a
+    registry placeholder domain matters, is handled by
+    :func:`resolve_provider_applicability` rather than by identifier shape.
+    """
+    normalized = value.strip().upper()
+    return (
+        normalized.startswith(PLACEHOLDER_PREFIX)
+        or normalized.startswith("REDACTED_OR_PLACEHOLDER")
+        or "EXAMPLE-ALIAS-OR-CANONICAL-SLUG" in normalized
+        or normalized in {"CHANGEME", "TODO", "TBD"}
+    )
+
+
+def _ga4_shape_note(value: str) -> str:
+    return f"GA4 property_id {value!r} is not a numeric property identifier"
+
+
+def _gsc_shape_note(value: str) -> str:
+    return f"GSC site_url {value!r} is not a supported site identifier"
+
+
+def _identifier_findings(value: str, label: str, pattern, shape_note) -> list[str]:
+    if not value:
+        return [f"{label} is missing, blank, or exposed only as a presence flag"]
+    if _is_placeholder(value):
+        return [f"{label} is still a placeholder and requires David"]
+    if pattern is not None:
+        if not pattern.match(value):
+            return [shape_note(value)]
+    elif not (
+        value.startswith("http://") or value.startswith("https://") or value.startswith("sc-domain:")
+    ):
+        return [shape_note(value)]
+    return []
+
+
+def _credential_findings(config: Mapping[str, Any], label: str) -> list[str]:
+    """Validate the credential *reference*, never its value.
+
+    Uses the loader's own non-secret vocabulary: whether a reference is
+    configured, and whether it resolves inside a prohibited repository path.
+    """
+    findings: list[str] = []
+    if not config.get("oauth_client_secrets_configured"):
+        findings.append(f"{label} credential reference is not configured")
+    elif str(config.get("oauth_client_secrets_repo_location") or "").strip().lower() == "inside repo":
+        findings.append(f"{label} credential reference must stay outside the repository")
+    return findings
+
+
+def _reference_kind_from_state(config: Mapping[str, Any]) -> str:
+    env_name = str(config.get("oauth_client_secrets_env") or "").strip()
+    if env_name:
+        return "environment_variable_name"
+    if config.get("oauth_client_secrets_configured"):
+        return "file_path"
+    return "missing"
+
+
+def build_call_plan(
+    profile: str,
+    structural: StructuralResult,
+    *,
+    ga4_applicable: bool = True,
+    gsc_applicable: bool = True,
+) -> ProviderCallPlan:
     """The exact, deterministic provider-call plan for one profile.
 
-    Two operations, one request each, no pagination, no retries. Producible
-    with no credentials.
+    One request per **applicable** provider, no pagination, no retries.
+    Producible with no credentials.
+
+    A profile with only one applicable provider plans exactly one request, and
+    a profile with none plans zero. The approved per-client maximum of two is a
+    ceiling, never a quota to fill, so an inapplicable provider is never given
+    an invented call.
     """
-    return ProviderCallPlan(
-        profile=profile,
-        operations=[
-            PlannedOperation("ga4", GA4_METADATA_OPERATION, f"properties/{structural.ga4_property_id}"),
-            PlannedOperation("gsc", GSC_SITE_OPERATION, structural.gsc_site_url),
-        ],
-    )
+    operations: list[PlannedOperation] = []
+    if ga4_applicable:
+        operations.append(
+            PlannedOperation("ga4", GA4_METADATA_OPERATION, f"properties/{structural.ga4_property_id}")
+        )
+    if gsc_applicable:
+        operations.append(PlannedOperation("gsc", GSC_SITE_OPERATION, structural.gsc_site_url))
+    return ProviderCallPlan(profile=profile, operations=operations)
 
 
 def offline_validate(
@@ -231,17 +335,33 @@ def offline_validate(
     ga4_config: Mapping[str, Any],
     gsc_config: Mapping[str, Any],
     repository_root: Path,
+    applicability: Mapping[str, Any] | None = None,
 ) -> dict[str, object]:
     """Run the full offline path and return deterministic evidence.
 
     Contains no timestamp and no random value, so identical inputs produce
     byte-identical evidence.
+
+    Structural readiness and provider readiness are reported separately, and
+    neither is described as the other.
     """
     profile = authorization.requested_profile
+    if applicability is None:
+        applicability = resolve_provider_applicability(profile)
+    ga4_applicable = bool(applicability.get("ga4_applicable"))
+    gsc_applicable = bool(applicability.get("gsc_applicable"))
+
     structural = validate_profile_configuration(
-        profile, ga4_config, gsc_config, repository_root=repository_root
+        profile,
+        ga4_config,
+        gsc_config,
+        repository_root=repository_root,
+        ga4_applicable=ga4_applicable,
+        gsc_applicable=gsc_applicable,
     )
-    plan = build_call_plan(profile, structural)
+    plan = build_call_plan(
+        profile, structural, ga4_applicable=ga4_applicable, gsc_applicable=gsc_applicable
+    )
     cost = expected_direct_cost(plan.operation_names)
 
     evidence: dict[str, object] = {
@@ -266,6 +386,20 @@ def offline_validate(
             "Quota consumption, rate limiting, and any downstream billing interaction "
             "are not bounded by repository evidence and are recorded as Unknown."
         ),
+        "provider_applicability_status": applicability.get("status"),
+        "provider_applicability_reason": applicability.get("reason"),
+        "ga4_applicable": ga4_applicable,
+        "gsc_applicable": gsc_applicable,
+        "planned_requests_for_this_profile": plan.max_requests,
+        "required_request_ceiling": plan.max_requests,
+        "approved_request_ceiling_per_client": APPROVED_REQUESTS_PER_PROFILE,
+        "approved_cost_ceiling_per_client": APPROVED_COST_PER_PROFILE,
+        "numerical_approval_source": NUMERICAL_APPROVAL_SOURCE,
+        # Structural readiness is not provider readiness and is never reported
+        # as though a provider had been contacted.
+        "provider_verified": False,
+        "provider_execution_authorized": False,
+        "execution_eligible": bool(structural.ready and plan.operations),
         "final_state": "structurally_ready" if structural.ready else "structurally_not_ready",
         "stop_reason": None if structural.ready else "structural configuration incomplete",
         "errors": list(structural.findings),
@@ -309,8 +443,23 @@ def provider_verify(
         )
 
     profile = authorization.requested_profile
+    applicability = resolve_provider_applicability(profile)
+    if applicability.get("status") != APPLICABILITY_DECLARED:
+        raise ProviderVerificationError(
+            f"provider applicability for {profile} is {applicability.get('status')}: "
+            f"{applicability.get('reason')}. Provider verification cannot run. "
+            "No credential was read and no provider client was constructed."
+        )
+    ga4_applicable = bool(applicability.get("ga4_applicable"))
+    gsc_applicable = bool(applicability.get("gsc_applicable"))
+
     structural = validate_profile_configuration(
-        profile, ga4_config, gsc_config, repository_root=repository_root
+        profile,
+        ga4_config,
+        gsc_config,
+        repository_root=repository_root,
+        ga4_applicable=ga4_applicable,
+        gsc_applicable=gsc_applicable,
     )
     if not structural.ready:
         raise ProviderVerificationError(
@@ -318,7 +467,12 @@ def provider_verify(
             "No credential was read and no provider client was constructed."
         )
 
-    plan = build_call_plan(profile, structural)
+    plan = build_call_plan(
+        profile, structural, ga4_applicable=ga4_applicable, gsc_applicable=gsc_applicable
+    )
+    assert_approved_plan(plan)
+    assert_approved_ceilings(max_requests, max_cost, plan.max_requests)
+
     requests_budget = RequestBudget(max_requests=max_requests)
     cost_budget = CostBudget(max_cost=max_cost)
     cost_budget.check_operations(plan.operation_names)
@@ -328,17 +482,19 @@ def provider_verify(
     # Only now may a credential be touched.
     credentials = resolve_credentials()
 
-    ga4_client = build_ga4_client(credentials)
-    _reject_reporting_capable_use(ga4_client)
-    requests_budget.consume(GA4_METADATA_OPERATION)
-    ga4_metadata = ga4_client.get_property_metadata(structural.ga4_property_id)
-    _assert_ga4_identity(ga4_metadata, structural.ga4_property_id)
+    if ga4_applicable:
+        ga4_client = build_ga4_client(credentials)
+        _reject_reporting_capable_use(ga4_client)
+        requests_budget.consume(GA4_METADATA_OPERATION)
+        ga4_metadata = ga4_client.get_property_metadata(structural.ga4_property_id)
+        _assert_ga4_identity(ga4_metadata, structural.ga4_property_id)
 
-    gsc_client = build_gsc_client(credentials)
-    _reject_reporting_capable_use(gsc_client)
-    requests_budget.consume(GSC_SITE_OPERATION)
-    gsc_site = gsc_client.get_site(structural.gsc_site_url)
-    _assert_gsc_identity(gsc_site, structural.gsc_site_url)
+    if gsc_applicable:
+        gsc_client = build_gsc_client(credentials)
+        _reject_reporting_capable_use(gsc_client)
+        requests_budget.consume(GSC_SITE_OPERATION)
+        gsc_site = gsc_client.get_site(structural.gsc_site_url)
+        _assert_gsc_identity(gsc_site, structural.gsc_site_url)
 
     evidence: dict[str, object] = {
         "evidence_contract": EVIDENCE_CONTRACT,
@@ -351,6 +507,10 @@ def provider_verify(
         "gsc_configured_property": structural.gsc_site_url,
         "structural_configuration_result": "ready",
         "structural_findings": [],
+        "provider_applicability_status": applicability.get("status"),
+        "ga4_applicable": ga4_applicable,
+        "gsc_applicable": gsc_applicable,
+        "provider_verified": True,
         "ga4_credential_reference_type": structural.ga4_credential_reference,
         "gsc_credential_reference_type": structural.gsc_credential_reference,
         "credential_reference_checked_structurally": True,
@@ -364,6 +524,231 @@ def provider_verify(
     evidence.update(requests_budget.evidence())
     evidence.update(cost_budget.evidence())
     return evidence
+
+
+APPLICABILITY_DECLARED = "applicable_providers_declared"
+APPLICABILITY_UNRESOLVED = "provider_applicability_unresolved"
+APPLICABILITY_NONE = "no_applicable_providers"
+
+
+def resolve_provider_applicability(
+    profile: str, registry_path: Path | None = None
+) -> dict[str, object]:
+    """Which providers a profile actually uses, from governed registry evidence.
+
+    A profile that declares no data sources is **unresolved**, not "no
+    providers". The difference matters: unresolved means David has not yet said
+    which providers apply, and guessing either way would fabricate product
+    direction. AVS is currently in exactly that state.
+    """
+    import json
+
+    path = registry_path or (Path(__file__).resolve().parents[1] / "config" / "dashboard_lab_profiles.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    entry = next(
+        (item for item in payload.get("profiles", []) if str(item.get("slug") or "") == profile),
+        None,
+    )
+    if entry is None:
+        return {
+            "profile": profile,
+            "status": APPLICABILITY_UNRESOLVED,
+            "ga4_applicable": False,
+            "gsc_applicable": False,
+            "reason": "profile is absent from the governed registry",
+        }
+
+    sources = [str(item).strip().lower() for item in (entry.get("data_sources") or [])]
+    enabled = {
+        str(cap.get("key") or "").strip().lower()
+        for cap in (entry.get("capabilities") or [])
+        if str(cap.get("status") or "").strip().lower() == "enabled"
+        and str(cap.get("kind") or "").strip().lower() == "importer_provider"
+    }
+    ga4 = "ga4" in sources and "ga4" in enabled
+    gsc = "gsc" in sources and "gsc" in enabled
+
+    if not sources:
+        return {
+            "profile": profile,
+            "status": APPLICABILITY_UNRESOLVED,
+            "ga4_applicable": False,
+            "gsc_applicable": False,
+            "reason": (
+                "the governed registry declares no data sources and no enabled importer "
+                "provider capability, so provider applicability requires David's explicit "
+                "classification"
+            ),
+        }
+    if not ga4 and not gsc:
+        return {
+            "profile": profile,
+            "status": APPLICABILITY_NONE,
+            "ga4_applicable": False,
+            "gsc_applicable": False,
+            "reason": "no GA4 or GSC importer provider capability is enabled",
+        }
+    return {
+        "profile": profile,
+        "status": APPLICABILITY_DECLARED,
+        "ga4_applicable": ga4,
+        "gsc_applicable": gsc,
+        "reason": "governed registry declares the providers above",
+    }
+
+
+def plan_group_1(profiles: list[str]) -> dict[str, object]:
+    """Deterministic Group 1 aggregate plan, enforcing the approved total.
+
+    Guards the aggregate envelope that three separately valid single-profile
+    commands could otherwise exceed. A fourth profile is rejected, and an
+    incomplete set can never be described as Group 1.
+    """
+    supplied = [str(item or "").strip() for item in profiles]
+    unexpected = sorted(set(supplied) - set(GROUP_1_PROFILES))
+    if unexpected:
+        raise ProviderVerificationError(
+            f"{', '.join(unexpected)} is not a Group 1 profile. Group 1 is exactly "
+            f"{', '.join(GROUP_1_PROFILES)} and cannot be extended here."
+        )
+    missing = [item for item in GROUP_1_PROFILES if item not in supplied]
+
+    entries: list[dict[str, object]] = []
+    executable_now = 0
+    potential_max = 0
+    for slug in GROUP_1_PROFILES:
+        applicability = resolve_provider_applicability(slug)
+        planned = int(bool(applicability.get("ga4_applicable"))) + int(
+            bool(applicability.get("gsc_applicable"))
+        )
+        entries.append(
+            {
+                "profile": slug,
+                "applicability_status": applicability.get("status"),
+                "ga4_applicable": applicability.get("ga4_applicable"),
+                "gsc_applicable": applicability.get("gsc_applicable"),
+                "planned_requests_when_configured": planned,
+                "can_enter_provider_verification": False,
+                "reason": applicability.get("reason"),
+            }
+        )
+        potential_max += (
+            planned
+            if applicability.get("status") == APPLICABILITY_DECLARED
+            else APPROVED_REQUESTS_PER_PROFILE
+            if applicability.get("status") == APPLICABILITY_UNRESOLVED
+            else 0
+        )
+
+    unresolved = [
+        item["profile"] for item in entries if item["applicability_status"] == APPLICABILITY_UNRESOLVED
+    ]
+
+    if potential_max > APPROVED_GROUP_REQUESTS:
+        raise ProviderVerificationError(
+            f"potential group maximum {potential_max} exceeds the approved "
+            f"{APPROVED_GROUP_REQUESTS}"
+        )
+
+    return {
+        "group": "R8-C5 Group 1",
+        # Deterministic order, independent of how the caller supplied them.
+        "execution_order": list(GROUP_1_PROFILES),
+        "profiles_supplied": sorted(set(supplied)),
+        "missing_profiles": missing,
+        "group_complete": False,
+        "group_completion_blocked_by": (
+            (["missing from this invocation: " + ", ".join(missing)] if missing else [])
+            + (["provider applicability unresolved: " + ", ".join(unresolved)] if unresolved else [])
+            + ["no profile is structurally ready, so no profile can enter provider verification"]
+        ),
+        "profiles": entries,
+        # Nothing is executable today. Reporting six here would imply a runnable
+        # plan that does not exist.
+        "executable_requests_now": executable_now,
+        "potential_maximum_requests": potential_max,
+        "cost_ceiling_per_profile": APPROVED_COST_PER_PROFILE,
+        "group_request_ceiling": APPROVED_GROUP_REQUESTS,
+        "group_cost_ceiling": APPROVED_GROUP_COST,
+        "max_retries_per_operation": MAX_RETRIES_PER_OPERATION,
+        "approved_operations": list(SUPPORTED_OPERATIONS),
+        "numerical_approval_source": NUMERICAL_APPROVAL_SOURCE,
+        "stop_on_first_failure": True,
+        "provider_execution_authorized": False,
+    }
+
+
+def assert_approved_plan(plan: ProviderCallPlan) -> None:
+    """The plan must be exactly the two approved operations, nothing else.
+
+    Guards against an operation being added, substituted, retried, or
+    paginated into the plan after David approved a specific envelope.
+    """
+    unapproved = [name for name in plan.operation_names if name not in SUPPORTED_OPERATIONS]
+    if unapproved:
+        raise ProviderVerificationError(
+            f"planned operations {unapproved} are not in the approved set "
+            f"{list(SUPPORTED_OPERATIONS)}. Verification refused."
+        )
+    if len(set(plan.operation_names)) != len(plan.operation_names):
+        raise ProviderVerificationError(
+            "an approved operation is planned more than once. Verification refused."
+        )
+    for operation in plan.operations:
+        if operation.planned_requests != 1 or operation.max_retries != 0:
+            raise ProviderVerificationError(
+                f"operation {operation.operation} plans {operation.planned_requests} requests "
+                f"and {operation.max_retries} retries; the approved envelope is exactly one "
+                "request and zero retries. Verification refused."
+            )
+    if not plan.operations:
+        raise ProviderVerificationError(
+            "no provider operation is applicable for this profile, so provider verification "
+            "cannot run and cannot be reported complete."
+        )
+    if plan.max_requests > APPROVED_REQUESTS_PER_PROFILE:
+        raise ProviderVerificationError(
+            f"planned maximum {plan.max_requests} exceeds the approved "
+            f"{APPROVED_REQUESTS_PER_PROFILE} requests per profile. Verification refused."
+        )
+
+
+def assert_approved_ceilings(max_requests: int, max_cost: float, planned_requests: int) -> None:
+    """Ceilings must match this profile's actual plan exactly.
+
+    **Plan exact, not client maximum.** A profile with one applicable provider
+    must be given a ceiling of one, not two. Forcing the global per-client
+    maximum onto a one-provider profile would authorize a call that has no
+    corresponding planned operation.
+
+    Exact equality is deliberate: a larger ceiling would let an operator widen
+    authorization by passing a bigger number, which the approval does not
+    permit. The plan itself is separately bounded above by the approved
+    per-client maximum.
+    """
+    if planned_requests > APPROVED_REQUESTS_PER_PROFILE:
+        raise ProviderBudgetError(
+            f"planned {planned_requests} requests exceed the approved "
+            f"{APPROVED_REQUESTS_PER_PROFILE} per client."
+        )
+    if max_requests != planned_requests:
+        raise ProviderBudgetError(
+            f"request ceiling must equal the planned {planned_requests} requests for this "
+            f"profile; {max_requests} was supplied. The approved per-client maximum of "
+            f"{APPROVED_REQUESTS_PER_PROFILE} is a ceiling, not a quota to fill. "
+            "No credential was read and no provider client was constructed."
+        )
+    if max_cost > APPROVED_COST_PER_PROFILE:
+        raise ProviderBudgetError(
+            f"cost ceiling must not exceed the approved {APPROVED_COST_PER_PROFILE} per "
+            f"profile; {max_cost} was supplied. "
+            "No credential was read and no provider client was constructed."
+        )
+    if max_cost < expected_direct_cost([GA4_METADATA_OPERATION, GSC_SITE_OPERATION]):
+        raise ProviderBudgetError(
+            "cost ceiling is below the expected known direct cost. "
+            "No credential was read and no provider client was constructed."
+        )
 
 
 def _assert_ga4_identity(metadata: Mapping[str, Any], property_id: str) -> None:
