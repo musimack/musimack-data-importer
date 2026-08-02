@@ -263,9 +263,18 @@ def test_offline_mode_makes_no_network_request(monkeypatch) -> None:
 
 def test_offline_mode_writes_no_artifacts(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
+    before = sorted(p.name for p in (ROOT / "exports" / "local-real").glob("**/*")) if (
+        ROOT / "exports" / "local-real"
+    ).exists() else []
     _offline()
     assert list(tmp_path.iterdir()) == []
-    assert not (ROOT / "exports" / "local-real").exists()
+    # Offline mode must add nothing. The directory may already exist from an
+    # authorized provider run, so the assertion is that offline changed it, not
+    # that it is absent.
+    after = sorted(p.name for p in (ROOT / "exports" / "local-real").glob("**/*")) if (
+        ROOT / "exports" / "local-real"
+    ).exists() else []
+    assert before == after
 
 
 # Request planning

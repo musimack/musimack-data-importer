@@ -621,6 +621,9 @@ def plan_group_1(profiles: list[str]) -> dict[str, object]:
         planned = int(bool(applicability.get("ga4_applicable"))) + int(
             bool(applicability.get("gsc_applicable"))
         )
+        structurally_ready = _structurally_ready(slug, applicability)
+        if structurally_ready:
+            ready_requests += planned
         entries.append(
             {
                 "profile": slug,
@@ -628,7 +631,7 @@ def plan_group_1(profiles: list[str]) -> dict[str, object]:
                 "ga4_applicable": applicability.get("ga4_applicable"),
                 "gsc_applicable": applicability.get("gsc_applicable"),
                 "planned_requests_when_configured": planned,
-                "structurally_ready": _structurally_ready(slug, applicability),
+                "structurally_ready": structurally_ready,
                 # Structural readiness is not execution authorization. This stays
                 # false until David authorizes the credentialed run.
                 "can_enter_provider_verification": False,

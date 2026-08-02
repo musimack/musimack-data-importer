@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -70,16 +71,14 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             evidence = _run_provider_verify(args, authorization, ga4_config, gsc_config)
-    except (
-        ProfileAuthorizationError,
-        ProviderBudgetError,
-        ProviderVerificationError,
-        ProfileAliasError,
-        ConfigError,
-        OSError,
-        ValueError,
-    ) as exc:
-        print(f"provider configuration verification failed safely: {exc}", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001
+        # Every failure must leave truthful evidence, including a provider
+        # failure raised from inside the transport layer. Catching broadly is
+        # deliberate: an uncaught exception would otherwise leave no record of
+        # a run that really did consume provider requests.
+        message = _sanitize_failure(str(exc))
+        print(f"provider configuration verification failed safely: {message}", file=sys.stderr)
+        _write_failure_evidence(args, message, type(exc).__name__)
         return 1
 
     rendered = json.dumps(evidence, indent=2, sort_keys=True) + "\n"
@@ -94,6 +93,47 @@ def main(argv: list[str] | None = None) -> int:
     if evidence.get("final_state") in {"structurally_not_ready"}:
         return 1
     return 0
+
+
+def _sanitize_failure(message: str) -> str:
+    """Strip anything path-like or token-like from a failure message."""
+    cleaned = re.sub(r"[A-Za-z]:[\\/][^\s'\"]+", "[path removed]", message)
+    cleaned = re.sub(r"(?i)(bearer|token|secret|refresh_token)\s*[:=]?\s*\S+", r"\1 [redacted]", cleaned)
+    return cleaned
+
+
+def _write_failure_evidence(args, message: str, error_type: str) -> None:
+    """Record a truthful, sanitized failure so a run is never silent.
+
+    States plainly that the run did not succeed, so partial progress can never
+    be mistaken for verification.
+    """
+    if not getattr(args, "evidence_out", None):
+        return
+    evidence = {
+        "evidence_contract": "musimack_provider_configuration_verification.v1",
+        "evidence_contract_version": 1,
+        "execution_mode": getattr(args, "mode", None),
+        "profile": getattr(args, "profile", None),
+        "authorized_profiles": list(getattr(args, "authorized_profiles", None) or []),
+        "request_ceiling": getattr(args, "max_requests", None),
+        "cost_ceiling": getattr(args, "max_cost", None),
+        "final_state": "failed",
+        "provider_verified": False,
+        "group_complete": False,
+        "error_type": error_type,
+        "stop_reason": message,
+        "retries_performed": 0,
+        "pagination_performed": 0,
+        "reporting_data_requested": False,
+    }
+    try:
+        out = Path(args.evidence_out).resolve(strict=False)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"Failure evidence written to {out}", file=sys.stderr)
+    except OSError:
+        pass
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -167,9 +207,9 @@ def _run_provider_verify(args, authorization, ga4_config, gsc_config) -> dict:
     and both exact ceilings.
 
     Credential resolution and provider construction are passed as callables and
-    are therefore reached only if every preceding guard has already passed. The
-    two builders below remain unimplemented in this package, because the
-    credentialed run is a separately authorized step.
+    are therefore reached only if every preceding guard has already passed:
+    authorization, structural validation, the approved-plan guard, and both
+    exact ceilings.
     """
     return provider_verify(
         authorization=authorization,
@@ -178,36 +218,46 @@ def _run_provider_verify(args, authorization, ga4_config, gsc_config) -> dict:
         repository_root=ROOT,
         max_requests=args.max_requests,
         max_cost=args.max_cost,
-        resolve_credentials=_resolve_credentials,
+        resolve_credentials=_credential_resolver(authorization.requested_profile),
         build_ga4_client=_build_ga4_metadata_client,
         build_gsc_client=_build_gsc_metadata_client,
     )
 
 
-def _resolve_credentials():
-    """Reached only after authorization, structure, plan, and both ceilings pass.
+def _credential_resolver(profile: str):
+    """Resolve credential *references* for one profile.
 
-    Deliberately not implemented here. David approved the numerical ceilings,
-    but the credentialed run is a separate authorized step and all three Group 1
-    profiles are still structurally not ready.
+    Returns references, never contents, and opens no file. Reached only after
+    every preceding guard has passed.
     """
-    raise ProviderVerificationError(
-        "credential resolution is not implemented in this configuration-readiness package. "
-        "The approved ceilings authorize the limits of a later credentialed run, not the run "
-        "itself. No credential was read and no provider client was constructed."
-    )
+
+    def resolve():
+        from src.provider_metadata_clients import credential_references
+
+        return {
+            "ga4": credential_references(profile, "ga4"),
+            "gsc": credential_references(profile, "gsc"),
+        }
+
+    return resolve
 
 
-def _build_ga4_metadata_client(_credentials):
-    raise ProviderVerificationError(
-        "GA4 metadata client construction is not authorized in this package"
-    )
+def _build_ga4_metadata_client(credentials):
+    """Construct the metadata-only GA4 client.
+
+    Imported lazily, so the offline path never loads provider transport.
+    """
+    from src.provider_metadata_clients import Ga4MetadataClient
+
+    secrets, token = credentials["ga4"]
+    return Ga4MetadataClient(secrets, token)
 
 
-def _build_gsc_metadata_client(_credentials):
-    raise ProviderVerificationError(
-        "GSC metadata client construction is not authorized in this package"
-    )
+def _build_gsc_metadata_client(credentials):
+    from src.provider_metadata_clients import GscSiteMetadataClient
+
+    secrets, token = credentials["gsc"]
+    return GscSiteMetadataClient(secrets, token)
 
 
 if __name__ == "__main__":
