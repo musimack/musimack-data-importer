@@ -16,11 +16,18 @@ def main() -> int:
         description="Validate a local sanitized Client Report Publisher handoff folder."
     )
     parser.add_argument("folder", help="Path to a handoff folder containing manifest.json.")
+    # A runaway-payload tripwire, not a contract rule. The old default of 100
+    # predated both the comparison contract and daily trend series, and a
+    # governed handoff exceeds it by design: 120 comparison entries for 10
+    # sections across 12 presets, and one trend point per day for periods that
+    # can run a full year. Reporting those as invalid trained the eye to ignore
+    # the validator. 400 clears every governed maximum while still catching the
+    # unsanitized thousand-row payloads this guard exists for.
     parser.add_argument(
         "--max-list-items",
         type=int,
-        default=100,
-        help="Maximum allowed items in any JSON list. Defaults to 100.",
+        default=400,
+        help="Maximum allowed items in any JSON list. Defaults to 400.",
     )
     args = parser.parse_args()
 

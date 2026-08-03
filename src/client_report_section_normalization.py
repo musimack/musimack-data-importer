@@ -108,6 +108,7 @@ def normalize_section_payloads(
     client_id: str,
     project_id: str,
     key_field: str = "section_key",
+    group_field: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Normalize ``key_field`` across a list of section-keyed payloads.
 
@@ -115,13 +116,31 @@ def normalize_section_payloads(
     detected on the **source** keys before anything is emitted, so a refusal
     happens before any payload is rewritten.
 
+    ``group_field`` names a second dimension of the payload's identity. A
+    comparison contract holds one entry per section **per preset**, so its
+    identity is the pair, and detecting collisions across the flat list would
+    read twelve legitimate presets of one section as twelve colliding claims.
+    When supplied, each group is checked independently, which keeps a genuine
+    within-group collision refusing exactly as before. When omitted the list is
+    treated as a single group, so existing callers are unaffected.
+
+    The underlying detector is left untouched because it mirrors the portal's
+    accepted R8-C2 detector; the grouping belongs to the caller's data shape,
+    not to the definition of a collision.
+
     Payload objects are copied rather than mutated, so a refusal leaves the
     caller's input untouched.
     """
     source_keys = [str(item.get(key_field) or "").strip() for item in payloads]
-    assert_no_canonical_collisions(
-        source_keys, report_id=report_id, client_id=client_id, project_id=project_id
-    )
+
+    grouped: dict[str, list[str]] = {}
+    for item, source in zip(payloads, source_keys):
+        group = str(item.get(group_field) or "").strip() if group_field else ""
+        grouped.setdefault(group, []).append(source)
+    for group in sorted(grouped):
+        assert_no_canonical_collisions(
+            grouped[group], report_id=report_id, client_id=client_id, project_id=project_id
+        )
 
     normalized: list[dict[str, Any]] = []
     provenance: list[dict[str, Any]] = []

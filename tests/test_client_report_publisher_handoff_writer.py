@@ -845,3 +845,80 @@ def _ga4_exact_range(
         "source_identity": f"sample-client:{range_key}:{start}:{end}",
         "quality_notes": ["Synthetic exact-range summary fixture."],
     }
+
+
+def test_handoff_period_comes_from_governed_sources_not_wide_base_summaries(tmp_path):
+    """R8C5-HANDOFF-PERIOD-01.
+
+    The dashboard-lab provider summaries state the window their retained
+    evidence spans, which is routinely far wider than the report. Deriving the
+    handoff period from them put roughly eighteen months of totals into a
+    six-month report while still validating. The governed sources state the
+    report period explicitly and must win.
+    """
+    source = tmp_path / "source"
+    source.mkdir()
+    governed = {"start": "2026-01-01", "end": "2026-07-08"}
+    wide = {"start": "2025-01-01", "end": "2026-07-08"}
+    daily_rows = _daily_rows(governed["start"], 189)
+
+    ga4_summary = _ga4_summary()
+    ga4_summary["reporting_period"] = wide
+    ga4_summary["time_series"] = daily_rows
+    gsc_summary = _gsc_summary()
+    gsc_summary["reporting_period"] = wide
+    gsc_summary["time_series"] = daily_rows
+    ga4_snapshot = _ga4_snapshot_with_scoped_rows()
+    ga4_snapshot["date_range"] = wide
+    ga4_snapshot["time_series"] = daily_rows
+
+    _write_json(source / "ga4-summary.json", ga4_summary)
+    _write_json(source / "ga4-snapshot.json", ga4_snapshot)
+    _write_json(source / "gsc-summary.json", gsc_summary)
+    _write_json(source / "ga4_metric_display_exact_ranges.v1.json", _ga4_exact_ranges())
+
+    write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    manifest = json.loads((tmp_path / "handoff" / "manifest.json").read_text())
+    assert manifest["period_start"] == governed["start"]
+    assert manifest["period_end"] == governed["end"]
+    assert manifest["period_start"] != wide["start"]
+
+    metric_display = json.loads((tmp_path / "handoff" / "ga4_metric_display.v1.json").read_text())
+    assert metric_display["report_period"]["start"] == governed["start"]
+    assert metric_display["daily_series_coverage"]["requested_period_start"] == governed["start"]
+
+
+def test_absent_governed_sources_keep_the_legacy_period_derivation(tmp_path):
+    """Previously accepted handoffs must keep their exact existing period."""
+    source = tmp_path / "source"
+    source.mkdir()
+    wide = {"start": "2025-01-01", "end": "2026-07-08"}
+    daily_rows = _daily_rows(wide["start"], 554)
+
+    ga4_summary = _ga4_summary()
+    ga4_summary["reporting_period"] = wide
+    ga4_summary["time_series"] = daily_rows
+    gsc_summary = _gsc_summary()
+    gsc_summary["reporting_period"] = wide
+    gsc_summary["time_series"] = daily_rows
+
+    _write_json(source / "ga4-summary.json", ga4_summary)
+    _write_json(source / "ga4-snapshot.json", _ga4_snapshot_with_scoped_rows())
+    _write_json(source / "gsc-summary.json", gsc_summary)
+
+    write_client_report_publisher_handoff(
+        profile="sample-client",
+        client_name="Sample Client",
+        source_dir=source,
+        output_dir=tmp_path / "handoff",
+    )
+
+    manifest = json.loads((tmp_path / "handoff" / "manifest.json").read_text())
+    assert manifest["period_start"] == wide["start"]
+    assert manifest["period_end"] == wide["end"]

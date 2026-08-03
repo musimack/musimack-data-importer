@@ -21,6 +21,12 @@ from src.client_report_gsc_exact_ranges import (
     GSC_EXACT_RANGE_SOURCE_FILES,
     validate_gsc_exact_range_contract,
 )
+from src.client_report_governed_base_sources import (
+    build_governed_ga4_summary,
+    build_governed_gsc_summary,
+    governed_base_available,
+    governed_report_period,
+)
 from src.client_report_presentation_ranges import build_client_report_presentation_ranges
 from src.source_package_state import assert_handoff_eligible
 from src.client_report_presentation_comparisons import (
@@ -62,14 +68,47 @@ def write_client_report_publisher_handoff(
     output = output_dir or DEFAULT_OUTPUT_ROOT / profile
     ga4_snapshot = _load_json_object(ga4_snapshot_path or source / "ga4-snapshot.json")
     if ga4_summary_path:
-        ga4_summary = _load_json_object(ga4_summary_path)
+        legacy_ga4_summary = _load_json_object(ga4_summary_path)
     elif ga4_snapshot_path:
-        ga4_summary = _ga4_summary_from_snapshot(ga4_snapshot)
+        legacy_ga4_summary = _ga4_summary_from_snapshot(ga4_snapshot)
     else:
-        ga4_summary = _load_json_object(source / "ga4-summary.json")
-    gsc_summary = _load_json_object(gsc_summary_path or source / "gsc-summary.json")
+        legacy_ga4_summary = _load_json_object(source / "ga4-summary.json")
+    legacy_gsc_summary = _load_json_object(gsc_summary_path or source / "gsc-summary.json")
 
-    period = _period_from_payloads(ga4_summary, gsc_summary)
+    # The governed sources state the report period explicitly. The dashboard-lab
+    # provider summaries only state the window their retained evidence happens
+    # to span, which is routinely far wider than the report. Preferring the
+    # governed statement keeps the handoff describing the report it is for; the
+    # legacy derivation still applies when no governed source is present, so
+    # previously accepted handoffs keep their existing period exactly.
+    exact_range_sources = _load_exact_range_sources(source)
+    period_sources = dict(exact_range_sources)
+    comparison_path = source / f"{COMPARISON_SCHEMA_VERSION}.json"
+    if comparison_path.exists():
+        period_sources[COMPARISON_SCHEMA_VERSION] = _load_json_object(comparison_path)
+    governed_period = governed_report_period(period_sources)
+
+    if governed_period is not None:
+        period = governed_period
+    else:
+        period = _period_from_payloads(legacy_ga4_summary, legacy_gsc_summary)
+
+    # Base datasets are the report's headline numbers. Source them from the
+    # governed period or not at all: a handoff mixing governed figures with
+    # wide-window ones would read as one report while describing two spans.
+    use_governed_base = governed_period is not None and governed_base_available(
+        exact_range_sources, period
+    )
+    if use_governed_base:
+        ga4_summary = build_governed_ga4_summary(exact_range_sources, period, legacy_ga4_summary)
+        gsc_summary = build_governed_gsc_summary(exact_range_sources, period, legacy_gsc_summary)
+        # The snapshot spans the retained window, so it must not become a
+        # fallback for a governed row set that is truthfully empty.
+        ga4_snapshot = {}
+    else:
+        ga4_summary = legacy_ga4_summary
+        gsc_summary = legacy_gsc_summary
+
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     output.mkdir(parents=True, exist_ok=True)
 
@@ -106,6 +145,8 @@ def write_client_report_publisher_handoff(
             report_id=str(comparisons.get("report_id") or ""),
             client_id=str(comparisons.get("client_id") or ""),
             project_id=str(comparisons.get("project_id") or ""),
+            # A comparison entry is identified by section and preset together.
+            group_field="preset_key",
         )
         comparisons = dict(comparisons)
         comparisons["comparisons"] = entries
@@ -841,6 +882,41 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path.name} must contain a JSON object")
     return payload
+
+
+def _load_exact_range_sources(source: Path) -> dict[str, dict[str, Any]]:
+    """Load and contract-validate every exact-range source present.
+
+    This runs before the report period is settled, so it validates contract
+    shape only and leaves period agreement to the caller. Reading the files here
+    does not replace the later per-contract handling; it exists so the governed
+    report period can be read from the sources that actually state it.
+    """
+    sources: dict[str, dict[str, Any]] = {}
+
+    summary_path = source / "ga4_metric_display_exact_ranges.v1.json"
+    if summary_path.exists():
+        payload = _load_json_object(summary_path)
+        validate_ga4_exact_range_summary_contract(payload)
+        sources[GA4_EXACT_RANGE_SUMMARY_SCHEMA_VERSION] = payload
+
+    for schema_version, file_name in RANKED_EXACT_RANGE_SOURCE_FILES.items():
+        path = source / file_name
+        if not path.exists():
+            continue
+        payload = _load_json_object(path)
+        validate_ga4_ranked_exact_range_contract(payload)
+        sources[schema_version] = payload
+
+    for schema_version, file_name in GSC_EXACT_RANGE_SOURCE_FILES.items():
+        path = source / file_name
+        if not path.exists():
+            continue
+        payload = _load_json_object(path)
+        validate_gsc_exact_range_contract(payload)
+        sources[schema_version] = payload
+
+    return sources
 
 
 def _require_exact_source_period(payload: dict[str, Any], period: dict[str, str]) -> None:

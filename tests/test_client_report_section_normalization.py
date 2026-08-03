@@ -211,3 +211,73 @@ def test_failed_collision_writes_no_handoff_and_preserves_existing_output(tmp_pa
     assert existing.read_bytes() == original_bytes
     assert list(tmp_path.iterdir()) == [existing]
     assert not any(path.name.startswith(".") for path in tmp_path.iterdir())
+
+
+# Comparison-contract identity is (section, preset)
+
+
+def _comparison_entries(section_keys: list[str], preset_keys: list[str]) -> list[dict[str, object]]:
+    return [
+        {"section_key": section, "preset_key": preset}
+        for preset in preset_keys
+        for section in section_keys
+    ]
+
+
+def test_one_section_across_many_presets_is_not_a_collision() -> None:
+    """The R8-C5 defect: a governed comparison contract holds one entry per
+    section per preset, so 10 sections across 12 presets is 120 legitimate
+    entries, not 10 canonical identities each claimed 12 times."""
+    entries = _comparison_entries(
+        ["ga4_top_metrics", "gsc_top_pages"],
+        [f"preset_{index}" for index in range(12)],
+    )
+    normalized, provenance = normalize_section_payloads(
+        entries, **IDENTITY, group_field="preset_key"
+    )
+    assert len(normalized) == 24
+    assert provenance == []
+
+
+def test_a_genuine_collision_inside_one_preset_still_refuses() -> None:
+    entries = [
+        {"section_key": "ga4_traffic_trends", "preset_key": "report_period"},
+        {"section_key": "ga4_website_traffic_trends", "preset_key": "report_period"},
+    ]
+    with pytest.raises(CanonicalSectionCollisionError):
+        normalize_section_payloads(entries, **IDENTITY, group_field="preset_key")
+
+
+def test_grouping_does_not_hide_a_collision_in_a_later_preset() -> None:
+    entries = [
+        {"section_key": "ga4_top_metrics", "preset_key": "report_period"},
+        {"section_key": "ga4_traffic_trends", "preset_key": "last_30_days"},
+        {"section_key": "ga4_website_traffic_trends", "preset_key": "last_30_days"},
+    ]
+    with pytest.raises(CanonicalSectionCollisionError):
+        normalize_section_payloads(entries, **IDENTITY, group_field="preset_key")
+
+
+def test_an_alias_and_its_canonical_form_in_different_presets_do_not_collide() -> None:
+    """Distinct presets are distinct entries, so each may spell its own key."""
+    entries = [
+        {"section_key": "ga4_traffic_trends", "preset_key": "report_period"},
+        {"section_key": "ga4_website_traffic_trends", "preset_key": "last_30_days"},
+    ]
+    normalized, provenance = normalize_section_payloads(
+        entries, **IDENTITY, group_field="preset_key"
+    )
+    assert [entry["section_key"] for entry in normalized] == [
+        "ga4_website_traffic_trends",
+        "ga4_website_traffic_trends",
+    ]
+    assert len(provenance) == 1
+
+
+def test_omitting_the_group_field_preserves_existing_behavior() -> None:
+    with pytest.raises(CanonicalSectionCollisionError):
+        normalize_section_payloads(
+            _sections("ga4_traffic_trends", "ga4_website_traffic_trends"), **IDENTITY
+        )
+    normalized, _ = normalize_section_payloads(_sections("ga4_top_metrics"), **IDENTITY)
+    assert len(normalized) == 1
