@@ -233,7 +233,35 @@ def _query_fingerprint(range_key: str, date_range: DateRange) -> str:
 def _metrics_from_run_report_response(response: dict[str, Any], *, metric_names: tuple[str, ...]) -> dict[str, int | float]:
     headers = response.get("metricHeaders")
     if not isinstance(headers, list):
-        raise ValueError("GA4 exact-range summary response is missing metricHeaders")
+        if not response.get("rows"):
+            # GA4 omits every empty repeated field, so a range the property has
+            # no data for at all comes back as {kind, metadata} with no
+            # metricHeaders, no rows, and no rowCount. Observed on Steadfast
+            # Decks and Fences, whose data begins 2026-01-06 while the
+            # report_period comparison range is 2025-06-26 through 2025-12-31.
+            #
+            # That is a truthful empty result, not a malformed response, and it
+            # is reported as zeros exactly as the no-rows path below already
+            # does when headers are present. Nothing is inferred: zero is what
+            # the provider reports for the range.
+            return {
+                key: 0
+                for name in metric_names
+                if (key := _contract_key_for_provider_metric(name))
+            }
+        # Headers absent while rows are present is genuinely malformed and
+        # still refuses. Naming the shape turns a dead end into a decision;
+        # only key names, types, and container sizes appear, never a metric
+        # value, property identifier, or credential.
+        shape = ", ".join(
+            f"{key}:{type(value).__name__}"
+            + (f"[{len(value)}]" if isinstance(value, (list, dict)) else "")
+            for key, value in sorted(response.items())
+        )
+        raise ValueError(
+            "GA4 exact-range summary response is missing metricHeaders while carrying rows; "
+            f"response carried {{{shape}}}"
+        )
     names = [str(header.get("name") or "") for header in headers if isinstance(header, dict)]
     rows = response.get("rows") or []
     if not rows:

@@ -176,3 +176,52 @@ def test_the_primary_metric_set_has_no_duplicates_and_excludes_conversions() -> 
     assert len(primary) == len(set(primary))
     assert "conversions" not in primary
     assert primary.count("keyEvents") == 1
+
+
+# Empty provider result, R8C5-GA4-EMPTY-RESPONSE-01
+
+
+def _summary_metric_names() -> tuple[str, ...]:
+    return ("activeUsers", "sessions", "screenPageViews", "engagementRate", "engagedSessions")
+
+
+def test_a_range_with_no_data_reports_zeros_rather_than_failing() -> None:
+    """GA4 omits every empty repeated field, so a range the property has no
+    data for returns {kind, metadata} with no metricHeaders, no rows, and no
+    rowCount. Observed against the real provider for Steadfast Decks and
+    Fences, whose data begins after the comparison range ends."""
+    from src.client_report_ga4_exact_range_provider import _metrics_from_run_report_response
+
+    response = {"kind": "analyticsData#runReport", "metadata": {"currencyCode": "USD", "timeZone": "America/Los_Angeles"}}
+    metrics = _metrics_from_run_report_response(response, metric_names=_summary_metric_names())
+    assert metrics
+    assert set(metrics.values()) == {0}
+    for key in ("users", "sessions", "views"):
+        assert metrics[key] == 0
+
+
+def test_a_truly_empty_response_object_also_reports_zeros() -> None:
+    from src.client_report_ga4_exact_range_provider import _metrics_from_run_report_response
+
+    metrics = _metrics_from_run_report_response({}, metric_names=_summary_metric_names())
+    assert set(metrics.values()) == {0}
+
+
+def test_missing_headers_while_carrying_rows_is_still_refused() -> None:
+    """Absent headers with rows present is malformed, not empty."""
+    from src.client_report_ga4_exact_range_provider import _metrics_from_run_report_response
+
+    response = {"kind": "analyticsData#runReport", "rows": [{"metricValues": [{"value": "5"}]}]}
+    with pytest.raises(ValueError, match="while carrying rows"):
+        _metrics_from_run_report_response(response, metric_names=_summary_metric_names())
+
+
+def test_the_refusal_names_the_response_shape_without_leaking_values() -> None:
+    from src.client_report_ga4_exact_range_provider import _metrics_from_run_report_response
+
+    response = {"kind": "analyticsData#runReport", "rows": [{"metricValues": [{"value": "4242"}]}]}
+    with pytest.raises(ValueError) as excinfo:
+        _metrics_from_run_report_response(response, metric_names=_summary_metric_names())
+    message = str(excinfo.value)
+    assert "rows:list[1]" in message
+    assert "4242" not in message
