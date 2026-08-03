@@ -37,6 +37,10 @@ def main() -> int:
     parser.add_argument("--gsc-available-through-date", required=True)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
+    # Held outside the try so a failed run can still state what it spent. A
+    # partial run consumes real provider requests, and a defect report that
+    # cannot say how many is not an accounting record.
+    provider_calls: dict[str, int] = {"ga4": 0, "gsc": 0}
     try:
         # Authorization first, before any output check, credential lookup, or
         # provider-client construction. A refused run never reads a secret.
@@ -69,11 +73,19 @@ def main() -> int:
             report_end=date.fromisoformat(args.report_end_date),
             gsc_available_through=date.fromisoformat(args.gsc_available_through_date),
             authorization=authorization,
+            provider_calls=provider_calls,
         )
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(package, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except (ConfigError, ProfileAuthorizationError, ProfileAliasError, Ga4ClientError, GscClientError, GscOAuthError, OSError, ValueError) as exc:
         print(f"R4 comparison retrieval failed safely: {exc}", file=sys.stderr)
+        consumed = provider_calls.get("ga4", 0) + provider_calls.get("gsc", 0)
+        print(
+            f"Provider requests consumed before the failure: {consumed} "
+            f"(GA4 {provider_calls.get('ga4', 0)}, GSC {provider_calls.get('gsc', 0)}). "
+            "No output file was written.",
+            file=sys.stderr,
+        )
         return 1
     entries = package["comparisons"]
     eligible = sum(1 for entry in entries if entry["delta_eligible"])

@@ -8,6 +8,7 @@ from src.client_report_ga4_ranked_exact_range_provider import QUERY_BY_SECTION, 
 from src.client_report_ga4_ranked_exact_ranges import METRIC_LABELS, RANKED_EXACT_RANGE_CONTRACTS
 from src.client_report_presentation_comparisons import (
     COMPARISON_PRESET_KEYS,
+    RANKED_IDENTITY_MAX_LENGTH,
     align_trend_series,
     build_metric_comparison,
     build_presentation_comparison_package,
@@ -67,6 +68,7 @@ def build_real_presentation_comparisons(
     gsc_available_through: date,
     authorization: ProfileAuthorization,
     generated_at: str | None = None,
+    provider_calls: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     # Dual-layer protection. The CLI authorizes before constructing any provider
     # client, and this layer refuses to build a package unless it is handed the
@@ -82,7 +84,14 @@ def build_real_presentation_comparisons(
         )
     identity = {"report_id": report_id, "client_id": client_id, "project_id": project_id}
     comparisons: list[dict[str, Any]] = []
-    provider_calls = {"ga4": 0, "gsc": 0}
+    # A caller-supplied counter stays readable after an exception. A run that
+    # fails partway has still spent real provider requests, and a defect report
+    # that cannot state how many is not an accounting record.
+    if provider_calls is None:
+        provider_calls = {"ga4": 0, "gsc": 0}
+    else:
+        provider_calls.setdefault("ga4", 0)
+        provider_calls.setdefault("gsc", 0)
     for preset in COMPARISON_PRESET_KEYS:
         current, prior = resolve_comparison_ranges(preset, report_start=report_start, report_end=report_end)
         current_range = DateRange(current.start_date, current.end_date)
@@ -193,8 +202,24 @@ def build_real_presentation_comparisons(
                 comparisons.append(comparison_entry(
                     **common,
                     ranked_rows=match_ranked_rows(
-                        current_rows=[dict(row, rank=index + 1, stable_identity=row[dimension], label=row[dimension]) for index, row in enumerate(current_gsc["rows"])],
-                        prior_rows=[dict(row, rank=index + 1, stable_identity=row[dimension], label=row[dimension]) for index, row in enumerate(prior_gsc["rows"])],
+                        current_rows=[
+                            dict(
+                                row,
+                                rank=index + 1,
+                                stable_identity=_stable_gsc_identity(row, dimension, section, preset, "current", index),
+                                label=row[dimension],
+                            )
+                            for index, row in enumerate(current_gsc["rows"])
+                        ],
+                        prior_rows=[
+                            dict(
+                                row,
+                                rank=index + 1,
+                                stable_identity=_stable_gsc_identity(row, dimension, section, preset, "comparison", index),
+                                label=row[dimension],
+                            )
+                            for index, row in enumerate(prior_gsc["rows"])
+                        ],
                         identity_key="stable_identity",
                         metric_definitions=definitions,
                     ),
@@ -256,6 +281,51 @@ def _stable_ga4_identity(row: dict[str, Any], key: str) -> str:
         value = f"{value}\u001f{str(row['page_title']).strip()}"
     if not value:
         raise ValueError("GA4 ranked comparison row is missing stable semantic identity")
+    if len(value) > RANKED_IDENTITY_MAX_LENGTH:
+        raise ValueError(
+            f"GA4 ranked comparison identity exceeds {RANKED_IDENTITY_MAX_LENGTH} characters: "
+            f"key {key}, length {len(value)}, starts with {value[:80]!r}"
+        )
+    return value
+
+
+# Refuse an unusable identity where the section, preset, and side are still
+# known, rather than several layers later where the message can only say that
+# some identity was required. The ceiling is imported rather than restated so
+# the provider and the contract validator cannot drift apart.
+
+
+def _stable_gsc_identity(
+    row: dict[str, Any],
+    dimension: str,
+    section: str,
+    preset: str,
+    side: str,
+    index: int,
+) -> str:
+    """Stable identity for one GSC ranked row, refused loudly when unusable.
+
+    The GA4 path has always guarded its identity. This path passed the raw
+    dimension value straight through, so an empty or over-long value surfaced
+    several layers later as a bare "ranked identity is required" carrying no
+    section, preset, or offending value. Truncating or synthesizing an identity
+    is not an option: identities are matched across periods, so a substituted
+    one silently pairs unrelated rows.
+    """
+    raw = row.get(dimension)
+    value = raw.strip() if isinstance(raw, str) else ""
+    if not value:
+        raise ValueError(
+            f"GSC ranked comparison row is missing stable semantic identity: "
+            f"section {section}, preset {preset}, {side} row {index + 1}, "
+            f"dimension {dimension} was {'absent' if raw is None else 'empty'}"
+        )
+    if len(value) > RANKED_IDENTITY_MAX_LENGTH:
+        raise ValueError(
+            f"GSC ranked comparison identity exceeds {RANKED_IDENTITY_MAX_LENGTH} characters: "
+            f"section {section}, preset {preset}, {side} row {index + 1}, "
+            f"dimension {dimension}, length {len(value)}, starts with {value[:80]!r}"
+        )
     return value
 
 

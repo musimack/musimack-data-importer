@@ -30,6 +30,11 @@ DATA_STATES = {"complete", "partial", "empty", "unavailable"}
 COVERAGE_STATES = {"complete", "partial", "empty", "unavailable"}
 METRIC_UNITS = {"count", "rate", "average_position"}
 
+# Runaway guard for ranked stable identities. The portal imposes no length
+# limit of its own; this exists only to refuse an unbounded payload, and sits
+# far above any real GA4 path-plus-title or GSC URL value.
+RANKED_IDENTITY_MAX_LENGTH = 2048
+
 
 def resolve_comparison_ranges(
     preset_key: str,
@@ -306,7 +311,7 @@ def _validate_comparison_entry(
     for row in ranked:
         if not isinstance(row, dict):
             raise ValueError("comparison ranked row must be an object")
-        stable_id = _required_text(row.get("stable_identity"), "stable ranked identity")
+        stable_id = _required_identity_text(row.get("stable_identity"), "stable ranked identity")
         if stable_id in stable_ids:
             raise ValueError("duplicate ranked stable identity")
         stable_ids.add(stable_id)
@@ -386,7 +391,7 @@ def _unique_ranked_rows(rows: list[dict[str, Any]], identity_key: str, label: st
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError(f"{label} ranked row must be an object")
-        identity = _required_text(row.get(identity_key), f"{label} ranked identity")
+        identity = _required_identity_text(row.get(identity_key), f"{label} ranked identity")
         if identity in output:
             raise ValueError(f"duplicate {label} ranked identity")
         output[identity] = row
@@ -498,6 +503,30 @@ def _required_text(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > 240:
         raise ValueError(f"{label} is required")
     return value.strip()
+
+
+def _required_identity_text(value: Any, label: str) -> str:
+    """Validate a ranked stable identity.
+
+    Identities are not ordinary labels. A GA4 page identity is a path joined to
+    its page title, and real pages exceed the generic 240 character text guard:
+    a Pinnacle Contractors case-study page produced 253. The portal accepts any
+    non-empty unique string here and imposes no length limit of its own, so the
+    generic ceiling was rejecting rows the consumer would have accepted.
+
+    The value is preserved exactly. Truncating or hashing is not an option,
+    because identities are matched across periods and a shortened identity can
+    silently pair two different pages. The remaining ceiling is a runaway guard
+    only, set far above any real provider value.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} is required")
+    trimmed = value.strip()
+    if len(trimmed) > RANKED_IDENTITY_MAX_LENGTH:
+        raise ValueError(
+            f"{label} exceeds {RANKED_IDENTITY_MAX_LENGTH} characters (length {len(trimmed)})"
+        )
+    return trimmed
 
 
 def _finite_number(value: Any) -> bool:

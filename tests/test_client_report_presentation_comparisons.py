@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import pytest
 
 from src.client_report_presentation_comparisons import (
+    RANKED_IDENTITY_MAX_LENGTH,
     COMPARISON_SCHEMA_VERSION,
     align_trend_series,
     build_metric_comparison,
@@ -266,3 +267,112 @@ def _state(start: date, end: date, data_state: str, coverage_state: str, *, lag_
             actual_start=start, actual_end=actual_end, available_through=actual_end,
         )
     return period_state(requested_start=start, requested_end=end, data_state=data_state, coverage_state=coverage_state)
+
+
+# Ranked stable identity length, R8C5-RANKED-IDENTITY-01
+
+
+def _ranked_row(identity: str, rank: int = 1) -> dict:
+    return {"stable_identity": identity, "label": identity, "rank": rank, "users": 5}
+
+
+def _identity_definitions() -> list[dict[str, str]]:
+    return [{"key": "users", "label": "Website Visitors", "unit": "count"}]
+
+
+def test_a_real_long_page_identity_is_accepted() -> None:
+    """A Pinnacle Contractors case-study page produced a 253 character
+    path-plus-title identity. The generic 240 character text guard rejected it
+    even though the portal accepts any non-empty unique string."""
+    identity = "/case-studies/" + "a" * 239
+    assert len(identity) == 253
+    matched = match_ranked_rows(
+        current_rows=[_ranked_row(identity)],
+        prior_rows=[_ranked_row(identity)],
+        identity_key="stable_identity",
+        metric_definitions=_identity_definitions(),
+    )
+    assert matched[0]["stable_identity"] == identity
+
+
+def test_a_long_identity_is_preserved_exactly_not_truncated() -> None:
+    identity = "/x/" + "b" * 500
+    matched = match_ranked_rows(
+        current_rows=[_ranked_row(identity)],
+        prior_rows=[],
+        identity_key="stable_identity",
+        metric_definitions=_identity_definitions(),
+    )
+    assert matched[0]["stable_identity"] == identity
+    assert len(matched[0]["stable_identity"]) == len(identity)
+
+
+def test_an_unbounded_identity_is_still_refused() -> None:
+    identity = "c" * (RANKED_IDENTITY_MAX_LENGTH + 1)
+    with pytest.raises(ValueError, match="exceeds"):
+        match_ranked_rows(
+            current_rows=[_ranked_row(identity)],
+            prior_rows=[],
+            identity_key="stable_identity",
+            metric_definitions=_identity_definitions(),
+        )
+
+
+def test_an_empty_identity_is_still_refused() -> None:
+    with pytest.raises(ValueError, match="required"):
+        match_ranked_rows(
+            current_rows=[_ranked_row("   ")],
+            prior_rows=[],
+            identity_key="stable_identity",
+            metric_definitions=_identity_definitions(),
+        )
+
+
+def test_two_long_identities_sharing_a_prefix_stay_distinct() -> None:
+    """Truncation would have collapsed these into one row."""
+    base = "/case-studies/" + "d" * 300
+    matched = match_ranked_rows(
+        current_rows=[_ranked_row(base + "-one", 1), _ranked_row(base + "-two", 2)],
+        prior_rows=[],
+        identity_key="stable_identity",
+        metric_definitions=_identity_definitions(),
+    )
+    assert len({row["stable_identity"] for row in matched}) == 2
+
+
+def test_gsc_identity_guard_names_the_section_preset_and_side() -> None:
+    """The GSC path passed the raw dimension value straight through, so an
+    unusable value surfaced with no context about where it came from."""
+    from src.client_report_presentation_comparison_provider import _stable_gsc_identity
+
+    with pytest.raises(ValueError) as excinfo:
+        _stable_gsc_identity({"page": "  "}, "page", "gsc_top_pages", "last_30_days", "current", 3)
+    message = str(excinfo.value)
+    assert "gsc_top_pages" in message
+    assert "last_30_days" in message
+    assert "current row 4" in message
+
+    assert _stable_gsc_identity({"page": " /a "}, "page", "gsc_top_pages", "report_period", "current", 0) == "/a"
+
+
+def test_comparison_provider_call_counter_survives_a_failure() -> None:
+    """A run that fails partway has still spent real provider requests, so the
+    counter must remain readable to the caller."""
+    from src.client_report_presentation_comparison_provider import build_real_presentation_comparisons
+
+    provider_calls: dict[str, int] = {}
+    with pytest.raises(ValueError):
+        build_real_presentation_comparisons(
+            ga4_client=None,
+            gsc_client=None,
+            profile="sample-client",
+            report_id="r",
+            client_id="c",
+            project_id="p",
+            report_start=date(2026, 1, 1),
+            report_end=date(2026, 7, 8),
+            gsc_available_through=date(2026, 7, 8),
+            authorization="not-an-authorization",
+            provider_calls=provider_calls,
+        )
+    assert provider_calls == {}
