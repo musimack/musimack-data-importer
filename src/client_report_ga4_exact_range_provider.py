@@ -207,9 +207,21 @@ def _reusable_entries(
         "end_date": report_end.isoformat(),
     }:
         raise ValueError("existing GA4 exact-range summary does not match the requested profile/report period")
+    # Reuse must never carry a degraded entry forward. Identity alone is not
+    # sufficient: an entry produced by the retired duplicate-metric fallback has
+    # the right range_key and dates but only four of nine metrics, so reusing it
+    # would silently reintroduce the exact defect the guard exists to stop.
+    # Degraded entries are dropped here, which forces a fresh provider call.
+    # Allowlisted rather than denylisted: only states known to be safe are
+    # reused. A degraded, failed, unknown, or status-less entry is dropped, so a
+    # future source shape cannot be reused merely because it is not recognizably
+    # bad.
+    from src.source_package_state import ELIGIBLE_STATES, classify_range_entry
+
     return {
         (entry["range_key"], entry["requested_start_date"], entry["requested_end_date"]): entry
         for entry in payload["ranges"]
+        if classify_range_entry(entry) in ELIGIBLE_STATES
     }
 
 
