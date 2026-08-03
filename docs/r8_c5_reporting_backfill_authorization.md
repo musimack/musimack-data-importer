@@ -166,3 +166,53 @@ Planning makes **zero** credential accesses, provider constructions, network cal
 Recorded by: ______________________  Date: ____________
 
 **Before any of this is useful, the population problem in section 4 needs resolving**: the three verified profiles have no reports, and the three profiles with reports are unverified.
+## 15. Append: Measured Call Graph, Degraded-Source Guard, and Revised Provisional Ceilings (2026-08-02)
+
+**All prior text above is preserved unchanged and corrected here by append. The 296-request model recorded earlier was disproved by live execution and is corrected below.**
+
+### What live execution disproved
+
+The earlier 304 and 296 models were derived by reading code and doing arithmetic. **Both were wrong.** Live execution and subsequent counting-fake measurement found, in order: a containment rule that aborted retrieval entirely, two further containment layers in contract validators, and a duplicate-metric defect that doubled GA4 summary calls while silently halving metric coverage.
+
+### Measured call graph
+
+Measured through the **real production generators with counting fakes**, ten contained ranges and one unavailable:
+
+| Provider | Best case | Strict | Fallback | Pagination | Retries |
+|---|---|---|---|---|---|
+| GA4 exact-range summary | **10** | **20** | Governed | None | 0 |
+| GA4 ranked exact ranges | **40** | **40** | **None** | None | 0 |
+| GSC exact ranges | **30** | **30** | **None** | None | 0 |
+| Range-source total | **80** | **90** | | | |
+| Comparison generation | 216 | 216 | None | None | 0 |
+| **Fresh report** | **296** | **306** | | | |
+
+**Handoff-eligible maximum is 296, not 306**, because a fallback-generated package is degraded and cannot feed a handoff.
+
+### Revised provisional ceilings
+
+| Scope | Value |
+|---|---|
+| Fresh report, handoff-eligible | **296** |
+| **Recommended fresh-report ceiling** | **310** |
+| Spanish Head total including 27 sunk calls | **323** |
+| **Recommended Spanish Head ceiling** | **330**, separate |
+| Reporting total, four reports | **1,211** |
+| **Recommended aggregate reporting ceiling** | **1,260** |
+| Metadata already consumed | 2 |
+| **Direct-cost tripwire** | **$5** |
+| Retries, pagination, rerun allowance | **0, 0, none** |
+
+**Spanish Head needs its own ceiling** because its 27 sunk calls buy nothing and 323 exceeds the former 320.
+
+**All ceilings are marked Pending David approval. This packet authorizes nothing.**
+
+### Degraded-source handoff guard
+
+**A completed handoff must not be built from a source package marked degraded unless a versioned accepted-limitation contract authorizes it. None exists, so degraded always rejects.**
+
+Five states are kept distinct: **Full**, **Unavailable**, and **Empty** are eligible; **Degraded** and **Failed** are not. A missing or unrecognized state is refused. Enforced in the library before any file is written, so the atomic writer is never reached and a direct caller cannot bypass it.
+
+### Current state
+
+**245 provider requests consumed, $0.00.** Spanish Head holds a **valid** comparison contract and a **degraded, unusable** GA4 summary that must be regenerated. **Provider execution remains paused. No portal import and no R5 enablement occurred.**

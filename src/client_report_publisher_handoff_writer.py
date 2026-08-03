@@ -22,6 +22,7 @@ from src.client_report_gsc_exact_ranges import (
     validate_gsc_exact_range_contract,
 )
 from src.client_report_presentation_ranges import build_client_report_presentation_ranges
+from src.source_package_state import assert_handoff_eligible
 from src.client_report_presentation_comparisons import (
     COMPARISON_SCHEMA_VERSION,
     validate_presentation_comparison_package,
@@ -237,6 +238,20 @@ def write_client_report_publisher_handoff(
             "gsc_queries_display.v1",
         )
     )
+    # Refuse before anything is written. A degraded source package returned less
+    # than its governed coverage, so a handoff built from it would look complete
+    # while silently missing metrics. Raising here means the atomic writer is
+    # never reached: no partial handoff, no overwrite of an existing valid one,
+    # and no temporary file left behind.
+    assert_handoff_eligible(
+        {
+            name: payload
+            for name, payload in generated_datasets.items()
+            if isinstance(payload, dict) and "exact_ranges" in name
+        },
+        report_id=str(profile),
+    )
+
     presentation_ranges = build_client_report_presentation_ranges(
         client_slug=profile,
         period=period,
