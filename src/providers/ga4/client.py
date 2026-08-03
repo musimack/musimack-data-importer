@@ -14,6 +14,12 @@ from ...config import DateRange, Ga4Config
 
 GA4_DATA_API_SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
 GA4_RUN_REPORT_URL = "https://analyticsdata.googleapis.com/v1beta/{property_resource}:runReport"
+# GA4 renamed `conversions` to `keyEvents`. Requesting both makes the API
+# reject the whole query with INVALID_ARGUMENT "Found duplicate metrics:
+# conversions", which previously forced a fallback to four metrics and silently
+# dropped seven display fields on every range. `keyEvents` is the canonical
+# behavioral metric; `conversions` is not separately available through this
+# request. Decided by David Wallace on 2026-08-02.
 GA4_EXACT_RANGE_SUMMARY_METRICS = (
     "activeUsers",
     "newUsers",
@@ -24,7 +30,6 @@ GA4_EXACT_RANGE_SUMMARY_METRICS = (
     "averageSessionDuration",
     "eventCount",
     "keyEvents",
-    "conversions",
 )
 GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS = (
     "activeUsers",

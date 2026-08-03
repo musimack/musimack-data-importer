@@ -648,7 +648,6 @@ def _ga4_summary() -> dict:
             "average_session_duration_seconds": 60,
             "event_count": 20,
             "key_events": 4,
-            "conversions": 3,
         },
         "time_series": [{"date": "2026-01-01", "users": 10, "sessions": 12}],
         "traffic_channels": [{"channel": "Organic Search", "sessions": 80, "users": 70, "engagement_rate": 0.6}],
@@ -828,7 +827,6 @@ def _ga4_exact_range(
         "average_session_duration_seconds": 118,
         "event_count": views * 2,
         "key_events": key_events,
-        "conversions": 9,
     }
     if include_new_users:
         metrics["new_users"] = users - 100

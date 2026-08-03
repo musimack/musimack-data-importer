@@ -18,7 +18,10 @@ class FakeExactRangeClient:
     def run_exact_range_summary(self, date_range: DateRange, *, metric_names: tuple[str, ...]):
         self.calls.append((date_range, metric_names))
         if self.fail_full and metric_names != GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS:
-            raise Ga4ClientError("GA4 Data API request failed with HTTP 400; status=INVALID_ARGUMENT")
+            raise Ga4ClientError(
+            "GA4 Data API request failed with HTTP 400; status=INVALID_ARGUMENT; "
+            "message=Field averageEngagementTime is not compatible with this request"
+        )
         return _response(metric_names)
 
 
@@ -61,7 +64,7 @@ def test_provider_builds_valid_exact_range_contract_with_eleven_required_ranges(
     assert len(client.calls) == 11
 
 
-def test_provider_retries_required_metrics_when_optional_metric_query_fails():
+def test_provider_degrades_only_for_a_governed_incompatible_metric_error():
     client = FakeExactRangeClient(fail_full=True)
 
     payload = build_ga4_exact_range_summary_from_provider(
@@ -140,3 +143,36 @@ def _response(metric_names: tuple[str, ...]) -> dict:
             }
         ],
     }
+
+
+def test_a_malformed_request_is_never_degraded_around() -> None:
+    """A duplicate-metric error is a defect, not a reason to thin the data.
+
+    The retired behavior caught every Ga4ClientError and fell back to four
+    metrics, which silently dropped seven display fields on every range for
+    every client. A malformed request must now surface as a failure.
+    """
+    from src.client_report_ga4_exact_range_provider import _is_degradable_provider_error
+    from src.providers.ga4.client import Ga4ClientError
+
+    duplicate = Ga4ClientError(
+        "GA4 Data API request failed with HTTP 400; status=INVALID_ARGUMENT; "
+        "message=Found duplicate metrics: conversions"
+    )
+    assert _is_degradable_provider_error(duplicate) is False
+
+
+def test_an_unrecognized_provider_error_is_not_degraded_around() -> None:
+    """Unknown conditions fail loudly rather than returning thinner data."""
+    from src.client_report_ga4_exact_range_provider import _is_degradable_provider_error
+    from src.providers.ga4.client import Ga4ClientError
+
+    assert _is_degradable_provider_error(Ga4ClientError("something unexpected")) is False
+
+
+def test_the_primary_metric_set_has_no_duplicates_and_excludes_conversions() -> None:
+    from src.providers.ga4.client import GA4_EXACT_RANGE_SUMMARY_METRICS as primary
+
+    assert len(primary) == len(set(primary))
+    assert "conversions" not in primary
+    assert primary.count("keyEvents") == 1

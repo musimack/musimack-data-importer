@@ -180,7 +180,6 @@ def _range(
             "average_session_duration_seconds": 118,
             "event_count": 2100,
             "key_events": 42,
-            "conversions": 9,
         },
         "calculation_version": "ga4_summary_exact_ranges.synthetic.v1",
         "source_identity": f"synthetic-client:{range_key}:{start}:{end}",

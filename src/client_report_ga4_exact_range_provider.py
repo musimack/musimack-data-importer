@@ -140,11 +140,21 @@ def _range_entry(
         provider_calls += 1
         response = client.run_exact_range_summary(date_range, metric_names=metric_names)
     except Ga4ClientError as primary_exc:
+        # The fallback narrows metric coverage from nine metrics to four, so it
+        # must never be a catch-all. A malformed request is a defect to fix, not
+        # a condition to degrade around: the duplicate-metric error previously
+        # triggered this path on every range and silently dropped seven display
+        # fields. Only the governed classes below may degrade.
+        if not _is_degradable_provider_error(primary_exc):
+            raise
         try:
             metric_names = GA4_EXACT_RANGE_SUMMARY_REQUIRED_METRICS
             provider_calls += 1
             response = client.run_exact_range_summary(date_range, metric_names=metric_names)
-            notes.append(f"Optional GA4 metrics omitted after safe retry: {_safe_failure_note(primary_exc)}")
+            notes.append(
+                "DEGRADED: optional GA4 metrics omitted after a governed safe retry; "
+                f"metric coverage is incomplete: {_safe_failure_note(primary_exc)}"
+            )
         except Ga4ClientError as fallback_exc:
             raise Ga4ClientError(
                 "exact-range GA4 summary failed safely; full metric query failed and required metric retry failed"
@@ -266,3 +276,40 @@ def _safe_failure_note(exc: Exception) -> str:
     if len(text) > 180:
         text = text[:177] + "..."
     return text
+
+
+# Provider conditions that may legitimately degrade metric coverage. A property
+# can genuinely lack an optional metric, and that is worth a reduced answer. A
+# malformed request is not: it is a defect, and degrading around it hides the
+# defect while silently reducing what every client sees.
+DEGRADABLE_ERROR_MARKERS = (
+    "metric not found",
+    "did not have any value",
+    "is not compatible",
+    "incompatible",
+    "user does not have sufficient permissions for this metric",
+)
+
+# Never degraded. These indicate a request this repository constructed wrongly.
+#
+# Deliberately narrow. `INVALID_ARGUMENT` is *not* listed: GA4 returns that
+# status for both malformed requests and genuine property limitations, so
+# treating the status itself as non-degradable would block the legitimate
+# incompatible-metric case too. Only the specific defect signature is refused.
+NON_DEGRADABLE_ERROR_MARKERS = (
+    "duplicate metric",
+    "duplicate metrics",
+)
+
+
+def _is_degradable_provider_error(exc: Exception) -> bool:
+    """May this provider error reduce metric coverage?
+
+    Deliberately allowlist-driven and defect-hostile. An unrecognized error is
+    **not** degradable, so an unexpected condition surfaces as a failure rather
+    than as quietly thinner data.
+    """
+    text = str(exc).lower()
+    if any(marker in text for marker in NON_DEGRADABLE_ERROR_MARKERS):
+        return False
+    return any(marker in text for marker in DEGRADABLE_ERROR_MARKERS)

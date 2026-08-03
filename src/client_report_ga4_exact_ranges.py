@@ -19,6 +19,11 @@ TOP_METRICS_SECTION = "ga4_top_metrics"
 USER_ENGAGEMENT_SECTION = "ga4_user_engagement"
 SUPPORTED_SECTIONS = {TOP_METRICS_SECTION, USER_ENGAGEMENT_SECTION}
 
+GA4_CONVERSIONS_DEPRECATION_REASON = (
+    "GA4 standard behavioral reporting now uses key events; a distinct "
+    "conversions metric is not separately available through this provider request."
+)
+
 REQUIRED_AVAILABLE_METRICS = ("users", "sessions", "views", "engagement_rate")
 
 
@@ -103,14 +108,6 @@ METRIC_DEFINITIONS: dict[str, dict[str, str | bool]] = {
         "required_for_available": False,
         "formula_version": "provider_direct.v1",
     },
-    "conversions": {
-        "provider_metric_name": "conversions",
-        "value_type": "integer",
-        "unit": "count",
-        "source_kind": "direct",
-        "required_for_available": False,
-        "formula_version": "provider_direct.v1",
-    },
 }
 
 TOP_METRICS_ORDER = (
@@ -123,7 +120,6 @@ TOP_METRICS_ORDER = (
     "average_engagement_time_seconds",
     "event_count",
     "key_events",
-    "conversions",
 )
 
 USER_ENGAGEMENT_ORDER = (
@@ -132,7 +128,6 @@ USER_ENGAGEMENT_ORDER = (
     "engaged_sessions",
     "event_count",
     "key_events",
-    "conversions",
 )
 
 DISPLAY_LABELS = {
@@ -146,7 +141,6 @@ DISPLAY_LABELS = {
     "average_engagement_time_seconds": "Average Engagement Time",
     "event_count": "Events",
     "key_events": "Key Events",
-    "conversions": "Conversions",
 }
 
 DISPLAY_KEYS = {
@@ -278,7 +272,14 @@ def _validate_range_entry(
     if start > end:
         raise ValueError(f"exact-range GA4 summary ranges[{index}] requested dates are inverted")
     if start < period_start or end > period_end:
-        raise ValueError(f"exact-range GA4 summary ranges[{index}] must stay inside report period")
+        # A range outside the governed period is valid only as a truthful
+        # unavailable entry that cost no provider request. Anything else
+        # claiming out-of-period dates is still refused.
+        if not _is_out_of_period_entry(item):
+            raise ValueError(
+                f"exact-range GA4 summary ranges[{index}] must stay inside report period"
+            )
+        return
     identity = (range_key, start, end)
     if identity in seen:
         raise ValueError("duplicate exact-range GA4 summary identity")
@@ -364,3 +365,23 @@ def _format_metric(value: Any, value_type: str) -> str:
     if isinstance(value, float) and not value.is_integer():
         return f"{value:,.2f}"
     return f"{int(value):,}"
+
+
+def _is_out_of_period_entry(item: dict) -> bool:
+    """A truthful out-of-period range: unavailable, reasoned, and uncalled.
+
+    Guards the containment exemption narrowly. An entry qualifies only if it
+    declares itself unavailable, carries the governed reason, records zero
+    provider requests, and carries no metrics. That stops the exemption from
+    becoming a way to smuggle real data under out-of-period dates.
+    """
+    from src.range_containment import OUT_OF_PERIOD_REASON, OUT_OF_PERIOD_STATE
+
+    return (
+        item.get("data_state") == OUT_OF_PERIOD_STATE
+        and item.get("coverage_state") == OUT_OF_PERIOD_STATE
+        and item.get("availability_reason") == OUT_OF_PERIOD_REASON
+        and item.get("contained_in_report_period") is False
+        and item.get("provider_requests") == 0
+        and not item.get("metrics")
+    )
