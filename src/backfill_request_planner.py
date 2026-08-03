@@ -98,20 +98,45 @@ def comparison_maximum_counts() -> dict[str, int]:
     }
 
 
-def presentation_range_source_counts() -> dict[str, int]:
+def presentation_range_source_counts(
+    report_start: date | None = None, report_end: date | None = None
+) -> dict[str, int]:
     """Provider calls needed to produce presentation-range source datasets.
 
     ``build_client_report_presentation_ranges`` itself makes **zero** provider
     calls: it transforms datasets that are already in hand. These counts cover
-    the three exact-range pull scripts that produce those datasets, one call per
-    canonical range key per source.
+    the three exact-range pull scripts that produce those datasets.
+
+    **Containment is modelled, not assumed.** A canonical range that does not
+    fit entirely inside the governed report period is kept in the inventory,
+    marked unavailable, and costs **zero** provider requests. Containment is
+    resolved through the **real range resolver**, so it is decided by dates
+    rather than by a key's name: a twelve-month report supports
+    ``last_12_months`` normally, and ``last_6_months`` may or may not fit a
+    six-month period depending on its exact resolved boundaries.
     """
-    ranges = len(CANONICAL_RANGE_KEYS)
-    ga4_summary = ranges
-    ga4_ranked = ranges * len(RANKED_EXACT_RANGE_CONTRACTS)
-    gsc = ranges * GSC_EXACT_RANGE_SECTIONS
+    from src.client_report_presentation_ranges import resolve_range_key
+    from src.range_containment import is_contained
+
+    total_keys = len(CANONICAL_RANGE_KEYS)
+    if report_start is None or report_end is None:
+        contained_keys = total_keys
+        unavailable_keys = 0
+    else:
+        contained_keys = 0
+        for key in CANONICAL_RANGE_KEYS:
+            resolved = resolve_range_key(key, report_end)
+            if is_contained(resolved.start_date, resolved.end_date, report_start, report_end):
+                contained_keys += 1
+        unavailable_keys = total_keys - contained_keys
+
+    ga4_summary = contained_keys
+    ga4_ranked = contained_keys * len(RANKED_EXACT_RANGE_CONTRACTS)
+    gsc = contained_keys * GSC_EXACT_RANGE_SECTIONS
     return {
-        "range_keys": ranges,
+        "range_keys": total_keys,
+        "range_keys_contained": contained_keys,
+        "range_keys_unavailable": unavailable_keys,
         "range_ga4_requests": ga4_summary + ga4_ranked,
         "range_gsc_requests": gsc,
         "range_total_requests": ga4_summary + ga4_ranked + gsc,
@@ -136,13 +161,19 @@ def plan_report(
 
     expected = comparison_request_counts()
     maximum = comparison_maximum_counts()
-    ranges = presentation_range_source_counts() if include_presentation_ranges else {
-        "range_keys": 0,
-        "range_ga4_requests": 0,
-        "range_gsc_requests": 0,
-        "range_total_requests": 0,
-        "range_generation_requests": 0,
-    }
+    ranges = (
+        presentation_range_source_counts(report_start, report_end)
+        if include_presentation_ranges
+        else {
+            "range_keys": 0,
+            "range_keys_contained": 0,
+            "range_keys_unavailable": 0,
+            "range_ga4_requests": 0,
+            "range_gsc_requests": 0,
+            "range_total_requests": 0,
+            "range_generation_requests": 0,
+        }
+    )
 
     expected_total = expected["comparison_total_requests"] + ranges["range_total_requests"]
     maximum_total = maximum["comparison_maximum"] + ranges["range_total_requests"]

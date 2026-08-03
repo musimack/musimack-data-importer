@@ -15,6 +15,7 @@ from src.client_report_ga4_exact_ranges import (
     validate_ga4_exact_range_summary_contract,
 )
 from src.client_report_presentation_ranges import CANONICAL_RANGE_KEYS, resolve_range_key
+from src.range_containment import is_contained, unavailable_range_entry
 from src.config import DateRange
 from src.ga4_client import (
     GA4_EXACT_RANGE_SUMMARY_METRICS,
@@ -58,8 +59,16 @@ def build_ga4_exact_range_summary_from_provider(
     resolved_ranges = [resolve_range_key(key, report_period_end) for key in EXACT_RANGE_KEYS]
     for resolved in resolved_ranges:
         range_key = resolved.range_key
-        if resolved.start_date < report_period_start or resolved.end_date > report_period_end:
-            raise ValueError(f"{range_key} must stay inside the report period")
+        if not is_contained(
+            resolved.start_date, resolved.end_date, report_period_start, report_period_end
+        ):
+            # Truthful absence, not a failure. The canonical key is kept, the
+            # range is marked unavailable with a governed reason, and no
+            # provider request is issued for it.
+            ranges.append(
+                unavailable_range_entry(range_key, resolved.start_date, resolved.end_date)
+            )
+            continue
         identity = (range_key, resolved.start_date.isoformat(), resolved.end_date.isoformat())
         if identity in existing:
             reused = dict(existing[identity])

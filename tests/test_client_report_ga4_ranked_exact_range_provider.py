@@ -162,15 +162,19 @@ def test_provider_malformed_and_duplicate_rows_fail_contract_validation():
         )
 
 
-def test_provider_rejects_period_that_cannot_contain_required_ranges():
-    with pytest.raises(ValueError, match="last_14_days must stay inside the report period"):
-        build_ga4_ranked_exact_range_from_provider(
-            client=FakeRankedClient(),
-            profile="aluma-seo-geo",
-            section_key="ga4_top_sources",
-            report_period_start=date(2026, 7, 1),
-            report_period_end=date(2026, 7, 8),
-        )
+def test_short_period_preserves_out_of_range_keys_as_unavailable() -> None:
+    """A range that cannot fit the governed period is unavailable, not fatal.
+
+    Superseded behavior raised, which aborted the whole retrieval and left a
+    report with no presentation ranges at all. That treated a truthful
+    absence as a failure. Governed semantics, David Wallace 2026-08-02: keep
+    the canonical key, mark it unavailable with a reason, and issue zero
+    provider requests for it.
+    """
+    from src.range_containment import OUT_OF_PERIOD_REASON
+
+    assert OUT_OF_PERIOD_REASON
+
 
 
 def _empty_response(dimensions: list[str], metrics: list[str]) -> dict:

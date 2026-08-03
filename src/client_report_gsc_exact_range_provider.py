@@ -5,6 +5,7 @@ import math
 from datetime import date
 from typing import Any, Protocol
 
+from src.range_containment import is_contained, unavailable_range_entry
 from src.client_report_gsc_exact_ranges import (
     GSC_EXACT_RANGE_CONTRACTS,
     GSC_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
@@ -66,8 +67,13 @@ def build_gsc_exact_range_from_provider(
         range_key = resolved.range_key
         start, requested_end = resolved.start_date, resolved.end_date
         start_raw, end_raw = start.isoformat(), requested_end.isoformat()
-        if start < date.fromisoformat(report_start) or requested_end > date.fromisoformat(report_end):
-            raise ValueError(f"{range_key} must stay inside the report period")
+        if not is_contained(
+            start, requested_end, date.fromisoformat(report_start), date.fromisoformat(report_end)
+        ):
+            # Truthful absence, not a failure. Canonical key kept, marked
+            # unavailable, zero provider requests issued.
+            ranges.append(unavailable_range_entry(range_key, start, requested_end))
+            continue
         identity = (range_key, start_raw, end_raw)
         if identity in existing:
             reused = dict(existing[identity])

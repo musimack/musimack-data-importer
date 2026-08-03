@@ -4,6 +4,7 @@ import hashlib
 from datetime import UTC, date, datetime
 from typing import Any, Callable, Protocol
 
+from src.range_containment import is_contained, unavailable_range_entry
 from src.client_report_ga4_ranked_exact_ranges import (
     GA4_RANKED_EXACT_RANGE_PROVIDER_CALCULATION_VERSION,
     METRIC_DEFINITIONS,
@@ -125,8 +126,15 @@ def build_ga4_ranked_exact_range_from_provider(
     resolved_ranges = [resolve_range_key(key, report_period_end) for key in EXACT_RANGE_KEYS]
     for resolved in resolved_ranges:
         range_key = resolved.range_key
-        if resolved.start_date < report_period_start or resolved.end_date > report_period_end:
-            raise ValueError(f"{range_key} must stay inside the report period")
+        if not is_contained(
+            resolved.start_date, resolved.end_date, report_period_start, report_period_end
+        ):
+            # Truthful absence, not a failure. Canonical key kept,
+            # marked unavailable, zero provider requests issued.
+            ranges.append(
+                unavailable_range_entry(range_key, resolved.start_date, resolved.end_date)
+            )
+            continue
         identity = (range_key, resolved.start_date.isoformat(), resolved.end_date.isoformat())
         if identity in existing:
             reused = dict(existing[identity])

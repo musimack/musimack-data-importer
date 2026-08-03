@@ -114,10 +114,18 @@ def test_presentation_range_generation_makes_no_provider_call() -> None:
     assert ranges["range_total_requests"] == 88
 
 
-def test_per_report_total_is_exactly_304() -> None:
+def test_per_report_total_is_296_for_this_governed_period() -> None:
+    """296, not 304.
+
+    The earlier 304 assumed all eleven canonical ranges were retrievable. For
+    a 2026-01-01 to 2026-07-08 period, last_12_months cannot fit, so it is kept
+    as unavailable and costs zero requests. See tests/test_range_containment.py.
+    """
     plan = plan_report(**_report())
-    assert plan["expected_total_requests"] == 304
-    assert plan["maximum_total_requests"] == 304
+    assert plan["comparison_total_requests"] == 216
+    assert plan["range_total_requests"] == 80
+    assert plan["expected_total_requests"] == 296
+    assert plan["maximum_total_requests"] == 296
 
 
 def test_retries_and_pagination_are_zero() -> None:
@@ -140,7 +148,7 @@ def test_per_client_totals_sum_to_the_aggregate() -> None:
     assert aggregate["aggregate_maximum_requests"] == sum(
         p["maximum_total_requests"] for p in aggregate["reports"]
     )
-    assert aggregate["aggregate_maximum_requests"] == 5 * 304 == 1520
+    assert aggregate["aggregate_maximum_requests"] == 5 * 296 == 1480
 
 
 def test_group_totals_are_deterministic() -> None:
@@ -181,7 +189,7 @@ def test_planning_ceiling_is_enforced() -> None:
 
 
 def test_a_sufficient_planning_ceiling_passes() -> None:
-    assert plan_reports([_report()], planning_ceiling=304)["aggregate_maximum_requests"] == 304
+    assert plan_reports([_report()], planning_ceiling=296)["aggregate_maximum_requests"] == 296
 
 
 # Safety boundaries
