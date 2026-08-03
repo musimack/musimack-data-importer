@@ -166,7 +166,12 @@ def _validate_entry(entry: Any, index: int, contract: GscExactRangeContract, per
     if not isinstance(entry, dict): raise ValueError(f"GSC exact-range ranges[{index}] must be an object")
     start, end = _date(entry.get("requested_start_date")), _date(entry.get("requested_end_date"))
     identity = (entry.get("range_key"), start, end)
-    if start > end or start < period_start or end > period_end: raise ValueError("GSC exact-range dates are invalid")
+    if start > end:
+        raise ValueError("GSC exact-range dates are invalid")
+    if start < period_start or end > period_end:
+        if not _is_out_of_period_entry(entry):
+            raise ValueError("GSC exact-range dates are invalid")
+        return
     if identity in seen: raise ValueError("duplicate GSC exact-range identity")
     seen.add(identity)
     if entry.get("search_type") != "web" or entry.get("inclusive_dates") is not True: raise ValueError("GSC exact-range search/date semantics are invalid")
@@ -225,3 +230,27 @@ def _date(value: Any) -> date:
     if not isinstance(value, str): raise ValueError("GSC exact-range date must be ISO")
     try: return date.fromisoformat(value)
     except ValueError as exc: raise ValueError("GSC exact-range date must be ISO") from exc
+
+
+def _is_out_of_period_entry(item: dict) -> bool:
+    """A truthful out-of-period range: unavailable, reasoned, and uncalled.
+
+    The containment exemption is deliberately narrow. An entry qualifies only
+    if it declares itself unavailable, carries the governed reason, records
+    zero provider requests, and carries no metrics or rows. That stops the
+    exemption from becoming a way to smuggle real data under out-of-period
+    dates.
+    """
+    from src.range_containment import OUT_OF_PERIOD_REASON, OUT_OF_PERIOD_STATE
+
+    if item.get("data_state") != OUT_OF_PERIOD_STATE:
+        return False
+    if item.get("coverage_state") != OUT_OF_PERIOD_STATE:
+        return False
+    if item.get("availability_reason") != OUT_OF_PERIOD_REASON:
+        return False
+    if item.get("contained_in_report_period") is not False:
+        return False
+    if item.get("provider_requests") != 0:
+        return False
+    return not item.get("metrics") and not item.get("rows")

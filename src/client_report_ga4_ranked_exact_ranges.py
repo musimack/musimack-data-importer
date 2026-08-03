@@ -291,7 +291,11 @@ def _validate_range_entry(
     start = _parse_date(item.get("requested_start_date"), f"ranges[{index}].requested_start_date")
     end = _parse_date(item.get("requested_end_date"), f"ranges[{index}].requested_end_date")
     if start > end or start < period_start or end > period_end:
-        raise ValueError(f"ranked exact-range GA4 ranges[{index}] dates are invalid for report period")
+        if not _is_out_of_period_entry(item):
+            raise ValueError(
+                f"ranked exact-range GA4 ranges[{index}] dates are invalid for report period"
+            )
+        return
     identity = (range_key, start, end)
     if identity in seen:
         raise ValueError("duplicate ranked exact-range GA4 identity")
@@ -492,3 +496,27 @@ def _format_metric(value: Any, value_type: str) -> str:
     if isinstance(value, float) and not value.is_integer():
         return f"{value:,.2f}"
     return f"{int(value):,}"
+
+
+def _is_out_of_period_entry(item: dict) -> bool:
+    """A truthful out-of-period range: unavailable, reasoned, and uncalled.
+
+    The containment exemption is deliberately narrow. An entry qualifies only
+    if it declares itself unavailable, carries the governed reason, records
+    zero provider requests, and carries no metrics or rows. That stops the
+    exemption from becoming a way to smuggle real data under out-of-period
+    dates.
+    """
+    from src.range_containment import OUT_OF_PERIOD_REASON, OUT_OF_PERIOD_STATE
+
+    if item.get("data_state") != OUT_OF_PERIOD_STATE:
+        return False
+    if item.get("coverage_state") != OUT_OF_PERIOD_STATE:
+        return False
+    if item.get("availability_reason") != OUT_OF_PERIOD_REASON:
+        return False
+    if item.get("contained_in_report_period") is not False:
+        return False
+    if item.get("provider_requests") != 0:
+        return False
+    return not item.get("metrics") and not item.get("rows")
