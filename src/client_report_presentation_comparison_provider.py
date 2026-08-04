@@ -19,6 +19,10 @@ from src.client_report_presentation_comparisons import (
     period_state,
     resolve_comparison_ranges,
 )
+from src.client_report_presentation_comparison_resume import (
+    EXPECTED_TOTAL_ENTRIES,
+    ComparisonCheckpointStore,
+)
 from src.config import DateRange
 from src.profile_authorization import ProfileAuthorization
 
@@ -69,6 +73,8 @@ def build_real_presentation_comparisons(
     authorization: ProfileAuthorization,
     generated_at: str | None = None,
     provider_calls: dict[str, int] | None = None,
+    checkpoint: ComparisonCheckpointStore | None = None,
+    restored_calls: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     # Dual-layer protection. The CLI authorizes before constructing any provider
     # client, and this layer refuses to build a package unless it is handed the
@@ -86,144 +92,65 @@ def build_real_presentation_comparisons(
     comparisons: list[dict[str, Any]] = []
     # A caller-supplied counter stays readable after an exception. A run that
     # fails partway has still spent real provider requests, and a defect report
-    # that cannot state how many is not an accounting record.
+    # that cannot state how many is not an accounting record. This counter holds
+    # only requests newly issued by this run; requests restored from a
+    # checkpoint are counted separately so the two are never conflated.
     if provider_calls is None:
         provider_calls = {"ga4": 0, "gsc": 0}
     else:
         provider_calls.setdefault("ga4", 0)
         provider_calls.setdefault("gsc", 0)
+    if restored_calls is None:
+        restored_calls = {"ga4": 0, "gsc": 0}
+    else:
+        restored_calls.setdefault("ga4", 0)
+        restored_calls.setdefault("gsc", 0)
+
+    # Validated before the first request. An identity, period, dataset,
+    # contract, or operation-version mismatch refuses resume here rather than
+    # after spending anything.
+    completed = checkpoint.load() if checkpoint is not None else {}
+
     for preset in COMPARISON_PRESET_KEYS:
-        current, prior = resolve_comparison_ranges(preset, report_start=report_start, report_end=report_end)
-        current_range = DateRange(current.start_date, current.end_date)
-        prior_range = DateRange(prior.start_date, prior.end_date)
-
-        current_summary, _, calls = ga4_summary_entry(
-            client=ga4_client,
+        restored = completed.get(preset)
+        if restored is not None:
+            # Already paid for. Never requested again.
+            comparisons.extend(restored.entries)
+            restored_calls["ga4"] += restored.ga4_calls
+            restored_calls["gsc"] += restored.gsc_calls
+            continue
+        before_ga4, before_gsc = provider_calls["ga4"], provider_calls["gsc"]
+        entries = _build_preset_comparisons(
+            ga4_client=ga4_client,
+            gsc_client=gsc_client,
             profile=profile,
-            range_key=preset,
-            date_range=current_range,
-            metric_names=R4_SUMMARY_PROVIDER_METRICS,
+            identity=identity,
+            preset=preset,
+            report_start=report_start,
+            report_end=report_end,
+            gsc_available_through=gsc_available_through,
+            provider_calls=provider_calls,
         )
-        provider_calls["ga4"] += calls
-        prior_summary, _, calls = ga4_summary_entry(
-            client=ga4_client,
-            profile=profile,
-            range_key=f"{preset}_comparison",
-            date_range=prior_range,
-            metric_names=R4_SUMMARY_PROVIDER_METRICS,
-        )
-        provider_calls["ga4"] += calls
-        current_state = _ga4_state(current_summary, current)
-        prior_state = _ga4_state(prior_summary, prior)
-        eligible = _exactly_comparable(current_state, prior_state)
-        for section, definitions in SUMMARY_METRICS.items():
-            comparisons.append(comparison_entry(
-                package_identity=identity,
-                section_key=section,
+        # Reached only when the whole preset succeeded. A preset that failed
+        # partway is never recorded, so the next run rebuilds it in full.
+        if checkpoint is not None:
+            checkpoint.record(
                 preset_key=preset,
-                current=current_state,
-                comparison=prior_state,
-                current_lineage=_ga4_lineage(section, preset, current.start_date, current.end_date, current_summary),
-                comparison_lineage=_ga4_lineage(section, preset, prior.start_date, prior.end_date, prior_summary),
-                delta_eligible=eligible,
-                delta_ineligible_reason=None if eligible else "Exact current and comparison coverage is not equivalent.",
-                metrics=[
-                    build_metric_comparison(
-                        key=key, label=label, unit=unit,
-                        current_value=current_summary["metrics"].get(key),
-                        prior_value=prior_summary["metrics"].get(key),
-                    ) for key, label, unit in definitions
-                ],
-            ))
-
-        current_trends = _ga4_trends(ga4_client.run_exact_range_traffic_series(current_range))
-        prior_trends = _ga4_trends(ga4_client.run_exact_range_traffic_series(prior_range))
-        provider_calls["ga4"] += 2
-        comparisons.append(comparison_entry(
-            package_identity=identity,
-            section_key="ga4_website_traffic_trends",
-            preset_key=preset,
-            current=current_state,
-            comparison=prior_state,
-            current_lineage=_simple_lineage("ga4_daily_traffic_series.v1", "ga4", "ga4_website_traffic_trends", preset, current.start_date, current.end_date),
-            comparison_lineage=_simple_lineage("ga4_daily_traffic_series.v1", "ga4", "ga4_website_traffic_trends", preset, prior.start_date, prior.end_date),
-            delta_eligible=eligible and len(current_trends[0]["points"]) == len(prior_trends[0]["points"]),
-            delta_ineligible_reason="Daily-series coverage is not equivalent." if len(current_trends[0]["points"]) != len(prior_trends[0]["points"]) else None,
-            trend_series=align_trend_series(current_series=current_trends, comparison_series=prior_trends),
-        ))
-
-        for contract in RANKED_EXACT_RANGE_CONTRACTS.values():
-            runner = QUERY_BY_SECTION[contract.section_key][3]
-            current_rows = ga4_ranked_entry(client=ga4_client, profile=profile, range_key=preset, date_range=current_range, contract=contract, runner=runner)
-            prior_rows = ga4_ranked_entry(client=ga4_client, profile=profile, range_key=f"{preset}_comparison", date_range=prior_range, contract=contract, runner=runner)
-            provider_calls["ga4"] += 2
-            identity_key = _ga4_identity_key(contract.section_key)
-            definitions = [{"key": key, "label": METRIC_LABELS[key], "unit": "rate" if key == "engagement_rate" else "count"} for key in contract.metric_order]
-            comparisons.append(comparison_entry(
-                package_identity=identity,
-                section_key=contract.section_key,
-                preset_key=preset,
-                current=_ga4_state(current_rows, current),
-                comparison=_ga4_state(prior_rows, prior),
-                current_lineage=_simple_lineage(contract.schema_version, "ga4", contract.section_key, preset, current.start_date, current.end_date),
-                comparison_lineage=_simple_lineage(contract.schema_version, "ga4", contract.section_key, preset, prior.start_date, prior.end_date),
-                delta_eligible=True,
-                ranked_rows=match_ranked_rows(
-                    current_rows=[dict(row, stable_identity=_stable_ga4_identity(row, identity_key)) for row in current_rows["rows"]],
-                    prior_rows=[dict(row, stable_identity=_stable_ga4_identity(row, identity_key)) for row in prior_rows["rows"]],
-                    identity_key="stable_identity",
-                    metric_definitions=definitions,
-                ),
-            ))
-
-        for section, (dimension, _) in GSC_SECTIONS.items():
-            current_gsc = _gsc_period(gsc_client, dimension, current.start_date, current.end_date, gsc_available_through)
-            prior_gsc = _gsc_period(gsc_client, dimension, prior.start_date, prior.end_date, gsc_available_through)
-            provider_calls["gsc"] += int(current_gsc["provider_called"]) + int(prior_gsc["provider_called"])
-            gsc_eligible = _gsc_comparable(current_gsc, prior_gsc)
-            common = dict(
-                package_identity=identity,
-                section_key=section,
-                preset_key=preset,
-                current=current_gsc["state"],
-                comparison=prior_gsc["state"],
-                current_lineage=_simple_lineage(f"{section}_comparison_source.v1", "gsc", section, preset, current.start_date, current.end_date),
-                comparison_lineage=_simple_lineage(f"{section}_comparison_source.v1", "gsc", section, preset, prior.start_date, prior.end_date),
-                delta_eligible=gsc_eligible,
-                delta_ineligible_reason=None if gsc_eligible else "Change is withheld because actual Search Console coverage is not comparable.",
+                entries=entries,
+                ga4_calls=provider_calls["ga4"] - before_ga4,
+                gsc_calls=provider_calls["gsc"] - before_gsc,
             )
-            if dimension is None:
-                comparisons.append(comparison_entry(
-                    **common,
-                    metrics=[build_metric_comparison(key=key, label=label, unit=unit, current_value=current_gsc["metrics"].get(key), prior_value=prior_gsc["metrics"].get(key)) for key, label, unit in GSC_METRICS],
-                ))
-            else:
-                definitions = [{"key": key, "label": label, "unit": unit} for key, label, unit in GSC_METRICS]
-                comparisons.append(comparison_entry(
-                    **common,
-                    ranked_rows=match_ranked_rows(
-                        current_rows=[
-                            dict(
-                                row,
-                                rank=index + 1,
-                                stable_identity=_stable_gsc_identity(row, dimension, section, preset, "current", index),
-                                label=row[dimension],
-                            )
-                            for index, row in enumerate(current_gsc["rows"])
-                        ],
-                        prior_rows=[
-                            dict(
-                                row,
-                                rank=index + 1,
-                                stable_identity=_stable_gsc_identity(row, dimension, section, preset, "comparison", index),
-                                label=row[dimension],
-                            )
-                            for index, row in enumerate(prior_gsc["rows"])
-                        ],
-                        identity_key="stable_identity",
-                        metric_definitions=definitions,
-                    ),
-                ))
+        comparisons.extend(entries)
+
+    # Final output is assembled only when every canonical preset is present.
+    # Partial state can never reach the contract builder.
+    covered = {entry["preset_key"] for entry in comparisons}
+    if covered != set(COMPARISON_PRESET_KEYS) or len(comparisons) != EXPECTED_TOTAL_ENTRIES:
+        raise ValueError(
+            f"comparison assembly is incomplete: {len(comparisons)} entries across "
+            f"{len(covered)} presets, expected {EXPECTED_TOTAL_ENTRIES} across "
+            f"{len(COMPARISON_PRESET_KEYS)}"
+        )
 
     return build_presentation_comparison_package(
         report_id=report_id, client_id=client_id, project_id=project_id, client_slug=profile,
@@ -231,12 +158,169 @@ def build_real_presentation_comparisons(
         source_identity={
             "source_kind": "bounded_provider_exact_ranges",
             "profile": profile,
-            "ga4_provider_calls": provider_calls["ga4"],
-            "gsc_provider_calls": provider_calls["gsc"],
+            # Cumulative, so a resumed package is identical to a clean run.
+            "ga4_provider_calls": provider_calls["ga4"] + restored_calls["ga4"],
+            "gsc_provider_calls": provider_calls["gsc"] + restored_calls["gsc"],
             "raw_provider_payload_included": False,
         },
         generated_at=generated_at,
     )
+
+
+def _build_preset_comparisons(
+    *,
+    ga4_client: Any,
+    gsc_client: Any,
+    profile: str,
+    identity: dict[str, str],
+    preset: str,
+    report_start: date,
+    report_end: date,
+    gsc_available_through: date,
+    provider_calls: dict[str, int],
+) -> list[dict[str, Any]]:
+    """Build every comparison entry for one preset, or raise.
+
+    The unit of resume. Semantics, formulas, periods, ordering, and output are
+    exactly as they were when this body lived inline in the preset loop; the
+    only change is that it now returns its entries instead of appending them to
+    a shared list. `provider_calls` is incremented as requests are issued, not
+    at the end, so accounting survives a failure partway through.
+    """
+    comparisons: list[dict[str, Any]] = []
+    current, prior = resolve_comparison_ranges(preset, report_start=report_start, report_end=report_end)
+    current_range = DateRange(current.start_date, current.end_date)
+    prior_range = DateRange(prior.start_date, prior.end_date)
+
+    current_summary, _, calls = ga4_summary_entry(
+        client=ga4_client,
+        profile=profile,
+        range_key=preset,
+        date_range=current_range,
+        metric_names=R4_SUMMARY_PROVIDER_METRICS,
+    )
+    provider_calls["ga4"] += calls
+    prior_summary, _, calls = ga4_summary_entry(
+        client=ga4_client,
+        profile=profile,
+        range_key=f"{preset}_comparison",
+        date_range=prior_range,
+        metric_names=R4_SUMMARY_PROVIDER_METRICS,
+    )
+    provider_calls["ga4"] += calls
+    current_state = _ga4_state(current_summary, current)
+    prior_state = _ga4_state(prior_summary, prior)
+    eligible = _exactly_comparable(current_state, prior_state)
+    for section, definitions in SUMMARY_METRICS.items():
+        comparisons.append(comparison_entry(
+            package_identity=identity,
+            section_key=section,
+            preset_key=preset,
+            current=current_state,
+            comparison=prior_state,
+            current_lineage=_ga4_lineage(section, preset, current.start_date, current.end_date, current_summary),
+            comparison_lineage=_ga4_lineage(section, preset, prior.start_date, prior.end_date, prior_summary),
+            delta_eligible=eligible,
+            delta_ineligible_reason=None if eligible else "Exact current and comparison coverage is not equivalent.",
+            metrics=[
+                build_metric_comparison(
+                    key=key, label=label, unit=unit,
+                    current_value=current_summary["metrics"].get(key),
+                    prior_value=prior_summary["metrics"].get(key),
+                ) for key, label, unit in definitions
+            ],
+        ))
+
+    current_trends = _ga4_trends(ga4_client.run_exact_range_traffic_series(current_range))
+    prior_trends = _ga4_trends(ga4_client.run_exact_range_traffic_series(prior_range))
+    provider_calls["ga4"] += 2
+    comparisons.append(comparison_entry(
+        package_identity=identity,
+        section_key="ga4_website_traffic_trends",
+        preset_key=preset,
+        current=current_state,
+        comparison=prior_state,
+        current_lineage=_simple_lineage("ga4_daily_traffic_series.v1", "ga4", "ga4_website_traffic_trends", preset, current.start_date, current.end_date),
+        comparison_lineage=_simple_lineage("ga4_daily_traffic_series.v1", "ga4", "ga4_website_traffic_trends", preset, prior.start_date, prior.end_date),
+        delta_eligible=eligible and len(current_trends[0]["points"]) == len(prior_trends[0]["points"]),
+        delta_ineligible_reason="Daily-series coverage is not equivalent." if len(current_trends[0]["points"]) != len(prior_trends[0]["points"]) else None,
+        trend_series=align_trend_series(current_series=current_trends, comparison_series=prior_trends),
+    ))
+
+    for contract in RANKED_EXACT_RANGE_CONTRACTS.values():
+        runner = QUERY_BY_SECTION[contract.section_key][3]
+        current_rows = ga4_ranked_entry(client=ga4_client, profile=profile, range_key=preset, date_range=current_range, contract=contract, runner=runner)
+        prior_rows = ga4_ranked_entry(client=ga4_client, profile=profile, range_key=f"{preset}_comparison", date_range=prior_range, contract=contract, runner=runner)
+        provider_calls["ga4"] += 2
+        identity_key = _ga4_identity_key(contract.section_key)
+        definitions = [{"key": key, "label": METRIC_LABELS[key], "unit": "rate" if key == "engagement_rate" else "count"} for key in contract.metric_order]
+        comparisons.append(comparison_entry(
+            package_identity=identity,
+            section_key=contract.section_key,
+            preset_key=preset,
+            current=_ga4_state(current_rows, current),
+            comparison=_ga4_state(prior_rows, prior),
+            current_lineage=_simple_lineage(contract.schema_version, "ga4", contract.section_key, preset, current.start_date, current.end_date),
+            comparison_lineage=_simple_lineage(contract.schema_version, "ga4", contract.section_key, preset, prior.start_date, prior.end_date),
+            delta_eligible=True,
+            ranked_rows=match_ranked_rows(
+                current_rows=[dict(row, stable_identity=_stable_ga4_identity(row, identity_key)) for row in current_rows["rows"]],
+                prior_rows=[dict(row, stable_identity=_stable_ga4_identity(row, identity_key)) for row in prior_rows["rows"]],
+                identity_key="stable_identity",
+                metric_definitions=definitions,
+            ),
+        ))
+
+    for section, (dimension, _) in GSC_SECTIONS.items():
+        current_gsc = _gsc_period(gsc_client, dimension, current.start_date, current.end_date, gsc_available_through)
+        prior_gsc = _gsc_period(gsc_client, dimension, prior.start_date, prior.end_date, gsc_available_through)
+        provider_calls["gsc"] += int(current_gsc["provider_called"]) + int(prior_gsc["provider_called"])
+        gsc_eligible = _gsc_comparable(current_gsc, prior_gsc)
+        common = dict(
+            package_identity=identity,
+            section_key=section,
+            preset_key=preset,
+            current=current_gsc["state"],
+            comparison=prior_gsc["state"],
+            current_lineage=_simple_lineage(f"{section}_comparison_source.v1", "gsc", section, preset, current.start_date, current.end_date),
+            comparison_lineage=_simple_lineage(f"{section}_comparison_source.v1", "gsc", section, preset, prior.start_date, prior.end_date),
+            delta_eligible=gsc_eligible,
+            delta_ineligible_reason=None if gsc_eligible else "Change is withheld because actual Search Console coverage is not comparable.",
+        )
+        if dimension is None:
+            comparisons.append(comparison_entry(
+                **common,
+                metrics=[build_metric_comparison(key=key, label=label, unit=unit, current_value=current_gsc["metrics"].get(key), prior_value=prior_gsc["metrics"].get(key)) for key, label, unit in GSC_METRICS],
+            ))
+        else:
+            definitions = [{"key": key, "label": label, "unit": unit} for key, label, unit in GSC_METRICS]
+            comparisons.append(comparison_entry(
+                **common,
+                ranked_rows=match_ranked_rows(
+                    current_rows=[
+                        dict(
+                            row,
+                            rank=index + 1,
+                            stable_identity=_stable_gsc_identity(row, dimension, section, preset, "current", index),
+                            label=row[dimension],
+                        )
+                        for index, row in enumerate(current_gsc["rows"])
+                    ],
+                    prior_rows=[
+                        dict(
+                            row,
+                            rank=index + 1,
+                            stable_identity=_stable_gsc_identity(row, dimension, section, preset, "comparison", index),
+                            label=row[dimension],
+                        )
+                        for index, row in enumerate(prior_gsc["rows"])
+                    ],
+                    identity_key="stable_identity",
+                    metric_definitions=definitions,
+                ),
+            ))
+    return comparisons
+
 
 
 def _ga4_state(entry: dict[str, Any], resolved: Any) -> dict[str, Any]:
