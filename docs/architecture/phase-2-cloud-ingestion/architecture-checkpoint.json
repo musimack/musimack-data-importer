@@ -1,0 +1,137 @@
+{
+  "schema_version": "musimack_cross_repository_cloud_ingestion_architecture.v1",
+  "checkpoint_id": "P2-3A",
+  "status": "human_review_ready_not_human_accepted",
+  "generated_date": "2026-08-06",
+  "canonical_repository": {
+    "name": "musimack-data-importer",
+    "remote": "https://github.com/musimack/musimack-data-importer.git",
+    "default_branch": "main",
+    "baseline_head": "e3f7aada1d76152be9750f5544c79ce6920e8291",
+    "architecture_branch": "codex/phase-2-cloud-ingestion-architecture"
+  },
+  "downstream_repository": {
+    "name": "musimack-client-portal",
+    "local_repository_name": "client-dashboard",
+    "remote": "https://github.com/musimack/musimack-client-portal.git",
+    "default_branch": "master",
+    "baseline_head": "51221e30cd6ca4c071824a1e6b00474e16006965",
+    "modified": false
+  },
+  "decisions_recommended": {
+    "execution": "cloud_run_jobs",
+    "ingestion_boundary": "portal_owned_private_versioned_api",
+    "credentials": "secret_manager_plus_keyless_workload_identity",
+    "canonical_configuration": "client_portal_database_versioned_configuration_api",
+    "gcp_project_structure": "dedicated_ingestion_prod_and_dev_projects",
+    "bigquery": "read_source_datasets_in_place_with_dataset_iam_and_bytes_ceilings",
+    "initial_transport": "synchronous_https_oidc",
+    "future_transport": "queue_or_object_handoff_only_if_measured_need"
+  },
+  "ownership": {
+    "data_importer": [
+      "provider_retrieval",
+      "credential_resolution",
+      "cloud_job_execution",
+      "request_and_cost_ceiling_enforcement",
+      "provider_normalization",
+      "normalized_contract_delivery"
+    ],
+    "client_portal": [
+      "canonical_client_identity",
+      "canonical_project_identity",
+      "provider_resource_mappings",
+      "weekly_contract_validation",
+      "weekly_revision_persistence",
+      "current_revision_pointers",
+      "dashboard_presentation",
+      "access_control",
+      "immutable_publications"
+    ],
+    "google_cloud": [
+      "job_runtime",
+      "secret_value_storage",
+      "workload_iam",
+      "logging_monitoring_and_budget_backstops",
+      "bigquery_dataset_and_query_iam",
+      "scheduling_after_acceptance"
+    ]
+  },
+  "accepted_portal_foundation": {
+    "p2_1": "complete_and_human_accepted",
+    "p2_2": "complete_and_human_accepted",
+    "p2_ops_1": "complete_and_human_accepted",
+    "p2_ops_2": "complete_and_human_accepted",
+    "retained_database_applied_migrations": 21,
+    "repository_live_weekly_migration_number": 22,
+    "retained_database_migration_22_applied": false,
+    "scheduling_blocker": "P2-OPS-F06"
+  },
+  "contract": {
+    "result_schema": "weekly_provider_ingestion.v1",
+    "run_schema": "weekly_ingestion_run.v1",
+    "failure_schema": "weekly_ingestion_failure.v1",
+    "authentication": "google_oidc_id_token_exact_audience_and_subject",
+    "idempotency": "project_provider_week_plus_uuid_key_and_canonical_sha256",
+    "initial_max_payload_bytes": 2097152,
+    "portal_transaction_owner": true,
+    "direct_database_writes": false,
+    "publication_current_pointer_dependency": false
+  },
+  "pilot": {
+    "execution_mode": "manual_only",
+    "cloud_run_tasks": 1,
+    "parallelism": 1,
+    "platform_retries": 0,
+    "providers": ["ga4", "google_search_console"],
+    "projects": ["inn-at-spanish-head", "pinnacle-contractors"],
+    "scheduler_enabled": false
+  },
+  "new_identity_recommendations": {
+    "cain_dentures": "one_client_with_at_least_one_project_pending_identity_data",
+    "coin_meter": "one_client_two_projects_if_shared_customer_and_access_boundary",
+    "coin_meter_support_portal": "separate_project_block_shared_property_without_accepted_filter",
+    "cascade_fresh": "one_client_with_at_least_one_project_pending_identity_data"
+  },
+  "product_owner_decisions": [
+    "PO-001",
+    "PO-002",
+    "PO-003",
+    "PO-004",
+    "PO-005",
+    "PO-006",
+    "PO-007",
+    "PO-008",
+    "PO-009",
+    "PO-010",
+    "PO-011",
+    "PO-012",
+    "PO-013",
+    "PO-014",
+    "PO-015",
+    "PO-016",
+    "PO-017",
+    "PO-018",
+    "PO-019",
+    "PO-020",
+    "PO-021",
+    "PO-022",
+    "PO-023",
+    "PO-024",
+    "PO-025"
+  ],
+  "hard_boundaries": {
+    "provider_calls": 0,
+    "bigquery_queries": 0,
+    "cloud_resources_created": 0,
+    "database_migrations_run": 0,
+    "retained_database_writes": 0,
+    "runtime_files_changed": 0,
+    "client_portal_files_changed": 0,
+    "deployments": 0,
+    "schedules_configured": 0,
+    "governed_branches_merged": 0,
+    "phase_3_started": false,
+    "phase_4_started": false
+  }
+}
