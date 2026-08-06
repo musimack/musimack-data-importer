@@ -5,6 +5,8 @@
 - Canonical owner: `musimack-data-importer`
 - Portal baseline: `musimack/musimack-client-portal` `master` at `51221e30cd6ca4c071824a1e6b00474e16006965`
 - Importer baseline: `musimack/musimack-data-importer` `main` at `e3f7aada1d76152be9750f5544c79ce6920e8291`
+- Implementation milestone: **P2-3B Complete and Human Accepted — 2026-08-06** at `fe6e34aca72343e3c43caa75bfd8b238b22da1ec`
+- Phase status: **Phase 2 In Progress; P2-3C not begun**
 
 ## Executive recommendation
 
@@ -42,6 +44,9 @@ The cross-repository contract is canonical here because the Data Importer is the
 | Product Owner decision packet              | [12-product-owner-decisions.md](12-product-owner-decisions.md)                                 |
 | Revised Phase 2 roadmap                    | [13-phase-2-roadmap.md](13-phase-2-roadmap.md)                                                 |
 | Machine-readable checkpoint                | [architecture-checkpoint.json](architecture-checkpoint.json)                                   |
+| P2-3B Product Owner acceptance             | [../../p2-3b-product-owner-acceptance.md](../../p2-3b-product-owner-acceptance.md)               |
+| Current Project Truth                      | [../../current_project_truth.md](../../current_project_truth.md)                                 |
+| Requirements traceability                  | [../../phase-2-requirements-traceability.md](../../phase-2-requirements-traceability.md)         |
 
 ## Accepted boundaries preserved
 

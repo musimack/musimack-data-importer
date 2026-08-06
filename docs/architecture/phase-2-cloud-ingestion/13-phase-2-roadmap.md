@@ -8,6 +8,7 @@ Every milestone ends at Human Review Ready. Only David can close its Human Accep
 - P2-2 Separate Live Weekly Storage Foundation: Complete and Human Accepted.
 - P2-OPS-1 Default-Branch Correction: Complete and Human Accepted.
 - P2-OPS-2 Backup/Restore/Migration/Rollback Rehearsal: Complete and Human Accepted.
+- P2-3B Cloud-ready Data Importer application refactor: Complete and Human Accepted on 2026-08-06 at `fe6e34aca72343e3c43caa75bfd8b238b22da1ec`.
 - Overall Phase 2: In Progress and not Human Accepted.
 
 ## Proposed sequence
@@ -21,6 +22,7 @@ Every milestone ends at Human Review Ready. Only David can close its Human Accep
 
 ### P2-3B — Cloud-ready Data Importer application refactor
 
+- Status: **Complete and Human Accepted — 2026-08-06**. See [P2-3B Product Owner acceptance](../../p2-3b-product-owner-acceptance.md).
 - Entry: P2-3A accepted; `PO-001`–`PO-009`, `PO-011`, `PO-020` decided; numerical GA4/GSC ceilings approved.
 - Exit: provider logic runs through configuration/credential/sink interfaces; cloud mode is noninteractive/stateless; structured logs, request budgets, deterministic exits, container, conformance fixtures, and fixture/local parity pass. No production provider or Portal write is required for exit.
 - Gate: `P2-3B-HAG`.
@@ -28,6 +30,7 @@ Every milestone ends at Human Review Ready. Only David can close its Human Accep
 
 ### P2-3C — Portal service ingestion boundary
 
+- Status: **Not begun and not authorized**. Recommended next milestone subject to separate Product Owner authorization.
 - Entry: P2-3B contract fixtures stable; Portal migration/rollback plan approved.
 - Exit: workload authentication, versioned config read, begin/complete/failure endpoints, accepted-store reuse, idempotency/hash/config validation, cross-client tests, and operator-safe read models pass on disposable databases; publication hashes remain unchanged.
 - Gate: `P2-3C-HAG`.
@@ -107,7 +110,7 @@ Every milestone ends at Human Review Ready. Only David can close its Human Accep
 
 | Architecture concern            | Implementation milestone |
 | ------------------------------- | ------------------------ |
-| Importer abstractions/container | P2-3B                    |
+| Importer abstractions/container | P2-3B — Human Accepted   |
 | Portal config/service ingestion | P2-3C                    |
 | IAM/Secret Manager/Cloud Run    | P2-3D                    |
 | GA4/GSC real manual use         | P2-3E                    |

@@ -1,10 +1,14 @@
 # P2-3B cloud-readiness implementation
 
-Status: **Human Review Ready; not Human Accepted**
+Status: **Complete and Human Accepted — 2026-08-06**
 
 Implementation branch: `codex/p2-3b-cloud-readiness`
 
 Accepted architecture baseline: `2e91aef36f52915c9049c1f156e4cd6ff361e4e3`
+
+Accepted implementation commit: `fe6e34aca72343e3c43caa75bfd8b238b22da1ec`
+
+Product Owner acceptance: [p2-3b-product-owner-acceptance.md](p2-3b-product-owner-acceptance.md)
 
 ## Product Owner authorization applied
 
@@ -114,15 +118,10 @@ The image definition was validated statically but not built or pulled. Container
 - Google Ads and BigQuery remain outside P2-3B.
 - Phase 3 and Phase 4 have not begun.
 
-## Human review checklist
+## Human acceptance outcome
 
-David should review:
+David Wallace accepted P2-3B on 2026-08-06 with the scope, limits, validation baseline, and exclusions recorded in the Product Owner acceptance record.
 
-1. whether the ports and dependency ordering correctly express the approved repository ownership boundary;
-2. whether the exact GA4/GSC and total request ceilings match `PO-011`;
-3. whether the normalized contract and canonical fixture are suitable inputs to P2-3C;
-4. whether the closed exit/error taxonomy is sufficient for future Cloud Run operations;
-5. whether excluding legacy direct-Postgres code from the container is the desired production capability boundary;
-6. whether P2-3B may be Human Accepted or requires revisions.
+The recommended next milestone is P2-3C, the Portal service ingestion boundary. P2-3C has not begun and requires separate authorization.
 
-Human acceptance of P2-3B would not authorize P2-3C, P2-3D, deployment, credentials, provider calls, Portal changes, or scheduling.
+Human acceptance of P2-3B does not authorize P2-3C, P2-3D, deployment, credentials, provider calls, Portal changes, database migration, client visibility, or scheduling. Phase 2 remains In Progress; Phase 3 and Phase 4 have not begun.

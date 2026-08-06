@@ -1,6 +1,10 @@
 {
   "schema_version": "musimack_p2_3b_cloud_readiness_checkpoint.v1",
-  "status": "human_review_ready_not_human_accepted",
+  "status": "complete_and_human_accepted",
+  "product_owner": "David Wallace",
+  "acceptance_date": "2026-08-06",
+  "accepted_implementation_commit": "fe6e34aca72343e3c43caa75bfd8b238b22da1ec",
+  "acceptance_record": "docs/p2-3b-product-owner-acceptance.md",
   "architecture_baseline": "2e91aef36f52915c9049c1f156e4cd6ff361e4e3",
   "branch": "codex/p2-3b-cloud-readiness",
   "approved_provider_limits": {
@@ -42,5 +46,14 @@
     "production_clients_onboarded": 0,
     "phase_3_started": false,
     "phase_4_started": false
-  }
+  },
+  "phase_status": {
+    "phase_2": "in_progress_not_human_accepted",
+    "p2_3b": "complete_and_human_accepted",
+    "p2_3c": "not_begun_not_authorized",
+    "phase_3": "not_begun",
+    "phase_4": "not_begun"
+  },
+  "production_readiness": false,
+  "recommended_next_milestone": "P2-3C_portal_service_ingestion_boundary_requires_separate_authorization"
 }

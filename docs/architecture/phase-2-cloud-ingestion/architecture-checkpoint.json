@@ -3,6 +3,7 @@
   "checkpoint_id": "P2-3A",
   "status": "human_review_ready_not_human_accepted",
   "generated_date": "2026-08-06",
+  "status_scope": "P2-3A architecture package; implementation milestones are tracked separately",
   "canonical_repository": {
     "name": "musimack-data-importer",
     "remote": "https://github.com/musimack/musimack-data-importer.git",
@@ -120,6 +121,48 @@
     "PO-024",
     "PO-025"
   ],
+  "product_owner_disposition": {
+    "recorded_date": "2026-08-06",
+    "approved_for_p2_3b": [
+      "PO-001",
+      "PO-002",
+      "PO-003",
+      "PO-004",
+      "PO-005",
+      "PO-006",
+      "PO-007",
+      "PO-008",
+      "PO-009",
+      "PO-011",
+      "PO-020"
+    ],
+    "governing_constraints": [
+      "PO-010",
+      "PO-013",
+      "PO-015",
+      "PO-019",
+      "PO-021",
+      "PO-022",
+      "PO-023",
+      "PO-024",
+      "PO-025"
+    ],
+    "deferred": ["PO-012", "PO-014", "PO-016", "PO-017", "PO-018"]
+  },
+  "implementation_milestones": {
+    "p2_3b": {
+      "status": "complete_and_human_accepted",
+      "acceptance_date": "2026-08-06",
+      "implementation_branch": "codex/p2-3b-cloud-readiness",
+      "implementation_commit": "fe6e34aca72343e3c43caa75bfd8b238b22da1ec",
+      "acceptance_record": "docs/p2-3b-product-owner-acceptance.md",
+      "production_ready": false
+    },
+    "p2_3c": "not_begun_not_authorized",
+    "phase_2": "in_progress_not_human_accepted",
+    "phase_3": "not_begun",
+    "phase_4": "not_begun"
+  },
   "hard_boundaries": {
     "provider_calls": 0,
     "bigquery_queries": 0,

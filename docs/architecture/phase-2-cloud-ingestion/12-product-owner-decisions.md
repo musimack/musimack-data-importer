@@ -2,6 +2,16 @@
 
 Status values: `BLOCKS P2-3B` means implementation must not begin until David records a choice. Recommendations in this packet are not decisions.
 
+## Recorded Product Owner disposition
+
+David Wallace recorded the following dispositions and authorized the bounded P2-3B implementation:
+
+- Approved for P2-3B: `PO-001`–`PO-009`, `PO-011`, and `PO-020`.
+- Governing constraints without later-milestone authorization: `PO-010`, `PO-013`, `PO-015`, `PO-019`, and `PO-021`–`PO-025`.
+- Deferred: `PO-012`, `PO-014`, and `PO-016`–`PO-018`.
+
+P2-3B was subsequently Human Accepted on 2026-08-06 at implementation commit `fe6e34aca72343e3c43caa75bfd8b238b22da1ec`. See the [Product Owner acceptance record](../../p2-3b-product-owner-acceptance.md). These dispositions do not authorize deployment, provider calls, Portal changes, BigQuery, Google Ads, scheduling, onboarding, Phase 3, or Phase 4.
+
 ## Decision register
 
 | ID       | Question                                                    | Recommended option                                                                                                  | Alternatives                                  | Advantages                                                               | Risks                                              | Reversibility / implementation impact                               | Blocker                                     |
@@ -32,9 +42,9 @@ Status values: `BLOCKS P2-3B` means implementation must not begin until David re
 | `PO-024` | Google Ads authorization model/ceilings?                    | Separate P2-5 decision after account/developer-token inventory                                                      | Reuse GA4 grant assumptions                   | Avoids premature credential/query claims                                 | Defers paid integration                            | Isolated later adapter                                              | Blocks P2-5 only                            |
 | `PO-025` | Deployment/IaC tool and state owner?                        | One reviewed IaC system in importer-owned deployment area; secret values excluded                                   | Console-only; separate infra repo             | Reproducibility and recovery                                             | Tool learning/state security                       | Decide before resource creation                                     | Blocks disposable cloud pilot               |
 
-## Decisions that block the next milestone
+## P2-3B blocking-decision outcome
 
-P2-3B implementation is blocked by `PO-001` through `PO-009`, `PO-011`, and `PO-020`, plus actual sanitized production-topology facts. `PO-010` must close before the disposable cloud pilot. The remaining decisions are milestone-specific as marked.
+The P2-3B blockers `PO-001` through `PO-009`, `PO-011`, and `PO-020` were decided with the recorded qualifications and are satisfied for the accepted cloud-readiness implementation only. `PO-010` and production-topology facts remain open before the disposable cloud pilot. The remaining decisions are milestone-specific as marked.
 
 ## Required decision record format
 

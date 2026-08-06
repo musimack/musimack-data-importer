@@ -2,7 +2,7 @@
 
 Local-only Python transport/importer and dashboard fixture builder for Musimack Marketing and Development data workflows.
 
-The P2-3B cloud-readiness boundary adds a noninteractive, fixture-only one-shot application path without authorizing deployment, live credentials, provider calls, Portal changes, or scheduling. See [P2-3B cloud-readiness Human Review Ready handoff](docs/p2-3b-cloud-readiness-human-review.md).
+P2-3B is Human Accepted as a cloud-readiness implementation. It adds a noninteractive, fixture-only one-shot application path without authorizing deployment, live credentials, provider calls, Portal changes, or scheduling. See the [P2-3B Product Owner acceptance record](docs/p2-3b-product-owner-acceptance.md) and [implementation handoff](docs/p2-3b-cloud-readiness-human-review.md).
 
 The GA4 path pulls Musimack-owned GA4 data, normalizes it, writes a sanitized `ga4_snapshot.v1` JSON export, and can optionally insert that sanitized snapshot into the local portal Postgres database as an internal/draft integration snapshot.
 
