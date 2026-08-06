@@ -1,0 +1,18 @@
+{
+  "schema_version": "project_ingestion_configuration.v1",
+  "identity": "fixture-gsc-config",
+  "version": 1,
+  "client_id": "10000000-0000-0000-0000-000000000002",
+  "project_id": "20000000-0000-0000-0000-000000000002",
+  "project_slug": "fixture-gsc-project",
+  "provider": "gsc",
+  "environment": "development",
+  "reporting_timezone": "America/Los_Angeles",
+  "external_resource_type": "gsc_site",
+  "external_resource_id": "https://fixture.invalid/",
+  "credential_binding_key": "fixture/google-oauth/development",
+  "request_ceiling": 4,
+  "authorized_retry_count": 0,
+  "max_payload_bytes": 2097152,
+  "enabled": true
+}

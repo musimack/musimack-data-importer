@@ -1,0 +1,63 @@
+{
+  "schema_version": "weekly_provider_fixture.v1",
+  "provider": "ga4",
+  "week_start": "2026-07-27",
+  "request_operations": [
+    "ga4.runReport.traffic",
+    "ga4.runReport.channels",
+    "ga4.runReport.pages",
+    "ga4.runReport.sources",
+    "ga4.runReport.landings"
+  ],
+  "normalized": {
+    "freshness": {
+      "state": "available",
+      "available_through": "2026-08-02",
+      "first_available_date": "2026-07-27",
+      "last_available_date": "2026-08-02",
+      "expected_observation_count": 7,
+      "actual_observation_count": 7,
+      "missing_observation_count": 0,
+      "generated_at": "2026-08-06T12:01:00Z",
+      "checked_at": "2026-08-06T12:01:01Z"
+    },
+    "source": {
+      "identity": "fixture.ga4.weekly.v1",
+      "contract_version": 1
+    },
+    "metrics": [
+      {
+        "metric_key": "sessions",
+        "value": 70,
+        "unit": "count",
+        "aggregation": "sum",
+        "provenance": "fixture.ga4.v1"
+      }
+    ],
+    "daily": [
+      {"metric_key": "sessions", "date": "2026-07-27", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"},
+      {"metric_key": "sessions", "date": "2026-07-28", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"},
+      {"metric_key": "sessions", "date": "2026-07-29", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"},
+      {"metric_key": "sessions", "date": "2026-07-30", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"},
+      {"metric_key": "sessions", "date": "2026-07-31", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"},
+      {"metric_key": "sessions", "date": "2026-08-01", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"},
+      {"metric_key": "sessions", "date": "2026-08-02", "value": 10, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"}
+    ],
+    "ranked": [
+      {
+        "dimension": "channel",
+        "identity": "fixture-organic-search",
+        "label": "Organic Search",
+        "rank": 1,
+        "metric": {
+          "metric_key": "sessions",
+          "value": 42,
+          "unit": "count",
+          "aggregation": "sum",
+          "provenance": "fixture.ga4.v1"
+        }
+      }
+    ],
+    "direct_cost_usd": 0
+  }
+}

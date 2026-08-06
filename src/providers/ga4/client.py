@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Protocol
 
 import requests
 from google.auth.exceptions import GoogleAuthError, RefreshError
@@ -47,10 +47,25 @@ class OAuthCredentialError(Ga4ClientError):
     pass
 
 
+class RequestCounter(Protocol):
+    def consume(self, operation: str, *, retry: bool = False) -> None: ...
+
+
 class Ga4DataClient:
-    def __init__(self, config: Ga4Config, timeout_seconds: int = 30):
+    def __init__(
+        self,
+        config: Ga4Config,
+        timeout_seconds: int = 30,
+        *,
+        session: Any = requests,
+        credential_loader: Callable[[], Any] | None = None,
+        request_counter: RequestCounter | None = None,
+    ):
         self._config = config
         self._timeout_seconds = timeout_seconds
+        self._session = session
+        self._credential_loader = credential_loader
+        self._request_counter = request_counter
 
     def run_traffic_overview(self, date_range: DateRange) -> dict[str, Any]:
         trend = self._run_report(build_traffic_overview_request(date_range))
@@ -111,23 +126,35 @@ class Ga4DataClient:
     def _run_report(self, body: dict[str, Any]) -> dict[str, Any]:
         credentials = self._credentials()
         if not credentials.valid:
+            if self._credential_loader is not None:
+                raise OAuthCredentialError(
+                    "in-memory credentials were not ready; noninteractive credential "
+                    "resolution must refresh before provider execution"
+                )
             credentials.refresh(Request())
         headers = {
             "Authorization": f"Bearer {credentials.token}",
             "Content-Type": "application/json",
         }
         url = GA4_RUN_REPORT_URL.format(property_resource=self._config.property_resource)
-        response = requests.post(
-            url,
-            headers=headers,
-            json=body,
-            timeout=self._timeout_seconds,
-        )
+        if self._request_counter is not None:
+            self._request_counter.consume("ga4.runReport")
+        try:
+            response = self._session.post(
+                url,
+                headers=headers,
+                json=body,
+                timeout=self._timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            raise Ga4ClientError("GA4 Data API request failed before a response was received") from exc
         if response.status_code >= 400:
             raise Ga4ClientError(sanitized_google_api_error(response))
         return response.json()
 
     def _credentials(self):
+        if self._credential_loader is not None:
+            return self._credential_loader()
         if self._config.auth_method == "oauth":
             return load_oauth_credentials(
                 self._config.oauth_client_secrets_file,

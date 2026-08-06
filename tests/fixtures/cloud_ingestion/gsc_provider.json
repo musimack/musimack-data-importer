@@ -1,0 +1,35 @@
+{
+  "schema_version": "weekly_provider_fixture.v1",
+  "provider": "gsc",
+  "week_start": "2026-07-27",
+  "request_operations": ["gsc.searchAnalytics.query"],
+  "normalized": {
+    "freshness": {
+      "state": "available",
+      "available_through": "2026-08-02",
+      "first_available_date": "2026-07-27",
+      "last_available_date": "2026-08-02",
+      "expected_observation_count": 7,
+      "actual_observation_count": 7,
+      "missing_observation_count": 0,
+      "generated_at": "2026-08-06T12:01:00Z",
+      "checked_at": "2026-08-06T12:01:01Z"
+    },
+    "source": {"identity": "fixture.gsc.weekly.v1", "contract_version": 1},
+    "metrics": [
+      {"metric_key": "clicks", "value": 21, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "impressions", "value": 210, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"}
+    ],
+    "daily": [
+      {"metric_key": "clicks", "date": "2026-07-27", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "clicks", "date": "2026-07-28", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "clicks", "date": "2026-07-29", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "clicks", "date": "2026-07-30", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "clicks", "date": "2026-07-31", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "clicks", "date": "2026-08-01", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"},
+      {"metric_key": "clicks", "date": "2026-08-02", "value": 3, "unit": "count", "aggregation": "sum", "provenance": "fixture.gsc.v1"}
+    ],
+    "ranked": [],
+    "direct_cost_usd": 0
+  }
+}

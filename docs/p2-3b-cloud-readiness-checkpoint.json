@@ -1,0 +1,46 @@
+{
+  "schema_version": "musimack_p2_3b_cloud_readiness_checkpoint.v1",
+  "status": "human_review_ready_not_human_accepted",
+  "architecture_baseline": "2e91aef36f52915c9049c1f156e4cd6ff361e4e3",
+  "branch": "codex/p2-3b-cloud-readiness",
+  "approved_provider_limits": {
+    "ga4_base_requests": 6,
+    "gsc_base_requests": 4,
+    "base_task_requests": 10,
+    "requests_with_explicitly_authorized_retries": 12,
+    "p2_3b_default_retries": 0,
+    "maximum_normalized_payload_bytes": 2097152
+  },
+  "contracts": {
+    "configuration": "project_ingestion_configuration.v1",
+    "begin": "weekly_ingestion_run.v1",
+    "result": "weekly_provider_ingestion.v1",
+    "failure": "weekly_ingestion_failure.v1",
+    "canonical_hash": "sha256_sorted_utf8_semantic_json"
+  },
+  "validation": {
+    "focused_tests_passed": 55,
+    "full_tests_passed": 952,
+    "full_tests_skipped": 29,
+    "python_compile": "passed",
+    "dependency_check": "passed",
+    "git_diff_check": "passed",
+    "secret_value_scan": "passed"
+  },
+  "hard_boundaries": {
+    "client_portal_files_changed": 0,
+    "cloud_resources_created": 0,
+    "cloud_images_built_or_pushed": 0,
+    "secret_manager_changes": 0,
+    "credentials_read_or_migrated": 0,
+    "provider_calls": 0,
+    "portal_calls": 0,
+    "database_migrations_or_writes": 0,
+    "bigquery_queries": 0,
+    "google_ads_calls": 0,
+    "schedules_created_or_enabled": 0,
+    "production_clients_onboarded": 0,
+    "phase_3_started": false,
+    "phase_4_started": false
+  }
+}

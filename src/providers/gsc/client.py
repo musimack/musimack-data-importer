@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Protocol
 
 import requests
 from google.auth.exceptions import GoogleAuthError, RefreshError
@@ -26,6 +26,10 @@ class GscOAuthError(GscClientError):
     pass
 
 
+class RequestCounter(Protocol):
+    def consume(self, operation: str, *, retry: bool = False) -> None: ...
+
+
 @dataclass(frozen=True)
 class GscFetchConfig:
     client_secrets_file: str
@@ -40,10 +44,14 @@ class GscSearchConsoleClient:
         config: GscFetchConfig,
         session: requests.Session | None = None,
         timeout_seconds: int = 30,
+        credential_loader: Callable[[], Any] | None = None,
+        request_counter: RequestCounter | None = None,
     ):
         self._config = config
         self._session = session or requests.Session()
         self._timeout_seconds = timeout_seconds
+        self._credential_loader = credential_loader
+        self._request_counter = request_counter
 
     def query_search_analytics(
         self,
@@ -54,10 +62,19 @@ class GscSearchConsoleClient:
         row_limit: int | None = None,
         search_type: str = "web",
     ) -> dict[str, Any]:
-        credentials = load_gsc_oauth_credentials(
-            self._config.client_secrets_file,
-            self._config.token_file,
+        credentials = (
+            self._credential_loader()
+            if self._credential_loader is not None
+            else load_gsc_oauth_credentials(
+                self._config.client_secrets_file,
+                self._config.token_file,
+            )
         )
+        if self._credential_loader is not None and not credentials.valid:
+            raise GscOAuthError(
+                "in-memory credentials were not ready; noninteractive credential "
+                "resolution must refresh before provider execution"
+            )
         url = GSC_SEARCH_ANALYTICS_URL.format(site_url=requests.utils.quote(self._config.site_url, safe=""))
         payload = {
             "startDate": start_date,
@@ -68,6 +85,8 @@ class GscSearchConsoleClient:
             "startRow": 0,
         }
         try:
+            if self._request_counter is not None:
+                self._request_counter.consume("gsc.searchAnalytics.query")
             response = self._session.post(
                 url,
                 json=payload,

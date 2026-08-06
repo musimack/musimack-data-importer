@@ -1,0 +1,41 @@
+{
+  "schema_version": "weekly_provider_ingestion_conformance.v1",
+  "payload": {
+    "schema_version": "weekly_provider_ingestion.v1",
+    "project_id": "20000000-0000-0000-0000-000000000001",
+    "provider": "ga4",
+    "week": {
+      "start": "2026-07-27",
+      "end": "2026-08-02",
+      "timezone": "America/Los_Angeles",
+      "inclusive_dates": true
+    },
+    "configuration": {"identity": "fixture-ga4-config", "version": 1},
+    "freshness": {
+      "state": "available",
+      "available_through": "2026-08-02",
+      "first_available_date": "2026-07-27",
+      "last_available_date": "2026-08-02",
+      "expected_observation_count": 7,
+      "actual_observation_count": 7,
+      "missing_observation_count": 0,
+      "generated_at": "2026-08-06T12:01:00Z",
+      "checked_at": "2026-08-06T12:01:01Z"
+    },
+    "source": {"identity": "fixture.ga4.weekly.v1", "contract_version": 1},
+    "metrics": [
+      {"metric_key": "sessions", "value": 70, "unit": "count", "aggregation": "sum", "provenance": "fixture.ga4.v1"}
+    ],
+    "daily": [],
+    "ranked": [],
+    "evidence": {
+      "requests_consumed": 5,
+      "retry_count": 0,
+      "direct_cost_usd": 0,
+      "bigquery_bytes_processed": null
+    },
+    "normalized_payload_hash": "bf159898c540c711d209e96ce268e9ed0fe2c683cfc711bd33a43e777aa77375",
+    "sent_at": "2026-08-06T12:02:00Z"
+  },
+  "expected_canonical_sha256": "bf159898c540c711d209e96ce268e9ed0fe2c683cfc711bd33a43e777aa77375"
+}
