@@ -1,0 +1,18 @@
+{
+  "schema_version": "project_ingestion_configuration.v1",
+  "identity": "p2-3d-synthetic-ga4-config",
+  "version": 1,
+  "client_id": "10000000-0000-0000-0000-000000000001",
+  "project_id": "20000000-0000-0000-0000-000000000001",
+  "project_slug": "p2-3d-synthetic-project",
+  "provider": "ga4",
+  "environment": "production",
+  "reporting_timezone": "America/Los_Angeles",
+  "external_resource_type": "ga4_property",
+  "external_resource_id": "properties/999999999",
+  "credential_binding_key": "fixture/p2-3d/no-provider-credential",
+  "request_ceiling": 5,
+  "authorized_retry_count": 0,
+  "max_payload_bytes": 2097152,
+  "enabled": true
+}

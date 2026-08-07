@@ -1,0 +1,31 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+RUN addgroup --system musimack && adduser --system --ingroup musimack --no-create-home musimack
+
+COPY requirements-p2-3d.txt ./
+RUN pip install --no-cache-dir --disable-pip-version-check -r requirements-p2-3d.txt
+
+COPY src/__init__.py ./src/__init__.py
+COPY src/cloud_ingestion/__init__.py \
+     src/cloud_ingestion/application.py \
+     src/cloud_ingestion/budget.py \
+     src/cloud_ingestion/contract.py \
+     src/cloud_ingestion/domain.py \
+     src/cloud_ingestion/errors.py \
+     src/cloud_ingestion/exit_codes.py \
+     src/cloud_ingestion/fixture_adapters.py \
+     src/cloud_ingestion/google_identity.py \
+     src/cloud_ingestion/p2_3d_pilot.py \
+     src/cloud_ingestion/portal_sink.py \
+     src/cloud_ingestion/ports.py \
+     src/cloud_ingestion/structured_logging.py \
+     ./src/cloud_ingestion/
+COPY dev/fixtures/p2_3d ./p2_3d_fixtures
+
+USER musimack
+ENTRYPOINT ["python", "-m", "src.cloud_ingestion.p2_3d_pilot"]
