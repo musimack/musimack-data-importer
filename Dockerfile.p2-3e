@@ -11,7 +11,7 @@ COPY requirements-p2-3e.txt ./
 RUN pip install --no-cache-dir --disable-pip-version-check -r requirements-p2-3e.txt
 
 COPY src ./src
-RUN python -c "import src.cloud_ingestion.p2_3e_pilot"
+RUN python -c "import src.cloud_ingestion.manual_weekly_runner"
 
 USER musimack
-ENTRYPOINT ["python", "-m", "src.cloud_ingestion.p2_3e_pilot"]
+ENTRYPOINT ["python", "-m", "src.cloud_ingestion.manual_weekly_runner"]
