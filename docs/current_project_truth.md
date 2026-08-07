@@ -12,8 +12,9 @@ Current as of 2026-08-07.
 - P2-3D Disposable Cloud Infrastructure Pilot is **Complete and Human Accepted**
   by David Wallace on 2026-08-07.
 - Accepted P2-3D source checkpoint: `7a64e23d5a50a52840b0d6b1b82f4d70408990f6`.
-- P2-3E Manual Real GA4/GSC Cloud Pilot is **Human Review Ready and not Human
-  Accepted**; the successful bounded stack is retained for internal reporting.
+- P2-3E Manual Real GA4/GSC Cloud Pilot is **Complete and Human Accepted** by
+  David Wallace on 2026-08-07; the successful bounded stack is retained for
+  internal reporting.
 - Phase 3 and Phase 4 have not begun.
 
 The authoritative P2-3B acceptance record is [p2-3b-product-owner-acceptance.md](p2-3b-product-owner-acceptance.md).
@@ -66,9 +67,9 @@ The accepted limits are:
 
 ## Next controlled action
 
-P2-3E is Human Review Ready. Await Product Owner review; do not integrate it,
-generalize the proven week, add another client, create Scheduler, start recurring
-work, add Ads/BigQuery or infer production authorization. Phase 2 remains In
+P2-3E is Complete and Human Accepted. Do not generalize the proven week, add
+another client, create Scheduler, start recurring work, add Ads/BigQuery or
+infer production authorization. P2-4 remains Not Begun; Phase 2 remains In
 Progress and not Human Accepted overall.
 
 See [Phase 2 requirements traceability](phase-2-requirements-traceability.md) and the [governed roadmap](architecture/phase-2-cloud-ingestion/13-phase-2-roadmap.md).
@@ -94,3 +95,20 @@ locked to the proven Inn At Spanish Head week until a separately reviewed
 completed-week generalization. No Scheduler, Ads, BigQuery, new client,
 publication or production launch is authorized. Phase 2 remains In Progress and
 not Human Accepted; P2-4 through P2-8, Phase 3 and Phase 4 remain Not Begun.
+
+## P2-3E Human Acceptance reconciliation (2026-08-07)
+
+David Wallace Human Accepted P2-3E. The cross-repository acceptance record is
+maintained in the Portal governance repository at
+`docs/p2_3e_human_acceptance_record.md`. Importer governed `main` started at
+`5e85c011bed5e8bd1abce9b69f51f2af16408515`; deployed source remains
+`d084d5a381a304c86e363f0be1a45f0737358d90`; Human Review Ready tip remains
+`572bbc651aa399510e51e7b9594bd7e5e63cf8d8`. These checkpoints remain distinct
+from this acceptance/governance commit and final governed `main`.
+
+The accepted retained environment uses daily automated Cloud SQL backups at
+00:00 UTC with 7 retained, PITR off and no restore proof. `P2-OPS-F06` remains open. The runner
+remains manual, zero-retry and locked to the proven Inn At Spanish Head week.
+P2-4 is Not Begun; Phase 2 remains In Progress and not Human Accepted overall;
+Scheduler, unattended execution, Ads, BigQuery, new-client onboarding, Phase 3
+and Phase 4 remain unauthorized.
