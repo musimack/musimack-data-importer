@@ -10,12 +10,8 @@ RUN addgroup --system musimack && adduser --system --ingroup musimack --no-creat
 COPY requirements-p2-3e.txt ./
 RUN pip install --no-cache-dir --disable-pip-version-check -r requirements-p2-3e.txt
 
-COPY src/__init__.py ./src/__init__.py
-COPY src/config.py ./src/config.py
-COPY src/cloud_ingestion ./src/cloud_ingestion
-COPY src/providers/__init__.py ./src/providers/__init__.py
-COPY src/providers/ga4 ./src/providers/ga4
-COPY src/providers/gsc ./src/providers/gsc
+COPY src ./src
+RUN python -c "import src.cloud_ingestion.p2_3e_pilot"
 
 USER musimack
 ENTRYPOINT ["python", "-m", "src.cloud_ingestion.p2_3e_pilot"]
