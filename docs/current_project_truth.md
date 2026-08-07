@@ -112,3 +112,30 @@ remains manual, zero-retry and locked to the proven Inn At Spanish Head week.
 P2-4 is Not Begun; Phase 2 remains In Progress and not Human Accepted overall;
 Scheduler, unattended execution, Ads, BigQuery, new-client onboarding, Phase 3
 and Phase 4 remain unauthorized.
+
+## Internal reporting manual runner Human Review Ready (2026-08-07)
+
+The P2-3E hard-coded proof runner has been generalized on branch
+`codex/internal-reporting-manual-runner` at implementation commit
+`7d161e9729b10b59a4459a428dee7ced72333531`. The governed contract and evidence
+are in `docs/internal_reporting_manual_weekly_runner.md`. An operator now selects
+canonical client and project UUIDs, exactly GA4 or GSC, and one completed
+Monday-through-Sunday week without editing source, the job definition, or a
+secret. Portal-owned configuration remains authoritative for identity,
+resource, timezone, binding, environment, version, and request ceiling.
+
+Inn At Spanish Head succeeded for `2026-07-20..2026-07-26`: GA4 used five
+requests and GSC one, both with zero retries, immutable persistence, exact
+zero-call replay, and refusal of invalid hashes and wrong resources. The prior
+accepted `2026-07-27..2026-08-02` revisions remain present and current for their
+own week. Aluma Aesthetic Medicine stopped before execution because the retained
+cloud Portal contains no Aluma client/project, provider mappings, credential
+bindings, or mounted grants; zero Aluma provider calls occurred. This is a
+future governed cloud configuration/onboarding requirement, not a runner
+bypass.
+
+Validation is **989 passed, 29 governed skips** overall, with 30 generalized
+runner, 51 GA4, 42 GSC, 64 cloud/credential/runner, and 20 request-planner tests.
+P2-4 remains Not Begun. Phase 2 remains In Progress and not Human Accepted
+overall. Scheduler, unattended execution, Ads, BigQuery, broad onboarding,
+publishing, and Phase 3/4 remain unauthorized.
