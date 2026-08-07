@@ -1,9 +1,17 @@
 # Manual Completed-Week Internal Reporting Runner
 
-**Status:** Human Review Ready, August 7, 2026
+**Status:** Complete and Human Accepted, August 7, 2026
 
 **Branch:** `codex/internal-reporting-manual-runner`
 **Implementation:** `7d161e9729b10b59a4459a428dee7ced72333531`
+
+**Accepted Human Review Ready tip:**
+`20d871b9477547f212c04788843dfffac67b2ead`
+
+David Wallace, Product Owner, Human Accepted the generalized runner capability.
+Acceptance does not declare the intended Inn-plus-Aluma reporting scope ready:
+Aluma remains blocked by missing governed retained-cloud configuration and no
+Aluma provider execution has occurred.
 
 ## Contract
 

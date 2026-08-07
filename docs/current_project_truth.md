@@ -139,3 +139,35 @@ runner, 51 GA4, 42 GSC, 64 cloud/credential/runner, and 20 request-planner tests
 P2-4 remains Not Begun. Phase 2 remains In Progress and not Human Accepted
 overall. Scheduler, unattended execution, Ads, BigQuery, broad onboarding,
 publishing, and Phase 3/4 remain unauthorized.
+
+## Internal reporting manual runner Human Accepted (2026-08-07)
+
+David Wallace Human Accepted the generalized manual completed-week GA4/GSC
+runner capability at Human Review Ready tip
+`20d871b9477547f212c04788843dfffac67b2ead`, including deployed implementation
+ancestor `7d161e9729b10b59a4459a428dee7ced72333531`. Governed `main` integrated the
+accepted history by fast-forward from starting checkpoint
+`208d45ca7a91978fd54494762631c36deb5fe95c`; no accepted commit was squashed or
+rewritten.
+
+Acceptance rests on the Inn At Spanish Head 2026-07-20 through 2026-07-26
+proof: GA4 used five calls and GSC one, both with zero retries, immutable
+revisions, exact zero-call replay, stable current pointers, and no publication
+side effects. No new provider call was made during acceptance integration.
+
+Aluma Aesthetic Medicine remains blocked. Its governed identifiers are client
+`34f4d999-e93c-4b3f-b914-8dcc30f99f7b` and project
+`4cb10985-5506-4789-8e68-de90a1025da7`, but required retained-cloud
+configuration, mappings, credential bindings, secrets, mounts, and workload
+authorization remain absent. This is an accepted stop condition, not runner
+failure, and does not establish Inn-plus-Aluma operational readiness.
+
+Acceptance validation reproduced **989 passed, 29 governed skips** in the
+governed sibling-repository layout, plus focused counts of 30 runner, 51 GA4,
+42 GSC, 64 cloud/credential/runner, and 20 request-planning tests. Compilation,
+dependency, diff, and credential-pattern scans passed.
+
+P2-OPS-F06 remains open. P2-4 through P2-8 remain Not Begun; Phase 2 remains In
+Progress and not Human Accepted overall; Phase 3 and Phase 4 remain Not Begun.
+Scheduler, unattended execution, Ads, BigQuery, broad onboarding, and
+publishing remain unauthorized.
