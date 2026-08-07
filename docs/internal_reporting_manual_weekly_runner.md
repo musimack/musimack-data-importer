@@ -1,7 +1,8 @@
 # Manual Completed-Week Internal Reporting Runner
 
-**Status:** Human Review Ready, August 7, 2026  
-**Branch:** `codex/internal-reporting-manual-runner`  
+**Status:** Human Review Ready, August 7, 2026
+
+**Branch:** `codex/internal-reporting-manual-runner`
 **Implementation:** `7d161e9729b10b59a4459a428dee7ced72333531`
 
 ## Contract
