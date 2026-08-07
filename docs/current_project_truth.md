@@ -12,7 +12,8 @@ Current as of 2026-08-07.
 - P2-3D Disposable Cloud Infrastructure Pilot is **Complete and Human Accepted**
   by David Wallace on 2026-08-07.
 - Accepted P2-3D source checkpoint: `7a64e23d5a50a52840b0d6b1b82f4d70408990f6`.
-- P2-3E Manual Real GA4/GSC Cloud Pilot has **not begun** and is not authorized.
+- P2-3E Manual Real GA4/GSC Cloud Pilot is **Human Review Ready and not Human
+  Accepted**; the successful bounded stack is retained for internal reporting.
 - Phase 3 and Phase 4 have not begun.
 
 The authoritative P2-3B acceptance record is [p2-3b-product-owner-acceptance.md](p2-3b-product-owner-acceptance.md).
@@ -65,9 +66,31 @@ The accepted limits are:
 
 ## Next controlled action
 
-P2-3E is the Manual Real GA4/GSC Cloud Pilot and remains Not Begun. Do not begin
-it, use provider credentials, call real providers, onboard clients, create
-Scheduler, start recurring work, or infer production authorization from P2-3D
-acceptance. Phase 2 remains In Progress and not Human Accepted overall.
+P2-3E is Human Review Ready. Await Product Owner review; do not integrate it,
+generalize the proven week, add another client, create Scheduler, start recurring
+work, add Ads/BigQuery or infer production authorization. Phase 2 remains In
+Progress and not Human Accepted overall.
 
 See [Phase 2 requirements traceability](phase-2-requirements-traceability.md) and the [governed roadmap](architecture/phase-2-cloud-ingestion/13-phase-2-roadmap.md).
+## P2-3E Real Provider Cloud Runner Human Review Ready (2026-08-07)
+
+**P2-3E is Human Review Ready and not Human Accepted.** Branch
+`codex/p2-3e-real-provider-pilot` started from governed `main`
+`5e85c011bed5e8bd1abce9b69f51f2af16408515`; deployed source is
+`d084d5a381a304c86e363f0be1a45f0737358d90`. Record:
+`docs/p2_3e_real_provider_cloud_runner.md`.
+
+The bounded Cloud Run entrypoint proved exact Portal configuration retrieval,
+separate pinned Secret Manager grants, exact read-only OAuth scopes, in-memory
+refresh, 5-request GA4 and 1-request GSC retrieval, accepted contract
+normalization, keyless Portal delivery, in-memory replay and zero-call negative
+proofs. Retries and failed provider calls were zero. No raw provider response,
+token or secret was durably stored or logged. Full tests: **959 passed, 29
+governed skips**; focused: **37 passed**.
+
+The successful cloud environment is retained by Product Owner direction for
+bounded internal reporting, but the Importer remains manual, zero-retry and
+locked to the proven Inn At Spanish Head week until a separately reviewed
+completed-week generalization. No Scheduler, Ads, BigQuery, new client,
+publication or production launch is authorized. Phase 2 remains In Progress and
+not Human Accepted; P2-4 through P2-8, Phase 3 and Phase 4 remain Not Begun.
