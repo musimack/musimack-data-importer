@@ -116,4 +116,3 @@ class PortalIngestionSink:
 
     def fail(self, receipt: BeginReceipt, payload: dict) -> None:
         self._contexts.pop(receipt.run_id, None)
-
