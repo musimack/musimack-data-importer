@@ -38,6 +38,8 @@ class PortalIngestionSink:
         self._tamper_contract = tamper_contract
         self._contexts: dict[str, _DeliveryContext] = {}
         self.last_response: dict | None = None
+        self.response_history: list[dict] = []
+        self._last_envelope: dict | None = None
 
     def begin(self, request: RunRequest, configuration: IngestionConfiguration) -> BeginReceipt:
         run_id = str(uuid4())
@@ -68,6 +70,55 @@ class PortalIngestionSink:
             "run": {"importer_run_id": receipt.run_id},
             "payload": delivered,
         }
+        self._last_envelope = copy.deepcopy(envelope)
+        self._deliver(envelope)
+
+    def replay_last_delivery(self) -> dict:
+        """Replay the exact in-memory envelope without another provider call."""
+        if self._last_envelope is None:
+            raise SinkError("no completed delivery is available for replay")
+        self._deliver(copy.deepcopy(self._last_envelope))
+        return copy.deepcopy(self.last_response or {})
+
+    def prove_invalid_contract(self) -> dict:
+        """Submit a hash-invalid copy with a fresh run id and expect refusal."""
+        if self._last_envelope is None:
+            raise SinkError("no completed delivery is available for negative proof")
+        envelope = copy.deepcopy(self._last_envelope)
+        envelope["run"]["importer_run_id"] = str(uuid4())
+        metrics = envelope.get("payload", {}).get("metrics", [])
+        if not metrics or not isinstance(metrics[0].get("value"), (int, float)):
+            raise SinkError("the normalized contract cannot be safely tampered")
+        metrics[0]["value"] += 1
+        try:
+            self._deliver(envelope)
+        except SinkError:
+            response = copy.deepcopy(self.last_response or {})
+            if response.get("accepted") is False:
+                return response
+            raise
+        raise SinkError("the Portal accepted an invalid normalized contract")
+
+    def prove_resource_mismatch(self) -> dict:
+        """Submit a wrong governed resource without making a provider call."""
+        if self._last_envelope is None:
+            raise SinkError("no completed delivery is available for negative proof")
+        envelope = copy.deepcopy(self._last_envelope)
+        envelope["run"]["importer_run_id"] = str(uuid4())
+        kind = envelope.get("resource", {}).get("identity_kind")
+        envelope["resource"]["identity"] = (
+            "properties/999999999" if kind == "ga4_property" else "https://wrong.invalid/"
+        )
+        try:
+            self._deliver(envelope)
+        except SinkError:
+            response = copy.deepcopy(self.last_response or {})
+            if response.get("error_code") == "resource_mismatch":
+                return response
+            raise
+        raise SinkError("the Portal accepted a mismatched provider resource")
+
+    def _deliver(self, envelope: dict) -> None:
         token = self._identity_tokens.token_for_audience(self.portal_url)
         request = urllib.request.Request(
             f"{self.portal_url}/api/service/v1/provider-ingestions",
@@ -111,6 +162,7 @@ class PortalIngestionSink:
             )
             if key in parsed
         }
+        self.response_history.append(copy.deepcopy(self.last_response))
         if status != 200 or parsed.get("accepted") is not True:
             raise SinkError("Portal refused the normalized contract")
 

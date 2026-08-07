@@ -43,7 +43,7 @@ class GoogleGa4WeeklyProvider:
         client = self._client_factory(
             Ga4Config(
                 auth_method="in_memory",
-                property_id=configuration.external_resource_id,
+                property_id=configuration.external_resource_id.removeprefix("properties/"),
                 oauth_client_secrets_file=None,
                 oauth_token_file=None,
                 service_account_file=None,
@@ -110,7 +110,11 @@ class GoogleGscWeeklyProvider:
         credential: CredentialMaterial,
         budget: ProviderRequestBudget,
     ) -> ProviderOutput:
-        if configuration.external_resource_type != "gsc_site":
+        if configuration.external_resource_type not in {
+            "gsc_site",
+            "gsc_domain_property",
+            "gsc_url_prefix",
+        }:
             raise ConfigurationError("GSC configuration resource type is invalid")
         client = self._client_factory(
             GscFetchConfig("", "", configuration.external_resource_id, row_limit=25000),
